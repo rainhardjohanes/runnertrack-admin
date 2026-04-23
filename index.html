@@ -110,8 +110,6 @@
                     </div>
                 </div>
 
-                
-
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                         <h4 class="font-black text-slate-700 uppercase text-xs tracking-widest">Kit Inventory Breakdown</h4>
@@ -132,7 +130,7 @@
             </div>
         </div>
         
-<div id="view-sd_tracker" class="flex-1 flex flex-col hidden-view h-full">
+        <div id="view-sd_tracker" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <div>
                     <h2 class="text-xl font-black text-slate-800"><i class="fa-solid fa-microchip text-blue-600 mr-2"></i>SD Card Tracker</h2>
@@ -147,12 +145,12 @@
                 
                 <div class="bg-white rounded-2xl shadow-sm border border-blue-200 overflow-hidden">
                     <div class="p-4 bg-blue-50 border-b border-blue-100 flex justify-between items-center flex-wrap gap-2">
-    <h3 class="font-black text-blue-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-satellite-dish animate-pulse text-red-500 mr-2"></i>Radar Pending Phase 3</h3>
-    <div class="flex items-center gap-2">
-        <input type="date" id="filter-radar-date" onchange="renderSDTracker()" class="p-1 border border-blue-200 rounded text-xs outline-none bg-white font-bold text-blue-700 cursor-pointer">
-        <span id="badge-live-radar" class="bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
-    </div>
-</div>
+                        <h3 class="font-black text-blue-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-satellite-dish animate-pulse text-red-500 mr-2"></i>Radar Pending Phase 3</h3>
+                        <div class="flex items-center gap-2">
+                            <input type="date" id="filter-radar-date" onchange="renderSDTracker()" class="p-1 border border-blue-200 rounded text-xs outline-none bg-white font-bold text-blue-700 cursor-pointer">
+                            <span id="badge-live-radar" class="bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
+                        </div>
+                    </div>
                     <table class="w-full text-left whitespace-nowrap">
                         <thead class="bg-white border-b border-blue-100 text-[10px] uppercase text-blue-400 font-black tracking-widest">
                             <tr>
@@ -167,8 +165,8 @@
                     </table>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden">
-                    <div class="p-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
+                <div class="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden">
+                    <div class="p-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
                         <h3 class="font-black text-red-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Overdue SD Cards (> 24 Hours Not Returned)</h3>
                         <span id="badge-overdue-count" class="bg-red-600 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
                     </div>
@@ -186,12 +184,26 @@
                     </table>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden mt-6">
                     <div class="p-4 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
                         <h3 class="font-black text-amber-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-scale-unbalanced mr-2"></i>Daily Mismatch Log (Qty Discrepancy)</h3>
                         <span id="badge-mismatch-count" class="bg-amber-500 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
                     </div>
-<div class="bg-white rounded-2xl shadow-sm border border-emerald-200 overflow-hidden mt-6">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-white border-b border-amber-100 text-[10px] uppercase text-amber-500 font-black tracking-widest">
+                            <tr>
+                                <th class="p-4">Date & Time</th>
+                                <th class="p-4">Target Merchant</th>
+                                <th class="p-4">Runner (Personnel)</th>
+                                <th class="p-4 text-center">Anomaly Status</th>
+                                <th class="p-4">System Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-sd-mismatch" class="divide-y divide-amber-50 text-xs"></tbody>
+                    </table>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 overflow-hidden mt-6">
                     <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
                         <h3 class="font-black text-emerald-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-check-double mr-2"></i>Perfect Matches (Phase 2 & 3 Reconciled)</h3>
                         <span id="badge-match-count" class="bg-emerald-500 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
@@ -207,20 +219,6 @@
                             </tr>
                         </thead>
                         <tbody id="table-sd-match" class="divide-y divide-emerald-50 text-xs"></tbody>
-                    </table>
-                </div>
-
-                    <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-white border-b border-amber-100 text-[10px] uppercase text-amber-500 font-black tracking-widest">
-                            <tr>
-                                <th class="p-4">Date & Time</th>
-                                <th class="p-4">Target Merchant</th>
-                                <th class="p-4">Runner (Personnel)</th>
-                                <th class="p-4 text-center">Anomaly Status</th>
-                                <th class="p-4">System Remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-sd-mismatch" class="divide-y divide-amber-50 text-xs"></tbody>
                     </table>
                 </div>
 
@@ -268,11 +266,11 @@
                     </select>
 
                     <div class="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-    <button onclick="changeLogPage(-1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-r border-slate-200 disabled:opacity-30" id="btn-log-prev"><i class="fa-solid fa-chevron-left"></i></button>
-    <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">Page <span id="log-page-display">1</span></div>
-    <button onclick="changeLogPage(1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-l border-slate-200 disabled:opacity-30" id="btn-log-next"><i class="fa-solid fa-chevron-right"></i></button>
-</div>
-<button onclick="fetchLogs(true)" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button onclick="changeLogPage(-1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-r border-slate-200 disabled:opacity-30" id="btn-log-prev"><i class="fa-solid fa-chevron-left"></i></button>
+                        <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">Page <span id="log-page-display">1</span></div>
+                        <button onclick="changeLogPage(1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-l border-slate-200 disabled:opacity-30" id="btn-log-next"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <button onclick="fetchLogs(true)" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
@@ -884,10 +882,11 @@
         );
 
         let globalLogs = [], globalAreas = [], globalRunners = [], globalSDRs = [], globalBusinesses = [], globalKitTypes = [], globalKits = [], globalUsers = [], globalAdminLogs = [];
-        let globalKitLocations = {}; // <-- VARIABEL BARU UNTUK FIX LOKASI
-// State untuk pagination
-let logPage = 0;
-const logPageSize = 20;
+        let globalKitLocations = {}; 
+        
+        // State untuk pagination
+        let logPage = 0;
+        const logPageSize = 20;
 
         function getAdminArea() {
             const admin = JSON.parse(localStorage.getItem('admin_user'));
@@ -983,6 +982,7 @@ const logPageSize = 20;
             
             await fetchAreas(); 
             switchTab('dashboard');
+            enableRealtimeSync(); // DIPINDAHKAN KE SINI (Aman dari race condition)
         }
 
         function switchTab(tab) {
@@ -1039,54 +1039,50 @@ const logPageSize = 20;
             }
         }
 
-async function fetchLogs(force = false) {
-    // Jika tidak force, dan data sudah ada di halaman ini, render saja
-    if (!force && globalLogs.length > 0) return renderLogs();
+        async function fetchLogs(force = false) {
+            if (!force && globalLogs.length > 0) return renderLogs();
 
-    const from = logPage * logPageSize;
-    const to = from + logPageSize - 1;
+            const from = logPage * logPageSize;
+            const to = from + logPageSize - 1;
 
-    let q = db.from('transactions').select('*', { count: 'exact' });
-    
-    const adminArea = getAdminArea();
-    if (adminArea !== 'All') q = q.eq('area', adminArea);
+            let q = db.from('transactions').select('*', { count: 'exact' });
+            
+            const adminArea = getAdminArea();
+            if (adminArea !== 'All') q = q.eq('area', adminArea);
 
-    // Filter UI jika ada (Realtime server-side filtering)
-    const fPhase = document.getElementById('filter-logs-phase')?.value;
-    const fBiz = document.getElementById('filter-logs-business')?.value;
-    if(fPhase) q = q.eq('phase', fPhase);
-    if(fBiz) q = q.eq('business_name', fBiz);
+            const fPhase = document.getElementById('filter-logs-phase')?.value;
+            const fBiz = document.getElementById('filter-logs-business')?.value;
+            if(fPhase) q = q.eq('phase', fPhase);
+            if(fBiz) q = q.eq('business_name', fBiz);
 
-    // Ambil hanya rentang tertentu (Server-side Pagination)
-    const { data, count, error } = await q
-        .order('created_at', { ascending: false })
-        .range(from, to);
+            const { data, count, error } = await q
+                .order('created_at', { ascending: false })
+                .range(from, to);
 
-    if (error) {
-        console.error("Gagal tarik logs:", error.message);
-        return;
-    }
+            if (error) {
+                console.error("Gagal tarik logs:", error.message);
+                return;
+            }
 
-    if (data) {
-        globalLogs = data;
-        document.getElementById('log-page-display').innerText = logPage + 1;
-        
-        // Atur tombol disable jika sudah di ujung data
-        document.getElementById('btn-log-prev').disabled = (logPage === 0);
-        document.getElementById('btn-log-next').disabled = (to >= count - 1);
+            if (data) {
+                globalLogs = data;
+                document.getElementById('log-page-display').innerText = logPage + 1;
+                
+                // FIXED PAGINATION (count || 0)
+                document.getElementById('btn-log-prev').disabled = (logPage === 0);
+                document.getElementById('btn-log-next').disabled = (to >= (count || 0) - 1);
 
-        renderLogs();
-        if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
-        if(!document.getElementById('view-dashboard').classList.contains('hidden-view')) renderDashboard();
-    }
-}
+                renderLogs();
+                if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
+                if(!document.getElementById('view-dashboard').classList.contains('hidden-view')) renderDashboard();
+            }
+        }
 
-// Fungsi Navigasi Halaman
-function changeLogPage(step) {
-    logPage += step;
-    if (logPage < 0) logPage = 0;
-    fetchLogs(true);
-}
+        function changeLogPage(step) {
+            logPage += step;
+            if (logPage < 0) logPage = 0;
+            fetchLogs(true);
+        }
 
         async function fetchAreas(force = false) { 
             if (!force && globalAreas.length > 0) return renderAreas(); 
@@ -1145,17 +1141,13 @@ function changeLogPage(step) {
             
             if (data) { 
                 globalKits = data; 
+                
+                await fetchKitLocations(); 
+                await fetchLogs(true);     
+                
                 renderKits(); 
-                
-                // 1. Tarik pemetaan lokasi yang akurat dulu
-                await fetchKitLocations();
-                
-                // 2. BARU render tabel bisnis/merchant karena data lokasi sudah siap
-                if (globalBusinesses.length > 0) renderBusinesses();
-                
-                // 3. Tarik logs paginasi untuk tabel activity logs
-                await fetchLogs(true); 
-            } 
+                if (globalBusinesses.length > 0) renderBusinesses(); 
+            }
         }
 
         async function fetchUsers(force = false) { 
@@ -1186,9 +1178,9 @@ function changeLogPage(step) {
         }
 
         function renderLogs() {
-    const s = document.getElementById('search-logs').value.toLowerCase();
-    // Jika user mencari sesuatu, kita ingatkan bahwa ini hanya mencari di halaman aktif
-    // Atau opsional: reset page ke 0 jika ingin search global (tapi butuh query server lagi)            const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : ''; 
+            const s = document.getElementById('search-logs').value.toLowerCase();
+            // FIXED JAVASCRIPT COMMENT ERROR
+            const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : ''; 
             const fPhase = document.getElementById('filter-logs-phase') ? document.getElementById('filter-logs-phase').value : '';
             const fBiz = document.getElementById('filter-logs-business') ? document.getElementById('filter-logs-business').value : '';
 
@@ -1390,7 +1382,6 @@ function changeLogPage(step) {
             `).join(''); 
         }
 
-        // FUNGSI BARU: Tarik data lokasi langsung secara penuh tanpa pagination
         async function fetchKitLocations() {
             const { data, error } = await db.from('transactions')
                 .select('kit_id, business_name, phase, created_at')
@@ -1411,7 +1402,6 @@ function changeLogPage(step) {
             }
         }
 
-        // FUNGSI GET LOKASI YANG SUDAH DIPERBAIKI (Cepat & Akurat)
         function getKitLocation(kitId) {
             return globalKitLocations[kitId] || { loc: 'Warehouse', isOffice: true };
         }
@@ -1458,52 +1448,40 @@ function changeLogPage(step) {
                 </tr>`;
             }).join('');
             
-            // Panggil render mismatch tiap kali render kits selesai
             renderKitMismatches();
         }
 
-        // --- NEW: LOGIKA PENGECEKAN MISMATCH KIT ---
         function renderKitMismatches() {
-            // Kita cari log transaksi Phase 4
             const phase4Logs = globalLogs.filter(l => l.phase === 'Phase 4' && l.kit_id);
             let auditList = [];
 
             phase4Logs.forEach(p4 => {
-                // Cari Phase 1 sebelumnya untuk Kit ID yang sama
                 const p1 = globalLogs.find(l => l.phase === 'Phase 1' && l.kit_id === p4.kit_id && new Date(l.created_at) < new Date(p4.created_at));
                 
                 if (p1) {
-                    // Asumsi: Checklist item disimpan dalam string (misal dipisah koma) 
-                    // di tabel transaksi. Jika mobile app save di field "checked_items", ganti nama field di bawah ini.
-                    // Jika tidak ada di transaksi P1, kita ambil standard list dari "master_kit_types" (Recipe).
-                    
                     let p1ChecklistStr = p1.checked_items || p1.missing_or_issue || ""; 
                     const recipe = globalKitTypes.find(t => t.type_name === p4.kit_type);
                     
                     if (!p1ChecklistStr || p1ChecklistStr.trim() === "") {
-                        p1ChecklistStr = recipe ? recipe.checklist_items : "";
+                        p1ChecklistStr = recipe ? (recipe.checklist_items || "") : "";
                     }
 
-                    // Checklist dari Phase 4
                     const p4ChecklistStr = p4.checked_items || p4.missing_or_issue || "";
 
-                    // Ubah jadi Array, bersihkan spasi, dan jadikan lowercase agar gampang dicompare
-                    const p1Items = p1ChecklistStr.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
-                    const p4Items = p4ChecklistStr.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+                    const p1Items = (p1ChecklistStr || "").split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+                    const p4Items = (p4ChecklistStr || "").split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
 
-                    // Cari barang yang ADA di P1, tapi TIDAK ADA di P4
                     const missingItems = p1Items.filter(item => !p4Items.includes(item));
 
-                    // Tampilkan hanya jika ada selisih/hilang
                     if (missingItems.length > 0) {
                         auditList.push({
                             kitId: p4.kit_id,
                             kitType: p4.kit_type,
                             dateP1: p1.created_at,
                             dateP4: p4.created_at,
-                            p1ItemsOrg: p1ChecklistStr.split(',').map(i => i.trim()).filter(Boolean),
-                            p4ItemsOrg: p4ChecklistStr.split(',').map(i => i.trim()).filter(Boolean),
-                            missingItemsOrg: missingItems // versi raw
+                            p1ItemsOrg: (p1ChecklistStr || "").split(',').map(i => i.trim()).filter(Boolean),
+                            p4ItemsOrg: (p4ChecklistStr || "").split(',').map(i => i.trim()).filter(Boolean),
+                            missingItemsOrg: missingItems
                         });
                     }
                 }
@@ -1515,7 +1493,6 @@ function changeLogPage(step) {
                     const badgeP1 = a.p1ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
                     const badgeP4 = a.p4ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
                     
-                    // Highlight item yang missing dengan warna merah
                     const missingBadges = a.missingItemsOrg.map(i => `<span class="inline-block px-2 py-1 bg-red-100 border border-red-300 rounded text-[10px] font-black uppercase text-red-700 mr-1 mb-1 shadow-sm"><i class="fa-solid fa-xmark mr-1"></i>${i}</span>`).join('');
 
                     return `
@@ -1812,7 +1789,7 @@ function changeLogPage(step) {
 
         function openManualDeployModal() {
             document.getElementById('form-manual-deploy').reset();
-            document.getElementById('deploy-kit-list').innerHTML = ''; // Kosongkan datalist
+            document.getElementById('deploy-kit-list').innerHTML = ''; 
             document.getElementById('deploy-business').innerHTML = `<option value="">-- Select Area First --</option>`;
             toggleDeployBiz(); 
             showModal('modal-manual-deploy');
@@ -1824,7 +1801,7 @@ function changeLogPage(step) {
             const kitList = document.getElementById('deploy-kit-list');
             const bizSelect = document.getElementById('deploy-business');
             
-            kitInput.value = ''; // Reset ketikan user
+            kitInput.value = ''; 
 
             if(!area) {
                 kitList.innerHTML = '';
@@ -1832,7 +1809,6 @@ function changeLogPage(step) {
                 return;
             }
 
-            // Memasukkan daftar Kit ID ke dalam Datalist
             const kits = globalKits.filter(k => k.area_name === area && k.current_status === 'Good');
             kitList.innerHTML = kits.map(k => `<option value="${k.kit_id}">${k.kit_id}</option>`).join('');
 
@@ -1864,18 +1840,15 @@ function changeLogPage(step) {
             const kitMaster = globalKits.find(k => k.kit_id === kitId);
             if(!kitMaster) { alert("Error: Kit ID tidak ditemukan atau ejaan salah!"); return; }
 
-            // Ambil data lokasi alat ini SAAT INI
             const currentLoc = getKitLocation(kitId);
             let payload = [];
 
-            // LOGIKA OTOMATIS: Jika mau dipindah ke Merchant baru (Phase 1), 
-            // TAPI alat saat ini MENGGANTUNG di Merchant lama (bukan di Office/Warehouse)
             if (phase === 'Phase 1' && !currentLoc.isOffice && currentLoc.loc !== biz) {
                 payload.push({
                     area: kitMaster.area_name,
                     phase: 'Phase 4',
                     runner_name: admin.runner_name || 'System Admin',
-                    business_name: currentLoc.loc, // Catat nama Merchant yang LAMA
+                    business_name: currentLoc.loc, 
                     kit_id: kitId,
                     kit_type: kitMaster.kit_type,
                     device_condition: 'Good',
@@ -1883,7 +1856,6 @@ function changeLogPage(step) {
                 });
             }
 
-            // Buat transaksi utama (Tujuan akhirnya)
             payload.push({
                 area: document.getElementById('deploy-area').value,
                 phase: phase,
@@ -1895,7 +1867,6 @@ function changeLogPage(step) {
                 missing_or_issue: 'Manual allocation/override by Admin'
             });
 
-            // Eksekusi semua payload ke Supabase sekaligus
             await db.from('transactions').insert(payload);
             
             await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
@@ -2157,43 +2128,31 @@ function changeLogPage(step) {
                 const isAreaMatch = !filterArea || log.area === filterArea;
                 const isTimeMatch = logTimeStr >= startTime && logTimeStr <= endTime;
 
-                // Cek kecocokan Tanggal, Area, dan Waktu
             if(isDateMatch && isAreaMatch && isTimeMatch) {
                 
-                // 1. Identifikasi tipe alat
                 let isIphone = false;
                 
                 if (log.kit_type) {
                     const recipe = globalKitTypes.find(t => t.type_name === log.kit_type);
-                    // Cek apakah alat ini ditandai sebagai iPhone di Recipe
                     if (recipe && recipe.upload_metric_type === 'iPhone') {
                         isIphone = true;
                     } else if (!recipe) {
-                        // Fallback: Jika tidak ada recipe, cek namanya
                         const kt = log.kit_type.toUpperCase();
                         if(kt.includes('MONO') || kt.includes('IPHONE')) isIphone = true;
                     }
                 }
 
-                // =======================================================
-                // BENTENG KEAMANAN: Paksa data menjadi Angka (Integer) murni!
-                // Jika isinya "No", null, teks kosong, atau false, akan otomatis jadi 0
-                // =======================================================
                 const uploadVal = parseInt(log.sd_uploaded) || 0;
 
-                // 2. LOGIKA MUTLAK iPHONE (Hanya Phase 4 + Upload Yes)
                 if (log.phase === 'Phase 4' && isIphone && uploadVal > 0) {
                     totalIphone += 1;
                 }
 
-                // 3. LOGIKA MUTLAK SD CARD (Blokir semua data iPhone)
                 if (!isIphone) {
                     if (log.phase === 'Phase 3' && uploadVal > 0) {
-                        // Phase 3: Tambah sesuai jumlah yang diketik
                         totalSD += uploadVal;
                     }
                     else if (log.phase === 'Phase 4' && uploadVal > 0) {
-                        // Phase 4 alat standar: Tambah 1 SD
                         totalSD += 1;
                     }
                 }
@@ -2244,13 +2203,10 @@ function changeLogPage(step) {
                     </tr>
                 `;
             }).join('');
-
-            
         }
     
-async function renderSDTracker() {
+        async function renderSDTracker() {
 
-            // TARIK DATA LANGSUNG DARI DATABASE (Tidak terganggu oleh sistem Pagination)
             const { data } = await db.from('transactions')
                 .select('*')
                 .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
@@ -2260,11 +2216,10 @@ async function renderSDTracker() {
             let sdLogs = data || [];
 
             let merchantState = {};
-            let mismatches = [];
-            let overdues = [];
-            let perfectMatches = []; // <-- Variabel baru untuk menampung history hijau
+            let mismatches = [];
+            let overdues = [];
+            let perfectMatches = []; 
 
-            // Process Ledger
             sdLogs.forEach(log => {
                 const biz = log.business_name;
                 if (!biz) return;
@@ -2276,20 +2231,20 @@ async function renderSDTracker() {
                 let state = merchantState[biz];
                 let qty = parseInt(log.sd_qty) || 0;
 
-if (log.phase === 'Phase 2') {
-    if (state.balance > 0) {
-        mismatches.push({
-            date: log.created_at,
-            merchant: biz,
-            runner: state.lastP2Runner || log.runner_name || 'Unknown', // <--- TAMBAHKAN INI
-            type: 'SHORTAGE',
-            variance: state.balance,
-            desc: `${state.balance} SD remaining from previous cycle. (Detected during new Phase 2).`
-        });
-    }
-    state.balance = qty;
-    
-    state.lastP2Date = log.created_at;
+                if (log.phase === 'Phase 2') {
+                    if (state.balance > 0) {
+                        mismatches.push({
+                            date: log.created_at,
+                            merchant: biz,
+                            runner: state.lastP2Runner || log.runner_name || 'Unknown', 
+                            type: 'SHORTAGE',
+                            variance: state.balance,
+                            desc: `${state.balance} SD remaining from previous cycle. (Detected during new Phase 2).`
+                        });
+                    }
+                    state.balance = qty;
+                    
+                    state.lastP2Date = log.created_at;
                     state.lastP2Runner = log.runner_name;
                 } 
                 else if (log.phase === 'Phase 3') {
@@ -2309,7 +2264,6 @@ if (log.phase === 'Phase 2') {
                 }
             });
 
-            // Check Overdue
             const now = new Date();
             Object.entries(merchantState).forEach(([biz, state]) => {
                 if (state.balance > 0 && state.lastP2Date) {
@@ -2320,10 +2274,9 @@ if (log.phase === 'Phase 2') {
                 }
             });
 
-            // --- LOGIKA RADAR (Berdasarkan Filter Tanggal) ---
             const radarDateInput = document.getElementById('filter-radar-date');
             if (!radarDateInput.value) {
-                radarDateInput.value = new Date().toLocaleDateString('en-CA'); // Default ke hari ini
+                radarDateInput.value = new Date().toLocaleDateString('en-CA'); 
             }
             const targetDateStr = radarDateInput.value;
             
@@ -2331,11 +2284,10 @@ if (log.phase === 'Phase 2') {
             let radarState = {};
             
             sdLogs.forEach(log => {
-                // Ambil tanggal dengan zona waktu lokal yang benar
                 const logDateObj = new Date(log.created_at);
                 const logDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
                 
-                if (logDate !== targetDateStr) return; // Tangkap data sesuai tanggal filter
+                if (logDate !== targetDateStr) return; 
                 const biz = log.business_name;
                 if (!radarState[biz]) radarState[biz] = { balance: 0, p2Time: null, runner: null };
 
@@ -2375,32 +2327,24 @@ if (log.phase === 'Phase 2') {
             if (tbodyRadar) tbodyRadar.innerHTML = radarHTML;
             const badgeRadar = document.getElementById('badge-live-radar');
             if (badgeRadar) badgeRadar.innerText = todayPending.length;
-            // -----------------------------------------------------------
 
-// --- FILTER LOGIKA CLEAR ANOMALI ---
             const clearLogs = sdLogs.filter(t => t.phase === 'SYSTEM CLEAR');
-
-            // Hapus dari tabel OVERDUE jika sistem mendeteksi ada jejak penyelesaian
-
 
             overdues = overdues.filter(o => {
                 const isCleared = clearLogs.some(c => c.business_name === o.merchant && c.missing_or_issue === 'OVERDUE');
                 return !isCleared;
             });
 
-            // Hapus dari tabel MISMATCH (Shortage/Surplus) jika sistem mendeteksi ada jejak penyelesaian SETELAH jam kejadian anomali
             mismatches = mismatches.filter(m => {
                 const isCleared = clearLogs.some(c => 
                     c.business_name === m.merchant && 
                     c.missing_or_issue === m.type && 
                     c.sd_qty === m.variance && 
-                    new Date(c.created_at) > new Date(m.date) // Validasi agar hanya menghilangkan error lama yang ditekan tombol Clearnya
+                    new Date(c.created_at) > new Date(m.date) 
                 );
                 return !isCleared;
             });
-            // ------------------------------------
 
-            // Render Overdue (Added Resolve Button)
             const overdueHTML = overdues.length === 0
                 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">All SD Cards returned on time.</td></tr>`
                 : overdues.map(o => {
@@ -2422,7 +2366,6 @@ if (log.phase === 'Phase 2') {
                     </tr>`;
                 }).join('');
 
-            // Render Mismatch (Added Resolve Button)
             mismatches.sort((a, b) => new Date(b.date) - new Date(a.date));
             const mismatchHTML = mismatches.length === 0
                 ? `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">SD Card records are perfect. No discrepancies.</td></tr>`
@@ -2442,9 +2385,9 @@ if (log.phase === 'Phase 2') {
                             <div class="text-[10px] font-bold text-slate-500">${timeStr}</div>
                         </td>
                         <td class="p-4 font-black text-slate-700">${m.merchant}</td>
-<td class="p-4">
-    <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span>
-</td>
+                        <td class="p-4">
+                            <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span>
+                        </td>
                         <td class="p-4 text-center">
                             <span class="text-[11px] font-black px-2 py-1 rounded border shadow-sm ${badgeClass} whitespace-nowrap"><i class="fa-solid ${icon} mr-1"></i> ${m.type} ${m.variance}</span>
                         </td>
@@ -2462,19 +2405,16 @@ if (log.phase === 'Phase 2') {
             if(tbodyMismatch) tbodyMismatch.innerHTML = mismatchHTML;
             document.getElementById('badge-mismatch-count').innerText = mismatches.length;
 
-            // --- NEW: LOGIKA HISTORY SD CARD (P2 -> P3) ---
             let historyList = [];
-            let tempP2 = {}; // Simpan Phase 2 yang belum ada pasangannya
+            let tempP2 = {}; 
 
             sdLogs.forEach(log => {
                 const biz = log.business_name;
                 if (!biz) return;
                 
                 if (log.phase === 'Phase 2') {
-                    // Timpa/simpan Phase 2 terbaru untuk merchant ini
                     tempP2[biz] = log; 
                 } else if (log.phase === 'Phase 3' && tempP2[biz]) {
-                    // Ketemu Phase 3, cocokkan dengan Phase 2 sebelumnya
                     const p2Log = tempP2[biz];
                     const diffMs = new Date(log.created_at) - new Date(p2Log.created_at);
                     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
@@ -2488,11 +2428,10 @@ if (log.phase === 'Phase 2') {
                         qty: log.sd_qty,
                         duration: `${diffHrs} Jam`
                     });
-                    delete tempP2[biz]; // Selesai dipasangkan
+                    delete tempP2[biz]; 
                 }
             });
 
-            // Urutkan history dari yang paling baru selesai
             historyList.sort((a, b) => new Date(b.p3Time) - new Date(a.p3Time));
             
             document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ? 
@@ -2515,20 +2454,18 @@ if (log.phase === 'Phase 2') {
         }
         
         async function resolveLiveRadar(merchant, pendingQty) {
-            // Pop-up dialog untuk konfirmasi upload
             const isUploaded = confirm(`Menyelesaikan status Live Radar untuk ${merchant} (${pendingQty} SD).\n\nAPAKAH SD CARD INI AKAN DI-UPLOAD?\n\nTekan [OK / Yes] = Ya, hitung masuk Dashboard\nTekan [Cancel / No] = Tidak, hitung 0 Upload`);
             
             const admin = JSON.parse(localStorage.getItem('admin_user'));
             const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
 
-            // Simulasikan sebagai Phase 3 agar Live Radar otomatis menganggapnya "Selesai ditarik"
             const payload = {
                 area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
                 phase: 'Phase 3', 
                 runner_name: adminName,
                 business_name: merchant,
                 sd_qty: pendingQty,
-                sd_uploaded: isUploaded ? pendingQty : 0, // Kunci utama: Masuk ke upload atau tidak
+                sd_uploaded: isUploaded ? pendingQty : 0, 
                 device_condition: 'Good',
                 missing_or_issue: 'Manual Clear Radar by Admin'
             };
@@ -2544,95 +2481,79 @@ if (log.phase === 'Phase 2') {
                 await logAdminAction('CLEAR_RADAR', `Admin cleared radar for ${merchant} (${pendingQty} SD) - Uploaded: ${isUploaded ? 'Yes' : 'No'}`);
             }
 
-            // Render ulang tanpa perlu refresh browser
             await renderSDTracker(); 
-            await fetchLogs(true); // Update log halaman utama
-            renderDashboard(); // Update angka di Dashboard Atas
+            await fetchLogs(true); 
+            renderDashboard(); 
         }
 
-        
         async function resolveSD(merchant, type, variance) {
-    const confirmAction = confirm(`Yakin ingin menyembunyikan/clear anomali ini dari sistem?\n\nMerchant: ${merchant}\nTipe: ${type}\nJumlah: ${variance} SD`);
-    
-    if (confirmAction) {
-        const admin = JSON.parse(localStorage.getItem('admin_user'));
-        const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
+            const confirmAction = confirm(`Yakin ingin menyembunyikan/clear anomali ini dari sistem?\n\nMerchant: ${merchant}\nTipe: ${type}\nJumlah: ${variance} SD`);
+            
+            if (confirmAction) {
+                const admin = JSON.parse(localStorage.getItem('admin_user'));
+                const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
 
-        // 1. Buat jejak 'SYSTEM CLEAR' di tabel transactions Anda
-        const payload = {
-            area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
-            phase: 'SYSTEM CLEAR',
-            runner_name: adminName,
-            business_name: merchant,
-            sd_qty: variance, // Jumlah yang di-clear
-            device_condition: 'Good',
-            missing_or_issue: type // Menyimpan tipe anomali (OVERDUE/SHORTAGE/SURPLUS)
-        };
+                const payload = {
+                    area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
+                    phase: 'SYSTEM CLEAR',
+                    runner_name: adminName,
+                    business_name: merchant,
+                    sd_qty: variance, 
+                    device_condition: 'Good',
+                    missing_or_issue: type 
+                };
 
-        const { error } = await db.from('transactions').insert([payload]);
+                const { error } = await db.from('transactions').insert([payload]);
 
-        if (error) {
-            console.error("Gagal menyimpan ke Supabase:", error);
-            alert("Error database: " + error.message);
-            return;
+                if (error) {
+                    console.error("Gagal menyimpan ke Supabase:", error);
+                    alert("Error database: " + error.message);
+                    return;
+                }
+
+                if (typeof logAdminAction === "function") {
+                    await logAdminAction('CLEAR_ANOMALY', `Admin resolved ${type} for ${merchant} (${variance} SD)`);
+                }
+
+                await fetchLogs(true);
+                renderSDTracker(); 
+            }
         }
 
-        // 2. Catat juga di Audit Log (agar bos tahu siapa yang menekan Clear)
-        if (typeof logAdminAction === "function") {
-            await logAdminAction('CLEAR_ANOMALY', `Admin resolved ${type} for ${merchant} (${variance} SD)`);
+        // -----------------------------------------------------
+        // SUPABASE REALTIME SYNC (NO REFRESH REQUIRED)
+        // -----------------------------------------------------
+        let realtimeTimeout = null; 
+
+        function enableRealtimeSync() {
+            db.channel('admin-realtime')
+              .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+                  console.log('⚡ Realtime Triggered:', payload.table, payload.eventType);
+                  
+                  if (realtimeTimeout) clearTimeout(realtimeTimeout);
+                  
+                  realtimeTimeout = setTimeout(async () => {
+                      if (payload.table === 'transactions') {
+                          await fetchLogs(true);
+                          await fetchKitLocations(); 
+                      }
+                      else if (payload.table === 'master_kits') await fetchKits(true);
+                      else if (payload.table === 'master_businesses') await fetchBusinesses(true);
+                      
+                      const activeTab = document.querySelector('aside nav button.bg-blue-600') || document.querySelector('aside nav button.bg-amber-500');
+                      if (activeTab) {
+                          const tabId = activeTab.id.replace('btn-', '');
+                          if(tabId === 'dashboard') renderDashboard();
+                          if(tabId === 'sd_tracker') renderSDTracker();
+                          if(tabId === 'kits') { renderKits(); renderKitMismatches(); }
+                          if(tabId === 'businesses') renderBusinesses(); 
+                      }
+                  }, 1500); 
+              })
+              .subscribe((status) => {
+                  if(status === 'SUBSCRIBED') console.log("⚡ Global Realtime Sync Active.");
+              });
         }
-
-        // 3. Tarik data transaksi terbaru dari server & render ulang tabel
-        await fetchLogs(true);
-        renderSDTracker(); 
-    }
-}
-
-// -----------------------------------------------------
-// SUPABASE REALTIME SYNC (NO REFRESH REQUIRED)
-// -----------------------------------------------------
-let realtimeTimeout = null; // Penahan (Debounce) mencegah spam request
-
-function enableRealtimeSync() {
-    db.channel('admin-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-          console.log('⚡ Realtime Triggered:', payload.table, payload.eventType);
-          
-          // Hapus antrean sebelumnya jika ada perubahan baru masuk bertubi-tubi (mencegah DDoS sendiri)
-          if (realtimeTimeout) clearTimeout(realtimeTimeout);
-          
-          // Tunggu 1.5 detik. Jika tidak ada perubahan lagi, baru tarik data ke server
-          realtimeTimeout = setTimeout(async () => {
-              if (payload.table === 'transactions') {
-                  await fetchLogs(true);
-                  await fetchKitLocations(); // Update lokasi kit secara background
-              }
-              else if (payload.table === 'master_kits') await fetchKits(true);
-              else if (payload.table === 'master_businesses') await fetchBusinesses(true);
-              
-              // Re-render UI yang sedang aktif
-              const activeTab = document.querySelector('aside nav button.bg-blue-600') || document.querySelector('aside nav button.bg-amber-500');
-              if (activeTab) {
-                  const tabId = activeTab.id.replace('btn-', '');
-                  if(tabId === 'dashboard') renderDashboard();
-                  if(tabId === 'sd_tracker') renderSDTracker();
-                  if(tabId === 'kits') { renderKits(); renderKitMismatches(); }
-                  if(tabId === 'businesses') renderBusinesses(); // Tambahan: Refresh tabel merchant!
-              }
-          }, 1500); 
-      })
-      .subscribe((status) => {
-          if(status === 'SUBSCRIBED') console.log("⚡ Global Realtime Sync Active.");
-      });
-}
-
-// Aktifkan Realtime otomatis saat admin selesai login dan inisialisasi aplikasi
-const originalInitApp = initApp;
-initApp = async function() {
-    await originalInitApp();
-    enableRealtimeSync();
-};
-</script>
-
+    </script>
 </body>
 </html>
