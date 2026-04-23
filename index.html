@@ -2274,7 +2274,7 @@ async function renderSDTracker() {
                     historyList.push({
                         merchant: biz, p2Time: state.lastP2Time, p2Runner: state.p2Runner,
                         p3Time: state.lastP3Time, p3Runner: state.p3Runner, qty: state.p3Qty,
-                        duration: `${diffHrs} Jam`
+                        duration: `${diffHrs} Hours`
                     });
                 }
 
@@ -2287,14 +2287,14 @@ async function renderSDTracker() {
                     if (state.p3Qty > 0) {
                         mismatchList.push({
                             date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SHORTAGE', variance: diff,
-                            desc: `Target drop ${state.p2Qty} SD, tapi Phase 3 baru pick up ${state.p3Qty} SD. Selisih ${diff} SD.`
+                            desc: `Target drop ${state.p2Qty} SD, but Phase 3 only picked up ${state.p3Qty} SD. Missing ${diff} SD.`
                         });
                     }
                 } else if (diff < 0) {
                     // 3. Ambil Phase 3 lebih banyak dari drop Phase 2 hari ini -> Mismatch Surplus
                     mismatchList.push({
                         date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SURPLUS', variance: Math.abs(diff),
-                        desc: `Phase 3 pick up ${state.p3Qty} SD, padahal catatan drop hari ini hanya ${state.p2Qty} SD.`
+                        desc: `Phase 3 picked up ${state.p3Qty} SD, but today's drop record is only ${state.p2Qty} SD.`
                     });
                 } else if (diff === 0 && state.p2Qty > 0) {
                     // 4. Target Terpenuhi (Phase 2 = Phase 3) -> Perfect Match!
@@ -2345,7 +2345,7 @@ async function renderSDTracker() {
             const tbodyRadar = document.getElementById('table-live-radar');
             if (tbodyRadar) {
                 tbodyRadar.innerHTML = radarList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>Aman! Semua target drop hari ini sudah di-pickup.</td></tr>`
+                    ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>All clear! All targets today have been picked up.</td></tr>`
                     : radarList.map(p => `
                         <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
                             <td class="p-4 font-black text-slate-800">${p.merchant}</td>
@@ -2353,7 +2353,7 @@ async function renderSDTracker() {
                             <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
                             <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
                             <td class="p-4 text-right">
-                                <span class="font-black text-amber-500 animate-pulse mr-2"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending 1</span>
+                                <span class="font-black text-amber-500 animate-pulse mr-2"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
                             </td>
                         </tr>
                     `).join('');
@@ -2366,7 +2366,7 @@ async function renderSDTracker() {
             const tbodyMismatch = document.getElementById('table-sd-mismatch');
             if(tbodyMismatch) {
                 tbodyMismatch.innerHTML = mismatchList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Siklus harian sempurna. Tidak ada selisih Phase 2 vs Phase 3.</td></tr>`
+                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Perfect daily cycle. No discrepancies between Phase 2 and Phase 3.</td></tr>`
                     : mismatchList.map(m => {
                         const timeStr = new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
                         const isShort = m.type === 'SHORTAGE';
@@ -2381,7 +2381,12 @@ async function renderSDTracker() {
                             <td class="p-4 font-black text-slate-700">${m.merchant}</td>
                             <td class="p-4"><span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span></td>
                             <td class="p-4 text-center"><span class="text-[11px] font-black px-2 py-1 rounded border shadow-sm ${badgeClass} whitespace-nowrap"><i class="fa-solid ${icon} mr-1"></i> ${m.type} ${m.variance}</span></td>
-                            <td class="p-4 text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</td>
+                            <td class="p-4">
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</span>
+                                    <button onclick="resolveSD('${m.merchant}', '${m.type}', ${m.variance})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                                </div>
+                            </td>
                         </tr>`;
                     }).join('');
             }
@@ -2392,7 +2397,7 @@ async function renderSDTracker() {
             const tbodyMatch = document.getElementById('table-sd-match');
             if(tbodyMatch) {
                 tbodyMatch.innerHTML = perfectMatchList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Belum ada cycle Phase 2 & Phase 3 yang clear 100% hari ini.</td></tr>`
+                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No 100% reconciled cycles yet today.</td></tr>`
                     : perfectMatchList.map(m => `
                         <tr class="hover:bg-emerald-50/30 transition border-b border-emerald-50">
                             <td class="p-4 font-black text-slate-800">${targetDateStr} <span class="text-[10px] font-bold text-slate-500 block">${new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</span></td>
@@ -2407,7 +2412,7 @@ async function renderSDTracker() {
 
             // 4. History P2->P3
             document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ? 
-                `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Belum ada history penukaran harian.</td></tr>` : 
+                `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` : 
                 historyList.map(h => `
                 <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
                     <td class="p-4 font-black text-slate-800">${h.merchant}</td>
@@ -2426,11 +2431,11 @@ async function renderSDTracker() {
 
             // 5. Overdue (Cek 24 jam kebelakang)
             const overdueHTML = overdues.length === 0
-                ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Aman! Tidak ada SD Card yang nginap lebih dari 24 jam.</td></tr>`
+                ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">All clear! No SD Cards pending over 24 hours.</td></tr>`
                 : overdues.map(o => {
                     const days = Math.floor(o.hoursOverdue / 24);
                     const hrs = Math.floor(o.hoursOverdue % 24);
-                    const timeStr = days > 0 ? `${days} Hari ${hrs} Jam` : `${hrs} Jam`;
+                    const timeStr = days > 0 ? `${days} Days ${hrs} Hrs` : `${hrs} Hrs`;
                     const dateStr = new Date(o.dateSent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
                     return `
                     <tr class="hover:bg-red-50/50 transition border-b border-red-50">
@@ -2438,7 +2443,12 @@ async function renderSDTracker() {
                         <td class="p-4 font-bold text-slate-500">${dateStr}</td>
                         <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner}</td>
                         <td class="p-4 text-center font-black text-red-600 bg-red-50/50">${o.qty} SD</td>
-                        <td class="p-4 text-right font-black text-red-600">${timeStr}</td>
+                        <td class="p-4">
+                            <div class="flex items-center justify-end gap-3">
+                                <span class="font-black text-red-600">${timeStr}</span>
+                                <button onclick="resolveSD('${o.merchant}', 'OVERDUE', ${o.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                            </div>
+                        </td>
                     </tr>`;
                 }).join('');
             document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
@@ -2479,7 +2489,7 @@ async function renderSDTracker() {
         }
 
         async function resolveSD(merchant, type, variance) {
-            const confirmAction = confirm(`Yakin ingin menyembunyikan/clear anomali ini dari sistem?\n\nMerchant: ${merchant}\nTipe: ${type}\nJumlah: ${variance} SD`);
+            const confirmAction = confirm(`Are you sure you want to clear this anomaly from the system?\n\nMerchant: ${merchant}\nType: ${type}\nQuantity: ${variance} SD`);
             
             if (confirmAction) {
                 const admin = JSON.parse(localStorage.getItem('admin_user'));
