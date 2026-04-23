@@ -2100,7 +2100,7 @@
             renderDashboard();
         }
 
-        function renderDashboard() {
+async function renderDashboard() {
             const dateInput = document.getElementById('dash-date-filter');
             if(!dateInput.value) {
                 const today = new Date();
@@ -2115,55 +2115,60 @@
             const startTime = document.getElementById('dash-start-time').value; 
             const endTime = document.getElementById('dash-end-time').value;
 
+            // 1. STATS UPLOAD: Query langsung ke DB agar tidak terpotong paginasi 20 baris
+            let q = db.from('transactions')
+                .select('phase, sd_uploaded, kit_type, created_at, area')
+                .gte('created_at', `${filterDate}T00:00:00`)
+                .lte('created_at', `${filterDate}T23:59:59`);
+
+            if (filterArea && filterArea !== 'All') {
+                q = q.eq('area', filterArea);
+            }
+
+            const { data: dashLogs } = await q;
+
             let totalSD = 0;
             let totalIphone = 0;
 
-            globalLogs.forEach(log => {
-                const logDateObj = new Date(log.created_at);
-                const logLocalFormat = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
-                
-                const logTimeStr = logDateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            if (dashLogs) {
+                dashLogs.forEach(log => {
+                    const logTimeStr = new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                    
+                    if(logTimeStr >= startTime && logTimeStr <= endTime) {
+                        let isIphone = false;
+                        
+                        if (log.kit_type) {
+                            const recipe = globalKitTypes.find(t => t.type_name === log.kit_type);
+                            if (recipe && recipe.upload_metric_type === 'iPhone') {
+                                isIphone = true;
+                            } else if (!recipe) {
+                                const kt = log.kit_type.toUpperCase();
+                                if(kt.includes('MONO') || kt.includes('IPHONE')) isIphone = true;
+                            }
+                        }
 
-                const isDateMatch = logLocalFormat === filterDate;
-                const isAreaMatch = !filterArea || log.area === filterArea;
-                const isTimeMatch = logTimeStr >= startTime && logTimeStr <= endTime;
+                        const uploadVal = parseInt(log.sd_uploaded) || 0;
 
-            if(isDateMatch && isAreaMatch && isTimeMatch) {
-                
-                let isIphone = false;
-                
-                if (log.kit_type) {
-                    const recipe = globalKitTypes.find(t => t.type_name === log.kit_type);
-                    if (recipe && recipe.upload_metric_type === 'iPhone') {
-                        isIphone = true;
-                    } else if (!recipe) {
-                        const kt = log.kit_type.toUpperCase();
-                        if(kt.includes('MONO') || kt.includes('IPHONE')) isIphone = true;
+                        if (log.phase === 'Phase 4' && isIphone && uploadVal > 0) {
+                            totalIphone += 1;
+                        }
+
+                        if (!isIphone) {
+                            if (log.phase === 'Phase 3' && uploadVal > 0) {
+                                totalSD += uploadVal;
+                            }
+                            else if (log.phase === 'Phase 4' && uploadVal > 0) {
+                                totalSD += 1;
+                            }
+                        }
                     }
-                }
-
-                const uploadVal = parseInt(log.sd_uploaded) || 0;
-
-                if (log.phase === 'Phase 4' && isIphone && uploadVal > 0) {
-                    totalIphone += 1;
-                }
-
-                if (!isIphone) {
-                    if (log.phase === 'Phase 3' && uploadVal > 0) {
-                        totalSD += uploadVal;
-                    }
-                    else if (log.phase === 'Phase 4' && uploadVal > 0) {
-                        totalSD += 1;
-                    }
-                }
+                });
             }
-
-            });
 
             document.getElementById('stat-sd-today').innerText = totalSD;
             document.getElementById('stat-iphone-today').innerText = totalIphone;
 
-            
+            // 2. KITS BREAKDOWN: Baca dari getKitLocation (mengambil semua pergerakan tanpa paginasi)
             const tbody = document.getElementById('table-dash-kits');
             tbody.innerHTML = globalKitTypes.map(type => {
                 const kitsOfType = globalKits.filter(k => k.kit_type === type.type_name);
@@ -2173,23 +2178,12 @@
                     if(kit.current_status === 'Damaged') {
                         damaged++; 
                     } else {
-                        const history = globalLogs.filter(l => {
-                            const logDateObj = new Date(l.created_at);
-                            const y = logDateObj.getFullYear();
-                            const m = String(logDateObj.getMonth() + 1).padStart(2, '0');
-                            const d = String(logDateObj.getDate()).padStart(2, '0');
-                            const logLocalFormat = `${y}-${m}-${d}`;
-                            
-                            return l.kit_id === kit.kit_id && logLocalFormat <= filterDate;
-                        });
-
-                        let isOffice = true;
-                        if(history.length > 0) {
-                            if(history[0].phase !== 'Phase 4') isOffice = false;
+                        const locData = getKitLocation(kit.kit_id);
+                        if(locData.isOffice) {
+                            inOffice++;
+                        } else {
+                            atBusiness++;
                         }
-
-                        if(isOffice) inOffice++;
-                        else atBusiness++;
                     }
                 });
 
@@ -2204,7 +2198,8 @@
                 `;
             }).join('');
         }
-    
+        
+        
         async function renderSDTracker() {
 
             const { data } = await db.from('transactions')
