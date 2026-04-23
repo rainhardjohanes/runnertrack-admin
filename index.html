@@ -2227,17 +2227,25 @@ async function renderDashboard() {
                 let qty = parseInt(log.sd_qty) || 0;
 
                 if (log.phase === 'Phase 2') {
-                    if (state.balance > 0) {
-                        mismatches.push({
-                            date: log.created_at,
-                            merchant: biz,
-                            runner: state.lastP2Runner || log.runner_name || 'Unknown', 
-                            type: 'SHORTAGE',
-                            variance: state.balance,
-                            desc: `${state.balance} SD remaining from previous cycle. (Detected during new Phase 2).`
-                        });
+                    // CEK SIKLUS BARU: Hanya anggap shortage jika jarak Phase 2 sebelumnya > 12 jam
+                    if (state.balance > 0 && state.lastP2Date) {
+                        const hoursSinceLastP2 = (new Date(log.created_at) - new Date(state.lastP2Date)) / (1000 * 60 * 60);
+                        
+                        if (hoursSinceLastP2 > 12) {
+                            mismatches.push({
+                                date: log.created_at,
+                                merchant: biz,
+                                runner: state.lastP2Runner || log.runner_name || 'Unknown', 
+                                type: 'SHORTAGE',
+                                variance: state.balance,
+                                desc: `${state.balance} SD remaining from previous cycle. (Detected during new Phase 2).`
+                            });
+                            state.balance = 0; // Reset balance dari cycle lama
+                        }
                     }
-                    state.balance = qty;
+                    
+                    // PERBAIKAN: Ditambah (+=) bukan ditimpa (=), untuk support banyak kamera di 1 merchant
+                    state.balance += qty; 
                     
                     state.lastP2Date = log.created_at;
                     state.lastP2Runner = log.runner_name;
