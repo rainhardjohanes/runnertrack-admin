@@ -2200,260 +2200,249 @@ async function renderDashboard() {
         }
         
         
-        async function renderSDTracker() {
+async function renderSDTracker() {
+            // 1. Ambil tanggal dari filter. Jika kosong, gunakan hari ini.
+            const radarDateInput = document.getElementById('filter-radar-date');
+            if (!radarDateInput.value) {
+                const today = new Date();
+                radarDateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+            }
+            const targetDateStr = radarDateInput.value;
 
+            // Ambil data transaksi dari database
             const { data } = await db.from('transactions')
                 .select('*')
                 .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-                .gte('created_at', '2026-04-15T00:00:00')
                 .order('created_at', { ascending: true });
 
-            let sdLogs = data || [];
+            let allLogs = data || [];
 
-            let merchantState = {};
-            let mismatches = [];
-            let overdues = [];
-            let perfectMatches = []; 
+            // --- A. LOGIKA SIKLUS HARIAN (Radar, Mismatch, Perfect Match) ---
+            let dailyState = {};
+            let systemClears = [];
 
-            sdLogs.forEach(log => {
-                const biz = log.business_name;
-                if (!biz) return;
-
-                if (!merchantState[biz]) {
-                    merchantState[biz] = { balance: 0, lastP2Date: null, lastP2Runner: null };
-                }
-
-                let state = merchantState[biz];
-                let qty = parseInt(log.sd_qty) || 0;
-
-                if (log.phase === 'Phase 2') {
-                    // CEK SIKLUS BARU: Hanya anggap shortage jika jarak Phase 2 sebelumnya > 12 jam
-                    if (state.balance > 0 && state.lastP2Date) {
-                        const hoursSinceLastP2 = (new Date(log.created_at) - new Date(state.lastP2Date)) / (1000 * 60 * 60);
-                        
-                        if (hoursSinceLastP2 > 12) {
-                            mismatches.push({
-                                date: log.created_at,
-                                merchant: biz,
-                                runner: state.lastP2Runner || log.runner_name || 'Unknown', 
-                                type: 'SHORTAGE',
-                                variance: state.balance,
-                                desc: `${state.balance} SD remaining from previous cycle. (Detected during new Phase 2).`
-                            });
-                            state.balance = 0; // Reset balance dari cycle lama
-                        }
-                    }
-                    
-                    // PERBAIKAN: Ditambah (+=) bukan ditimpa (=), untuk support banyak kamera di 1 merchant
-                    state.balance += qty; 
-                    
-                    state.lastP2Date = log.created_at;
-                    state.lastP2Runner = log.runner_name;
-                } 
-                else if (log.phase === 'Phase 3') {
-                    state.balance -= qty;
-                    if (state.balance < 0) {
-                        let lebihQty = Math.abs(state.balance);
-                        mismatches.push({
-                            date: log.created_at,
-                            merchant: biz,
-                            runner: log.runner_name,
-                            type: 'SURPLUS',
-                            variance: lebihQty,
-                            desc: `Runner withdrew ${qty} SD, but system records only showed ${qty - lebihQty} SD left.`
-                        });
-                        state.balance = 0; 
-                    }
-                }
-            });
-
-            const now = new Date();
-            Object.entries(merchantState).forEach(([biz, state]) => {
-                if (state.balance > 0 && state.lastP2Date) {
-                    const diffHours = (now - new Date(state.lastP2Date)) / (1000 * 60 * 60);
-                    if (diffHours >= 24) {
-                        overdues.push({ merchant: biz, runner: state.lastP2Runner, dateSent: state.lastP2Date, qty: state.balance, hoursOverdue: diffHours });
-                    }
-                }
-            });
-
-            const radarDateInput = document.getElementById('filter-radar-date');
-            if (!radarDateInput.value) {
-                radarDateInput.value = new Date().toLocaleDateString('en-CA'); 
-            }
-            const targetDateStr = radarDateInput.value;
-            
-            let todayPending = [];
-            let radarState = {};
-            
-            sdLogs.forEach(log => {
+            // Filter log HANYA untuk tanggal yang dipilih di filter
+            allLogs.forEach(log => {
                 const logDateObj = new Date(log.created_at);
                 const logDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
                 
-                if (logDate !== targetDateStr) return; 
-                const biz = log.business_name;
-                if (!radarState[biz]) radarState[biz] = { balance: 0, p2Time: null, runner: null };
+                if (logDate === targetDateStr) {
+                    const biz = log.business_name;
+                    if (!biz) return;
 
-                const qty = parseInt(log.sd_qty) || 0;
-                if (log.phase === 'Phase 2') {
-                    radarState[biz].balance += qty;
-                    radarState[biz].p2Time = log.created_at;
-                    radarState[biz].runner = log.runner_name;
-                } else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
-                    radarState[biz].balance -= qty;
-                    if (radarState[biz].balance < 0) radarState[biz].balance = 0;
+                    if (log.phase === 'SYSTEM CLEAR') {
+                        systemClears.push(log);
+                        return;
+                    }
+
+                    if (!dailyState[biz]) {
+                        dailyState[biz] = { 
+                            p2Qty: 0, p3Qty: 0, 
+                            p2Runner: null, p3Runner: null, 
+                            lastP2Time: null, lastP3Time: null 
+                        };
+                    }
+
+                    let qty = parseInt(log.sd_qty) || 0;
+                    if (log.phase === 'Phase 2') {
+                        dailyState[biz].p2Qty += qty;  // Tambah Target
+                        dailyState[biz].p2Runner = log.runner_name;
+                        dailyState[biz].lastP2Time = log.created_at;
+                    } else if (log.phase === 'Phase 3') {
+                        dailyState[biz].p3Qty += qty;  // Tambah Realisasi Pick Up
+                        dailyState[biz].p3Runner = log.runner_name;
+                        dailyState[biz].lastP3Time = log.created_at;
+                    }
                 }
             });
 
-            Object.entries(radarState).forEach(([biz, state]) => {
-                if (state.balance > 0) {
-                    todayPending.push({ merchant: biz, runner: state.runner, qty: state.balance, time: state.p2Time });
-                }
-            });
+            let radarList = [];
+            let mismatchList = [];
+            let perfectMatchList = [];
+            let historyList = []; 
 
-            const radarHTML = todayPending.length === 0
-                ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>Semua lokasi hari ini terpantau aman (Sudah ditarik Phase 3).</td></tr>`
-                : todayPending.map(p => `
-                    <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
-                        <td class="p-4 font-black text-slate-800">${p.merchant}</td>
-                        <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
-                        <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner}</td>
-                        <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
-                        <td class="p-4 text-right">
-                            <span class="font-black text-amber-500 animate-pulse mr-2"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
-                            <button onclick="resolveLiveRadar('${p.merchant}', ${p.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                        </td>
-                    </tr>
-                `).join('');
-                
-            const tbodyRadar = document.getElementById('table-live-radar');
-            if (tbodyRadar) tbodyRadar.innerHTML = radarHTML;
-            const badgeRadar = document.getElementById('badge-live-radar');
-            if (badgeRadar) badgeRadar.innerText = todayPending.length;
+            Object.entries(dailyState).forEach(([biz, state]) => {
+                const diff = state.p2Qty - state.p3Qty; // Sisa Target
+                const isCleared = systemClears.some(c => c.business_name === biz);
 
-            const clearLogs = sdLogs.filter(t => t.phase === 'SYSTEM CLEAR');
+                if (isCleared) return; // Jika sudah di-clear manual oleh admin hari itu
 
-            overdues = overdues.filter(o => {
-                const isCleared = clearLogs.some(c => c.business_name === o.merchant && c.missing_or_issue === 'OVERDUE');
-                return !isCleared;
-            });
-
-            mismatches = mismatches.filter(m => {
-                const isCleared = clearLogs.some(c => 
-                    c.business_name === m.merchant && 
-                    c.missing_or_issue === m.type && 
-                    c.sd_qty === m.variance && 
-                    new Date(c.created_at) > new Date(m.date) 
-                );
-                return !isCleared;
-            });
-
-            const overdueHTML = overdues.length === 0
-                ? `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">All SD Cards returned on time.</td></tr>`
-                : overdues.map(o => {
-                    const days = Math.floor(o.hoursOverdue / 24);
-                    const hrs = Math.floor(o.hoursOverdue % 24);
-                    const timeStr = days > 0 ? `${days} Days ${hrs} Hours` : `${hrs} Hours`;
-                    const dateStr = new Date(o.dateSent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
-                    
-                    return `
-                    <tr class="hover:bg-red-50/50 transition">
-                        <td class="p-4 font-black text-slate-800">${o.merchant}</td>
-                        <td class="p-4 font-bold text-slate-500">${dateStr}</td>
-                        <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner}</td>
-                        <td class="p-4 text-center font-black text-red-600 bg-red-50/50">${o.qty} SD</td>
-                        <td class="p-4 text-right font-black text-red-600">${timeStr}</td>
-                        <td class="p-4 text-right">
-                            <button onclick="resolveSD('${o.merchant}', 'OVERDUE', ${o.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                        </td>
-                    </tr>`;
-                }).join('');
-
-            mismatches.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const mismatchHTML = mismatches.length === 0
-                ? `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">SD Card records are perfect. No discrepancies.</td></tr>`
-                : mismatches.map(m => {
-                    const dateObj = new Date(m.date);
-                    const dateStr = dateObj.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
-                    const timeStr = dateObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-                    
-                    const isShort = m.type === 'SHORTAGE';
-                    const badgeClass = isShort ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200';
-                    const icon = isShort ? 'fa-arrow-down' : 'fa-arrow-up';
-
-                    return `
-                    <tr class="hover:bg-amber-50/50 transition border-b border-slate-100">
-                        <td class="p-4">
-                            <div class="font-black text-slate-800">${dateStr}</div>
-                            <div class="text-[10px] font-bold text-slate-500">${timeStr}</div>
-                        </td>
-                        <td class="p-4 font-black text-slate-700">${m.merchant}</td>
-                        <td class="p-4">
-                            <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span>
-                        </td>
-                        <td class="p-4 text-center">
-                            <span class="text-[11px] font-black px-2 py-1 rounded border shadow-sm ${badgeClass} whitespace-nowrap"><i class="fa-solid ${icon} mr-1"></i> ${m.type} ${m.variance}</span>
-                        </td>
-                        <td class="p-4 text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</td>
-                        <td class="p-4 text-right">
-                            <button onclick="resolveSD('${m.merchant}', '${m.type}', ${m.variance})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                        </td>
-                    </tr>`;
-                }).join('');
-
-            document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
-            document.getElementById('badge-overdue-count').innerText = overdues.length;
-            
-            const tbodyMismatch = document.getElementById('table-sd-mismatch');
-            if(tbodyMismatch) tbodyMismatch.innerHTML = mismatchHTML;
-            document.getElementById('badge-mismatch-count').innerText = mismatches.length;
-
-            let historyList = [];
-            let tempP2 = {}; 
-
-            sdLogs.forEach(log => {
-                const biz = log.business_name;
-                if (!biz) return;
-                
-                if (log.phase === 'Phase 2') {
-                    tempP2[biz] = log; 
-                } else if (log.phase === 'Phase 3' && tempP2[biz]) {
-                    const p2Log = tempP2[biz];
-                    const diffMs = new Date(log.created_at) - new Date(p2Log.created_at);
-                    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-                    
+                // Hitung History Penukaran
+                if (state.p2Qty > 0 && state.p3Qty > 0) {
+                    const diffMs = new Date(state.lastP3Time) - new Date(state.lastP2Time);
+                    const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
                     historyList.push({
-                        merchant: biz,
-                        p2Time: p2Log.created_at,
-                        p2Runner: p2Log.runner_name,
-                        p3Time: log.created_at,
-                        p3Runner: log.runner_name,
-                        qty: log.sd_qty,
+                        merchant: biz, p2Time: state.lastP2Time, p2Runner: state.p2Runner,
+                        p3Time: state.lastP3Time, p3Runner: state.p3Runner, qty: state.p3Qty,
                         duration: `${diffHrs} Jam`
                     });
-                    delete tempP2[biz]; 
+                }
+
+                // LOGIKA STATUS
+                if (diff > 0) {
+                    // 1. Masih ada sisa target -> Masuk Radar Pending
+                    radarList.push({ merchant: biz, runner: state.p2Runner || state.p3Runner, qty: diff, time: state.lastP2Time || state.lastP3Time });
+                    
+                    // 2. Jika SUDAH ADA pergerakan Phase 3, tapi kok target belum habis? -> Mismatch Shortage
+                    if (state.p3Qty > 0) {
+                        mismatchList.push({
+                            date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SHORTAGE', variance: diff,
+                            desc: `Target drop ${state.p2Qty} SD, tapi Phase 3 baru pick up ${state.p3Qty} SD. Selisih ${diff} SD.`
+                        });
+                    }
+                } else if (diff < 0) {
+                    // 3. Ambil Phase 3 lebih banyak dari drop Phase 2 hari ini -> Mismatch Surplus
+                    mismatchList.push({
+                        date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SURPLUS', variance: Math.abs(diff),
+                        desc: `Phase 3 pick up ${state.p3Qty} SD, padahal catatan drop hari ini hanya ${state.p2Qty} SD.`
+                    });
+                } else if (diff === 0 && state.p2Qty > 0) {
+                    // 4. Target Terpenuhi (Phase 2 = Phase 3) -> Perfect Match!
+                    perfectMatchList.push({
+                        date: state.lastP3Time, merchant: biz, runner: state.p3Runner, qty: state.p3Qty
+                    });
                 }
             });
 
-            historyList.sort((a, b) => new Date(b.p3Time) - new Date(a.p3Time));
-            
+            // --- B. LOGIKA OVERDUE (Cek masa lalu yang belum diambil lebih dari 24 jam) ---
+            let runningBalance = {};
+            allLogs.forEach(log => {
+                 const logDateObj = new Date(log.created_at);
+                 const logDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+                 
+                 // Abaikan log masa depan dari tanggal filter
+                 if (logDate > targetDateStr) return; 
+
+                 const biz = log.business_name;
+                 if(!biz) return;
+                 if(!runningBalance[biz]) runningBalance[biz] = { balance: 0, lastP2Date: null, lastP2Runner: null };
+
+                 let qty = parseInt(log.sd_qty) || 0;
+                 if (log.phase === 'Phase 2') {
+                     runningBalance[biz].balance += qty;
+                     runningBalance[biz].lastP2Date = log.created_at;
+                     runningBalance[biz].lastP2Runner = log.runner_name;
+                 } else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
+                     runningBalance[biz].balance -= qty;
+                     if(runningBalance[biz].balance < 0) runningBalance[biz].balance = 0;
+                 }
+            });
+
+            let overdues = [];
+            const now = new Date();
+            Object.entries(runningBalance).forEach(([biz, state]) => {
+                 if (state.balance > 0 && state.lastP2Date) {
+                     const diffHours = (now - new Date(state.lastP2Date)) / (1000 * 60 * 60);
+                     if (diffHours >= 24) {
+                         overdues.push({ merchant: biz, runner: state.lastP2Runner, dateSent: state.lastP2Date, qty: state.balance, hoursOverdue: diffHours });
+                     }
+                 }
+            });
+
+            // --- C. RENDER KE HTML ---
+
+            // 1. Radar
+            const tbodyRadar = document.getElementById('table-live-radar');
+            if (tbodyRadar) {
+                tbodyRadar.innerHTML = radarList.length === 0
+                    ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>Aman! Semua target drop hari ini sudah di-pickup.</td></tr>`
+                    : radarList.map(p => `
+                        <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
+                            <td class="p-4 font-black text-slate-800">${p.merchant}</td>
+                            <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
+                            <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
+                            <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
+                            <td class="p-4 text-right">
+                                <span class="font-black text-amber-500 animate-pulse mr-2"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending 1</span>
+                            </td>
+                        </tr>
+                    `).join('');
+            }
+            const badgeRadar = document.getElementById('badge-live-radar');
+            if (badgeRadar) badgeRadar.innerText = radarList.length;
+
+            // 2. Mismatch
+            mismatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const tbodyMismatch = document.getElementById('table-sd-mismatch');
+            if(tbodyMismatch) {
+                tbodyMismatch.innerHTML = mismatchList.length === 0
+                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Siklus harian sempurna. Tidak ada selisih Phase 2 vs Phase 3.</td></tr>`
+                    : mismatchList.map(m => {
+                        const timeStr = new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+                        const isShort = m.type === 'SHORTAGE';
+                        const badgeClass = isShort ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+                        const icon = isShort ? 'fa-arrow-down' : 'fa-arrow-up';
+                        return `
+                        <tr class="hover:bg-amber-50/50 transition border-b border-slate-100">
+                            <td class="p-4">
+                                <div class="font-black text-slate-800">${targetDateStr}</div>
+                                <div class="text-[10px] font-bold text-slate-500">${timeStr}</div>
+                            </td>
+                            <td class="p-4 font-black text-slate-700">${m.merchant}</td>
+                            <td class="p-4"><span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span></td>
+                            <td class="p-4 text-center"><span class="text-[11px] font-black px-2 py-1 rounded border shadow-sm ${badgeClass} whitespace-nowrap"><i class="fa-solid ${icon} mr-1"></i> ${m.type} ${m.variance}</span></td>
+                            <td class="p-4 text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</td>
+                        </tr>`;
+                    }).join('');
+            }
+            document.getElementById('badge-mismatch-count').innerText = mismatchList.length;
+
+            // 3. Perfect Matches
+            perfectMatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const tbodyMatch = document.getElementById('table-sd-match');
+            if(tbodyMatch) {
+                tbodyMatch.innerHTML = perfectMatchList.length === 0
+                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Belum ada cycle Phase 2 & Phase 3 yang clear 100% hari ini.</td></tr>`
+                    : perfectMatchList.map(m => `
+                        <tr class="hover:bg-emerald-50/30 transition border-b border-emerald-50">
+                            <td class="p-4 font-black text-slate-800">${targetDateStr} <span class="text-[10px] font-bold text-slate-500 block">${new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</span></td>
+                            <td class="p-4 font-black text-slate-700">${m.merchant}</td>
+                            <td class="p-4 text-slate-500 uppercase tracking-widest text-[11px]">${m.runner || '-'}</td>
+                            <td class="p-4 text-center font-black text-emerald-600 bg-emerald-50/50">${m.qty} SD</td>
+                            <td class="p-4 text-right"><span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span></td>
+                        </tr>
+                    `).join('');
+            }
+            document.getElementById('badge-match-count').innerText = perfectMatchList.length;
+
+            // 4. History P2->P3
             document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ? 
-                `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Belum ada history penukaran komplit.</td></tr>` : 
+                `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Belum ada history penukaran harian.</td></tr>` : 
                 historyList.map(h => `
                 <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
                     <td class="p-4 font-black text-slate-800">${h.merchant}</td>
                     <td class="p-4">
-                        <div class="font-bold text-slate-600">${new Date(h.p2Time).toLocaleDateString('en-GB')} ${new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="font-bold text-slate-600">${new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
                         <div class="text-[10px] uppercase text-slate-400">${h.p2Runner}</div>
                     </td>
                     <td class="p-4">
-                        <div class="font-bold text-slate-600">${new Date(h.p3Time).toLocaleDateString('en-GB')} ${new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="font-bold text-slate-600">${new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
                         <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
                     </td>
                     <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
                     <td class="p-4 text-center font-black bg-indigo-50 text-indigo-600">${h.qty} SD</td>
                 </tr>
             `).join('');
+
+            // 5. Overdue (Cek 24 jam kebelakang)
+            const overdueHTML = overdues.length === 0
+                ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Aman! Tidak ada SD Card yang nginap lebih dari 24 jam.</td></tr>`
+                : overdues.map(o => {
+                    const days = Math.floor(o.hoursOverdue / 24);
+                    const hrs = Math.floor(o.hoursOverdue % 24);
+                    const timeStr = days > 0 ? `${days} Hari ${hrs} Jam` : `${hrs} Jam`;
+                    const dateStr = new Date(o.dateSent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                    return `
+                    <tr class="hover:bg-red-50/50 transition border-b border-red-50">
+                        <td class="p-4 font-black text-slate-800">${o.merchant}</td>
+                        <td class="p-4 font-bold text-slate-500">${dateStr}</td>
+                        <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner}</td>
+                        <td class="p-4 text-center font-black text-red-600 bg-red-50/50">${o.qty} SD</td>
+                        <td class="p-4 text-right font-black text-red-600">${timeStr}</td>
+                    </tr>`;
+                }).join('');
+            document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
+            document.getElementById('badge-overdue-count').innerText = overdues.length;
         }
         
         async function resolveLiveRadar(merchant, pendingQty) {
