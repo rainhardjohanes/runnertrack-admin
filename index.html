@@ -1,0 +1,2638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RunnerTrack - Enterprise Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .hidden-view { display: none !important; }
+        .flex.gap-2 { flex-wrap: wrap; justify-content: flex-end; }
+        input[id^="search-"] { width: 140px !important; transition: width 0.3s ease; }
+        input[id^="search-"]:focus { width: 240px !important; }
+    </style>
+</head>
+<body class="w-screen h-screen overflow-hidden bg-slate-50 text-slate-800 font-sans flex text-sm">
+
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-6">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
+            <h1 class="text-3xl font-black text-blue-600 mb-2 italic">RunnerTrack</h1>
+            <p class="text-slate-500 mb-8 text-xs font-bold uppercase tracking-widest">Management System</p>
+            <form id="login-form" class="space-y-4">
+                <input type="email" id="login-email" placeholder="Administrator Email" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required>
+                <input type="password" id="login-pin" placeholder="Access PIN" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" required>
+                <button type="submit" class="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-black transition shadow-lg">Login to Dashboard</button>
+            </form>
+            <p id="login-error" class="text-red-500 text-xs mt-4 hidden font-bold">Access Denied: Invalid Credentials.</p>
+        </div>
+    </div>
+
+    <aside id="sidebar" class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col hidden-view shadow-2xl z-20">
+        <div class="p-6 text-center border-b border-slate-800">
+            <h1 class="text-xl font-black text-blue-400 italic">RunnerTrack</h1>
+            <div id="admin-info" class="text-[10px] text-slate-400 mt-2 font-mono bg-slate-800 rounded px-2 py-1 truncate"></div>
+            <div id="admin-badge" class="mt-2 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded inline-block bg-blue-900 text-blue-200 border border-blue-700"></div>
+        </div>
+        
+        <nav class="p-4 space-y-1 flex-1 overflow-y-auto">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-chart-line w-6"></i> Dashboard</button>
+
+            <button onclick="switchTab('sd_tracker')" id="btn-sd_tracker" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-microchip w-6"></i> SD Tracker</button>
+            <button onclick="switchTab('logs')" id="btn-logs" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-list-ul w-6"></i> Activity Logs</button>
+            <button onclick="switchTab('runners')" id="btn-runners" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-users w-6"></i> Field Personnel</button>
+            <button onclick="switchTab('sdrs')" id="btn-sdrs" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-user-tie w-6"></i> SDR / Sales</button>
+            <button onclick="switchTab('businesses')" id="btn-businesses" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-store w-6"></i> Merchants</button>
+            
+            <div class="pt-6 pb-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Inventory Assets</div>
+            <button onclick="switchTab('kit_types')" id="btn-kit_types" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-list-check w-6"></i> Kit Recipes</button>
+            <button onclick="switchTab('kits')" id="btn-kits" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-boxes-stacked w-6"></i> Asset Allocation</button>
+            
+            <div class="pt-6 pb-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">System Management</div>
+            <button onclick="switchTab('areas')" id="btn-areas" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-map-location-dot w-6"></i> Regional Areas</button>
+            <button onclick="switchTab('users')" id="btn-users" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-users-gear w-6"></i> User Accounts</button>
+            <button onclick="switchTab('admin_logs')" id="btn-admin_logs" class="w-full text-left px-4 py-3 rounded-lg text-amber-400 hover:bg-slate-800 transition flex items-center hidden-view"><i class="fa-solid fa-file-shield w-6"></i> Admin Audit Logs</button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="logoutAdmin()" class="w-full bg-red-500/10 text-red-400 px-4 py-3 rounded-lg hover:bg-red-500 hover:text-white transition font-bold text-xs flex justify-center items-center"><i class="fa-solid fa-power-off mr-2"></i> LOGOUT</button>
+        </div>
+    </aside>
+
+    <main id="main-content" class="flex-1 flex flex-col hidden-view bg-white relative">
+        
+        <div id="view-dashboard" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-5 border-b border-slate-200 bg-white flex flex-col 2xl:flex-row justify-between 2xl:items-center gap-4 shadow-sm z-10">
+                <h2 class="text-xl font-black text-slate-800 shrink-0">Operational Dashboard</h2>
+                
+                <div class="flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Region</label>
+                        <select id="dash-area-filter" onchange="renderDashboard()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none filter-area-dropdown min-w-[120px]"></select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Date</label>
+                        <input type="date" id="dash-date-filter" onchange="renderDashboard()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Time Range</label>
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="dash-start-time" onchange="renderDashboard()" value="00:00" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none">
+                            <span class="text-slate-400 font-bold">-</span>
+                            <input type="time" id="dash-end-time" onchange="renderDashboard()" value="23:59" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none">
+                        </div>
+                    </div>
+                    <button onclick="refreshAllData()" class="h-[34px] w-[34px] flex items-center justify-center bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-blue-600 hover:text-white transition shadow-sm mb-[1px]" title="Refresh Dashboard">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-200 relative overflow-hidden">
+                        <i class="fa-solid fa-sd-card absolute -right-4 -bottom-4 text-8xl text-blue-50 opacity-50"></i>
+                        <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 relative z-10">SD Cards Uploaded Today</p>
+                        <h3 id="stat-sd-today" class="text-4xl font-black text-slate-800 relative z-10">0</h3>
+                        <p class="text-[10px] text-slate-400 mt-2 italic relative z-10">From Phase 3 & Camera returns</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-indigo-200 relative overflow-hidden">
+                        <i class="fa-solid fa-mobile-screen absolute -right-4 -bottom-4 text-8xl text-indigo-50 opacity-50"></i>
+                        <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1 relative z-10">iPhones Uploaded Today</p>
+                        <h3 id="stat-iphone-today" class="text-4xl font-black text-slate-800 relative z-10">0</h3>
+                        <p class="text-[10px] text-slate-400 mt-2 italic relative z-10">From Phase 4 Phone returns</p>
+                    </div>
+                </div>
+
+                
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                        <h4 class="font-black text-slate-700 uppercase text-xs tracking-widest">Kit Inventory Breakdown</h4>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-[10px] uppercase text-slate-500 font-black">
+                            <tr>
+                                <th class="p-4">Kit Type</th>
+                                <th class="p-4 text-center">At Business</th>
+                                <th class="p-4 text-center">In Office</th>
+                                <th class="p-4 text-center">Damaged</th>
+                                <th class="p-4 text-right">Total Units</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-dash-kits" class="divide-y divide-slate-100 font-bold text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+<div id="view-sd_tracker" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800"><i class="fa-solid fa-microchip text-blue-600 mr-2"></i>SD Card Tracker</h2>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Daily Discrepancy & Delay Audit</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="renderSDTracker()" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition shadow-sm"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-blue-200 overflow-hidden">
+                    <div class="p-4 bg-blue-50 border-b border-blue-100 flex justify-between items-center flex-wrap gap-2">
+    <h3 class="font-black text-blue-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-satellite-dish animate-pulse text-red-500 mr-2"></i>Radar Pending Phase 3</h3>
+    <div class="flex items-center gap-2">
+        <input type="date" id="filter-radar-date" onchange="renderSDTracker()" class="p-1 border border-blue-200 rounded text-xs outline-none bg-white font-bold text-blue-700 cursor-pointer">
+        <span id="badge-live-radar" class="bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
+    </div>
+</div>
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-white border-b border-blue-100 text-[10px] uppercase text-blue-400 font-black tracking-widest">
+                            <tr>
+                                <th class="p-4">Merchant</th>
+                                <th class="p-4">Phase 2 Drop Time</th>
+                                <th class="p-4">Runner (Personnel)</th>
+                                <th class="p-4 text-center">Pending Qty</th>
+                                <th class="p-4 text-right">Live Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-live-radar" class="divide-y divide-blue-50 text-xs"></tbody>
+                    </table>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden">
+                    <div class="p-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
+                        <h3 class="font-black text-red-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Overdue SD Cards (> 24 Hours Not Returned)</h3>
+                        <span id="badge-overdue-count" class="bg-red-600 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
+                    </div>
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-white border-b border-red-100 text-[10px] uppercase text-red-400 font-black tracking-widest">
+                            <tr>
+                                <th class="p-4">Merchant</th>
+                                <th class="p-4">Phase 2 Time (Sent)</th>
+                                <th class="p-4">Phase 2 Runner</th>
+                                <th class="p-4 text-center">Pending Qty</th>
+                                <th class="p-4 text-right">Delay Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-sd-overdue" class="divide-y divide-red-50 text-xs"></tbody>
+                    </table>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
+                    <div class="p-4 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
+                        <h3 class="font-black text-amber-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-scale-unbalanced mr-2"></i>Daily Mismatch Log (Qty Discrepancy)</h3>
+                        <span id="badge-mismatch-count" class="bg-amber-500 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
+                    </div>
+<div class="bg-white rounded-2xl shadow-sm border border-emerald-200 overflow-hidden mt-6">
+                    <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
+                        <h3 class="font-black text-emerald-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-check-double mr-2"></i>Perfect Matches (Phase 2 & 3 Reconciled)</h3>
+                        <span id="badge-match-count" class="bg-emerald-500 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
+                    </div>
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-white border-b border-emerald-100 text-[10px] uppercase text-emerald-500 font-black tracking-widest">
+                            <tr>
+                                <th class="p-4">Date & Time</th>
+                                <th class="p-4">Merchant</th>
+                                <th class="p-4">Phase 3 Runner</th>
+                                <th class="p-4 text-center">Matched Qty</th>
+                                <th class="p-4 text-right">System Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-sd-match" class="divide-y divide-emerald-50 text-xs"></tbody>
+                    </table>
+                </div>
+
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-white border-b border-amber-100 text-[10px] uppercase text-amber-500 font-black tracking-widest">
+                            <tr>
+                                <th class="p-4">Date & Time</th>
+                                <th class="p-4">Target Merchant</th>
+                                <th class="p-4">Runner (Personnel)</th>
+                                <th class="p-4 text-center">Anomaly Status</th>
+                                <th class="p-4">System Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-sd-mismatch" class="divide-y divide-amber-50 text-xs"></tbody>
+                    </table>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden mt-6">
+                    <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
+                        <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>History Penukaran SD Card (P2 -> P3)</h3>
+                    </div>
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
+                            <tr>
+                                <th class="p-4">Merchant</th>
+                                <th class="p-4">Phase 2 (Drop)</th>
+                                <th class="p-4">Phase 3 (Ambil)</th>
+                                <th class="p-4 text-center">Durasi Terpasang</th>
+                                <th class="p-4 text-center">SD Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-sd-history" class="divide-y divide-indigo-50 text-xs"></tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="view-logs" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800">Activity Logs</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-logs" onkeyup="renderLogs()" placeholder="Search logs..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-48">
+                    </div>
+                    <select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); renderLogs();"></select>
+                    
+                    <select id="filter-logs-phase" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="renderLogs()">
+                        <option value="">All Phases</option>
+                        <option value="Phase 1">Phase 1</option>
+                        <option value="Phase 2">Phase 2</option>
+                        <option value="Phase 3">Phase 3</option>
+                        <option value="Phase 4">Phase 4</option>
+                    </select>
+
+                    <select id="filter-logs-business" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 w-32" onchange="renderLogs()">
+                        <option value="">All Merchants</option>
+                    </select>
+
+                    <div class="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+    <button onclick="changeLogPage(-1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-r border-slate-200 disabled:opacity-30" id="btn-log-prev"><i class="fa-solid fa-chevron-left"></i></button>
+    <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">Page <span id="log-page-display">1</span></div>
+    <button onclick="changeLogPage(1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-l border-slate-200 disabled:opacity-30" id="btn-log-next"><i class="fa-solid fa-chevron-right"></i></button>
+</div>
+<button onclick="fetchLogs(true)" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">Timestamp</th>
+                                <th class="p-4 font-black">Runner & Area</th>
+                                <th class="p-4 font-black">Phase</th>
+                                <th class="p-4 font-black">Details</th>
+                                <th class="p-4 font-black text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-logs" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-areas" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800">Regional Areas</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-areas" onkeyup="renderAreas()" placeholder="Search areas..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                    </div>
+                    <button onclick="fetchAreas(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button onclick="showModal('modal-area')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Add Area</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">Area Name</th>
+                                <th class="p-4 font-black text-right">System Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-areas" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-runners" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800">Field Personnel</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-runners" onkeyup="renderRunners()" placeholder="Search runners..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                    </div>
+                    <select id="filter-runners-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderRunners()"></select>
+                    <button onclick="fetchRunners(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">Personnel Name</th>
+                                <th class="p-4 font-black">Assigned Area</th>
+                                <th class="p-4 font-black text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-runners" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-sdrs" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800">SDR / Sales Team</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-sdrs" onkeyup="renderSDRs()" placeholder="Search SDRs..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                    </div>
+                    <select id="filter-sdrs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderSDRs()"></select>
+                    <button onclick="fetchSDRs(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button onclick="openAddSdrModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Add SDR</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">SDR Name</th>
+                                <th class="p-4 font-black">Assigned Area</th>
+                                <th class="p-4 font-black text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-sdrs" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-businesses" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800">Merchants</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-businesses" onkeyup="renderBusinesses()" placeholder="Search merchants..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                    </div>
+                    <select id="filter-businesses-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderBusinesses()"></select>
+                    <button onclick="fetchBusinesses(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button onclick="openAddBizModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Add Merchant</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">Merchant Name</th>
+                                <th class="p-4 font-black">Area</th>
+                                <th class="p-4 font-black">Active Kits</th>
+                                <th class="p-4 font-black text-center">Total Items</th>
+                                <th class="p-4 font-black text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-businesses" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-kit_types" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800">Kit Recipes</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-kit_types" onkeyup="renderKitTypes()" placeholder="Search recipes..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                    </div>
+                    <button onclick="fetchKitTypes(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button onclick="openAddKitTypeModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Add Recipe</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">Recipe Title & Checklist Items</th>
+                                <th class="p-4 font-black text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-kit-types" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-kits" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800">Asset Allocation</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-kits" onkeyup="renderKits()" placeholder="Search Kit ID..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                    </div>
+                    <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderKits()"></select>
+                    <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="renderKits()">
+                        <option value="">All Recipes</option>
+                    </select>
+                    <button onclick="fetchKits(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    
+                    <button onclick="openManualDeployModal()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-600 shadow-md transition"><i class="fa-solid fa-truck-fast mr-1"></i> Manual Override</button>
+                    
+                    <button onclick="showModal('modal-import')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition"><i class="fa-solid fa-file-excel mr-1"></i> Import</button>
+                    <button onclick="openAddKitModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Register New</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">Kit ID & Recipe</th>
+                                <th class="p-4 font-black">Current Location</th>
+                                <th class="p-4 font-black">Condition Status</th>
+                                <th class="p-4 font-black text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-kits" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-rose-200 overflow-hidden mt-6">
+                    <div class="p-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+                        <h3 class="font-black text-rose-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Audit Discrepancy Kit (Phase 1 vs 4)</h3>
+                        <button onclick="renderKitMismatches()" class="bg-white border border-rose-200 text-rose-600 p-1.5 rounded hover:bg-rose-600 hover:text-white transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-white border-b border-rose-100 text-[10px] uppercase text-rose-500 font-black tracking-widest whitespace-nowrap">
+                            <tr>
+                                <th class="p-4">Kit ID & Tipe</th>
+                                <th class="p-4">Data Keluar (Phase 1)</th>
+                                <th class="p-4">Data Kembali (Phase 4)</th>
+                                <th class="p-4">Barang Hilang / Selisih</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-kit-audit" class="divide-y divide-rose-50 text-xs"></tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="view-users" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800">User Accounts</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-users" onkeyup="renderUsers()" placeholder="Search emails..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                    </div>
+                    <button onclick="fetchUsers(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button id="btn-add-system-user" onclick="openAddUserModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-user-shield mr-1"></i> Add System User</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">Credentials (Email & Pass)</th>
+                                <th class="p-4 font-black">Role / Territory</th>
+                                <th class="p-4 font-black">Linked Profile</th>
+                                <th class="p-4 font-black text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-users" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-admin_logs" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-amber-600"><i class="fa-solid fa-shield-halved mr-2"></i>Security Audit Trail</h2>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-admin_logs" onkeyup="renderAdminLogs()" placeholder="Search logs..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-amber-500 w-64">
+                    </div>
+                    <button onclick="fetchAdminLogs(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-amber-50 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-amber-700">
+                                <th class="p-4 font-black">Timestamp</th>
+                                <th class="p-4 font-black">Admin Identity</th>
+                                <th class="p-4 font-black">Action Type</th>
+                                <th class="p-4 font-black">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-admin_logs" class="divide-y divide-slate-100 text-xs"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="modal-manual-deploy" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-manual-deploy')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 class="font-black text-xl mb-6 text-amber-600 border-b pb-3"><i class="fa-solid fa-truck-fast mr-2"></i>Manual Allocation</h3>
+            <form id="form-manual-deploy" class="space-y-4">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-800 font-bold mb-4">WARNING: This bypasses mobile app validation. Use only for corrections.</div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Target Area *</label>
+                    <select id="deploy-area" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs global-area-dropdown" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Action Type *</label>
+                    <select id="deploy-phase" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs font-bold text-blue-600" required onchange="toggleDeployBiz()">
+                        <option value="Phase 1">Deploy to Merchant (Phase 1)</option>
+                        <option value="Phase 4">Force Return to Warehouse (Phase 4)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID *</label>
+                    <input list="deploy-kit-list" id="deploy-kit-id" autocomplete="off" placeholder="Ketik atau Pilih Kit ID..." class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs uppercase font-bold" required>
+                    <datalist id="deploy-kit-list">
+                    </datalist>
+                </div>
+                <div id="deploy-biz-container">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Destination Merchant *</label>
+                    <select id="deploy-business" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                        <option value="">-- Select Area First --</option>
+                    </select>
+                </div>
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="w-full px-6 py-3 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 shadow-md">Execute Override</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-log" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-log')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 class="font-black text-xl mb-6 border-b pb-3">Edit Activity Log</h3>
+            <form id="form-log" class="space-y-4">
+                <input type="hidden" id="edit-log-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Phase</label>
+                        <select id="edit-log-phase" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs" required>
+                            <option value="Phase 1">Phase 1</option>
+                            <option value="Phase 2">Phase 2</option>
+                            <option value="Phase 3">Phase 3</option>
+                            <option value="Phase 4">Phase 4</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Merchant</label>
+                        <select id="edit-log-business" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs" required></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID</label>
+                        <input type="text" id="edit-log-kit" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">SD Qty</label>
+                        <input type="number" id="edit-log-sd" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Condition</label>
+                        <select id="edit-log-condition" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                            <option value="">--</option>
+                            <option value="Good">Good</option>
+                            <option value="Damaged">Damaged</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Notes</label>
+                    <textarea id="edit-log-notes" rows="2" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs"></textarea>
+                </div>
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg text-xs hover:bg-blue-700">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-area" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-area')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 class="font-black text-xl mb-6 border-b pb-3">Add Regional Area</h3>
+            <form id="form-area" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Area Name</label>
+                    <input type="text" id="input-area-name" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold" required>
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Create Area</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-runner" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-runner')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 id="runner-modal-title" class="font-black text-xl mb-6 border-b pb-3">Add Runner</h3>
+            <form id="form-runner" class="space-y-4">
+                <input type="hidden" id="input-runner-id">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Assigned Area *</label>
+                    <select id="input-runner-area" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm global-area-dropdown" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Full Name *</label>
+                    <input type="text" id="input-runner-name" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold" required>
+                </div>
+                <div id="runner-auth-section" class="hidden bg-slate-50 p-4 rounded-xl border border-slate-200 mt-2 space-y-3">
+                    <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-1">Mobile Login Credentials</p>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Email *</label>
+                        <input type="email" id="input-runner-email" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">PIN Password *</label>
+                        <input type="text" id="input-runner-pin" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                    </div>
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Save Data</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-sdr" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-sdr')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 id="sdr-modal-title" class="font-black text-xl mb-6 border-b pb-3">Add SDR</h3>
+            <form id="form-sdr" class="space-y-4">
+                <input type="hidden" id="input-sdr-id">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Assigned Area *</label>
+                    <select id="input-sdr-area" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm global-area-dropdown" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">SDR Name *</label>
+                    <input type="text" id="input-sdr-name" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold" required>
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Save SDR</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-business" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-business')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 id="biz-modal-title" class="font-black text-xl mb-6 border-b pb-3">Add Merchant</h3>
+            <form id="form-business" class="space-y-4">
+                <input type="hidden" id="input-biz-id">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Area *</label>
+                    <select id="input-biz-area" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm global-area-dropdown" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Merchant Name *</label>
+                    <input type="text" id="input-biz-name" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold" required>
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Save Merchant</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-kit-type" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-kit-type')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 id="type-modal-title" class="font-black text-xl mb-6 border-b pb-3">Add Recipe</h3>
+            <form id="form-kit-type" class="space-y-4">
+                <input type="hidden" id="input-type-id">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Recipe Title *</label>
+                    <input type="text" id="input-type-name" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Checklist Items *</label>
+                    <textarea id="input-type-items" rows="4" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm mb-4" required></textarea>
+                </div>
+                
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest border-b border-slate-200 pb-2 mb-3"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> UI & Behavior Settings</p>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Visual Icon</label>
+                            <select id="input-type-icon" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs bg-white font-bold text-slate-700">
+                                <option value="fa-box">📦 Box (Default)</option>
+                                <option value="fa-camera">📷 Camera</option>
+                                <option value="fa-video">🎥 Video / Action</option>
+                                <option value="fa-mobile-screen">📱 Mobile / Phone</option>
+                                <option value="fa-tablet-screen-button">📟 Tablet</option>
+                                <option value="fa-arrows-up-to-line">🏗️ Stand / Tripod</option>
+                                <option value="fa-bolt">⚡ Power / Cable</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Theme Color</label>
+                            <select id="input-type-color" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs bg-white font-bold text-slate-700">
+                                <option value="slate">🔘 Slate (Gray)</option>
+                                <option value="blue">🔵 Blue</option>
+                                <option value="purple">🟣 Purple</option>
+                                <option value="indigo">🌌 Indigo</option>
+                                <option value="rose">🔴 Rose (Red)</option>
+                                <option value="emerald">🟢 Emerald (Green)</option>
+                                <option value="amber">🟠 Amber (Orange)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 border-t border-slate-200 pt-3">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Need Pairing?</label>
+                            <select id="input-type-pairing" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs bg-white font-bold text-slate-700">
+                                <option value="false">No (Standalone)</option>
+                                <option value="true">Yes (Needs a pair)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Target Pair Name</label>
+                            <input type="text" id="input-type-pair-target" placeholder="e.g., iPhone" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs bg-white font-bold text-slate-700">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl mt-4">
+                    <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest border-b border-slate-200 pb-2 mb-3"><i class="fa-solid fa-chart-pie mr-1"></i> Dashboard Metric Rules</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Counts Towards?</label>
+                            <select id="input-type-metric" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs bg-white font-bold text-slate-700">
+                                <option value="None">🚫 None (Don't Count)</option>
+                                <option value="SD">🗂️ SD Card Uploads</option>
+                                <option value="iPhone">📱 iPhone Uploads</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">SD Yields (Phase 4)</label>
+                            <input type="number" id="input-type-sd-yield" value="0" min="0" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs bg-white font-bold text-slate-700">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-black tracking-widest uppercase rounded-lg hover:bg-blue-700 mt-4">Save Recipe</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-kit" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-kit')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 class="font-black text-xl mb-6 border-b pb-3">Register Barcode</h3>
+            <form id="form-kit" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Area *</label>
+                    <select id="input-kit-area" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm global-area-dropdown" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Recipe Type *</label>
+                    <select id="input-kit-type-dropdown" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm" required></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID Barcode *</label>
+                    <input type="text" id="input-kit-id" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold uppercase" required>
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Register Kit</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="modal-user" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-user')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 id="user-modal-title" class="font-black text-xl mb-6 border-b pb-3">System Account</h3>
+            <form id="form-user" class="space-y-4">
+                <input type="hidden" id="input-user-id">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Full Name *</label>
+                        <input type="text" id="input-user-fullname" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold" required placeholder="Employee Full Name">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Email Login *</label>
+                            <input type="email" id="input-user-email" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">PIN Password</label>
+                            <input type="text" id="input-user-pin" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Role *</label>
+                            <select id="input-user-role" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs bg-slate-50" required></select>
+                        </div>
+                        <div id="user-area-container">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Assigned Area *</label>
+                            <select id="input-user-area-admin" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs global-area-dropdown" required></select>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">Save System Account</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="modal-import" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-import')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div class="flex justify-between items-center border-b pb-3 mb-6">
+                <h3 class="font-black text-xl">Bulk Excel Import</h3>
+                <button onclick="downloadTemplate()" class="text-[10px] bg-blue-50 text-blue-600 font-black py-2 px-3 rounded-lg border border-blue-200 hover:bg-blue-100 transition uppercase tracking-widest"><i class="fa-solid fa-download mr-1"></i> Template</button>
+            </div>
+            <div class="space-y-4">
+                <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-[10px] text-blue-800 font-bold mb-4">
+                    Download template first, fill your data, then upload it here. Do not change the column headers.
+                </div>
+                <div>
+                    <input type="file" id="excel-file" accept=".xlsx, .xls" class="w-full p-3 border border-slate-300 rounded-lg text-xs bg-slate-50">
+                </div>
+                <div id="import-log" class="text-xs max-h-32 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-slate-200 hidden"></div>
+                <button onclick="processExcel()" id="btn-process-excel" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 shadow-md">Process Excel File</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const { createClient } = window.supabase;
+        const db = createClient(
+          'https://ksdulyitxvtfvxgoqotd.supabase.co',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzZHVseWl0eHZ0ZnZ4Z29xb3RkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODgzNzEsImV4cCI6MjA5MTE2NDM3MX0.nJ4lUtAKKBt_NQu0vZo8Dn6R7GfuE4qpgEfGYkkvh40'
+        );
+
+        let globalLogs = [], globalAreas = [], globalRunners = [], globalSDRs = [], globalBusinesses = [], globalKitTypes = [], globalKits = [], globalUsers = [], globalAdminLogs = [];
+        let globalKitLocations = {}; // <-- VARIABEL BARU UNTUK FIX LOKASI
+// State untuk pagination
+let logPage = 0;
+const logPageSize = 20;
+
+        function getAdminArea() {
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            return admin ? (admin.assigned_area || 'All') : null;
+        }
+
+        async function logAdminAction(actionType, description) {
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            if (!admin) return;
+            await db.from('admin_logs').insert([{ admin_email: admin.email, action_type: actionType, description: description }]);
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const email = document.getElementById('login-email').value.toLowerCase();
+            const password = document.getElementById('login-pin').value.trim();
+            
+            const { data: authData, error: authError } = await db.auth.signInWithPassword({ 
+                email: email, 
+                password: password 
+            });
+            await db.auth.getSession();
+
+            if (authError) {
+                document.getElementById('login-error').innerText = "Access Denied: Invalid credentials.";
+                document.getElementById('login-error').classList.remove('hidden');
+                return;
+            }
+
+            const { data: userData, error: userError } = await db
+              .from('master_users')
+              .select('*')
+              .ilike('email', email)
+              .single();
+
+            if (userError || !userData) {
+                document.getElementById('login-error').innerText = "Access Denied: Account not found in database.";
+                document.getElementById('login-error').classList.remove('hidden');
+                await db.auth.signOut();
+                return;
+            }
+
+            if (userData.role !== 'Admin') { 
+                document.getElementById('login-error').innerText = "Access Denied: This page is for Administrators only.";
+                document.getElementById('login-error').classList.remove('hidden');
+                await db.auth.signOut(); 
+                return;
+            }
+
+            document.getElementById('login-error').classList.add('hidden');
+            localStorage.setItem('admin_user', JSON.stringify(userData));
+            await logAdminAction('LOGIN', 'Admin logged into the portal.');
+            initApp(); 
+        });
+
+        async function logoutAdmin() { 
+            await db.auth.signOut(); 
+            localStorage.removeItem('admin_user'); 
+            window.location.reload(); 
+        }
+
+        window.addEventListener('load', async () => {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) {
+                initApp();
+            }
+        });
+
+        async function initApp() {
+            const { data: { session } } = await db.auth.getSession();
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            
+            if(!session || !admin || admin.role !== 'Admin') { 
+                document.getElementById('login-screen').classList.remove('hidden-view');
+                return; 
+            }
+            
+            const safeArea = admin.assigned_area || 'All';
+            document.getElementById('login-screen').classList.add('hidden-view'); 
+            document.getElementById('sidebar').classList.remove('hidden-view');
+            document.getElementById('main-content').classList.remove('hidden-view');
+            document.getElementById('admin-info').innerText = admin.email;
+            document.getElementById('admin-badge').innerText = safeArea === 'All' ? 'SUPER ADMIN' : `ADMIN: ${safeArea.toUpperCase()}`;
+
+            const btnAddUser = document.getElementById('btn-add-system-user');
+            if(btnAddUser) btnAddUser.classList.remove('hidden-view');
+            if (safeArea !== 'All') {
+                document.querySelectorAll('.filter-area-dropdown').forEach(el => el.classList.add('hidden-view'));
+            } else {
+                document.querySelectorAll('.filter-area-dropdown').forEach(el => el.classList.remove('hidden-view'));
+                document.getElementById('btn-admin_logs').classList.remove('hidden-view'); 
+            }
+            
+            await fetchAreas(); 
+            switchTab('dashboard');
+        }
+
+        function switchTab(tab) {
+            ['dashboard', 'sd_tracker', 'logs', 'runners', 'sdrs', 'businesses', 'areas', 'kit_types', 'kits', 'users', 'admin_logs'].forEach(n => {
+                const view = document.getElementById(`view-${n}`);
+                if(view) view.classList.add('hidden-view'); 
+                const btn = document.getElementById(`btn-${n}`);
+                if(btn) btn.className = `w-full text-left px-4 py-3 rounded-lg transition flex items-center ${n === 'admin_logs' ? 'text-amber-400 hover:bg-slate-800' : 'text-slate-300 hover:bg-slate-800'}`; 
+            });
+            
+            document.getElementById(`view-${tab}`).classList.remove('hidden-view');
+            const activeBtn = document.getElementById(`btn-${tab}`);
+            if(activeBtn) activeBtn.className = `w-full text-left px-4 py-3 rounded-lg font-bold flex items-center shadow-lg ${tab === 'admin_logs' ? 'bg-amber-500 text-white shadow-amber-900/50' : (tab === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white shadow-blue-900/50')}`;
+            
+            if(tab === 'dashboard') refreshAllData();
+            if(tab === 'sd_tracker') renderSDTracker(); 
+            if(tab === 'logs') fetchLogs();
+            if(tab === 'areas') fetchAreas(); 
+            if(tab === 'runners') fetchRunners(); 
+            if(tab === 'sdrs') fetchSDRs(); 
+            if(tab === 'businesses') fetchBusinesses(); 
+            if(tab === 'kit_types') fetchKitTypes(); 
+            if(tab === 'kits') fetchKits(); 
+            if(tab === 'users') fetchUsers();
+            if(tab === 'admin_logs') fetchAdminLogs();
+        }
+        
+        function showModal(id) { document.getElementById(id).classList.replace('hidden-view', 'flex'); }
+        function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden-view'); }
+
+        function populateAreaDropdowns() {
+            const adminArea = getAdminArea();
+            let opts = '', filterOpts = '';
+            
+            if (adminArea !== 'All') { 
+                opts = filterOpts = `<option value="${adminArea}">${adminArea}</option>`; 
+            } else {
+                opts = `<option value="">-- Select Area --</option>` + globalAreas.map(i => `<option value="${i.area_name}">${i.area_name}</option>`).join('');
+                filterOpts = `<option value="">All Regions</option>` + globalAreas.map(i => `<option value="${i.area_name}">${i.area_name}</option>`).join('');
+            }
+            
+            document.querySelectorAll('.global-area-dropdown').forEach(el => { el.innerHTML = opts; el.disabled = (adminArea !== 'All'); });
+            document.querySelectorAll('.filter-area-dropdown').forEach(el => el.innerHTML = filterOpts);
+            
+            const areaAdminUser = document.getElementById('input-user-area-admin');
+            if(areaAdminUser) {
+                if(adminArea !== 'All') {
+                    areaAdminUser.innerHTML = `<option value="${adminArea}">${adminArea}</option>`;
+                    areaAdminUser.disabled = true; 
+                } else {
+                    areaAdminUser.innerHTML = `<option value="All">All Regions (Super)</option>` + globalAreas.map(i => `<option value="${i.area_name}">${i.area_name}</option>`).join('');
+                    areaAdminUser.disabled = false;
+                }
+            }
+        }
+
+async function fetchLogs(force = false) {
+    // Jika tidak force, dan data sudah ada di halaman ini, render saja
+    if (!force && globalLogs.length > 0) return renderLogs();
+
+    const from = logPage * logPageSize;
+    const to = from + logPageSize - 1;
+
+    let q = db.from('transactions').select('*', { count: 'exact' });
+    
+    const adminArea = getAdminArea();
+    if (adminArea !== 'All') q = q.eq('area', adminArea);
+
+    // Filter UI jika ada (Realtime server-side filtering)
+    const fPhase = document.getElementById('filter-logs-phase')?.value;
+    const fBiz = document.getElementById('filter-logs-business')?.value;
+    if(fPhase) q = q.eq('phase', fPhase);
+    if(fBiz) q = q.eq('business_name', fBiz);
+
+    // Ambil hanya rentang tertentu (Server-side Pagination)
+    const { data, count, error } = await q
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+    if (error) {
+        console.error("Gagal tarik logs:", error.message);
+        return;
+    }
+
+    if (data) {
+        globalLogs = data;
+        document.getElementById('log-page-display').innerText = logPage + 1;
+        
+        // Atur tombol disable jika sudah di ujung data
+        document.getElementById('btn-log-prev').disabled = (logPage === 0);
+        document.getElementById('btn-log-next').disabled = (to >= count - 1);
+
+        renderLogs();
+        if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
+        if(!document.getElementById('view-dashboard').classList.contains('hidden-view')) renderDashboard();
+    }
+}
+
+// Fungsi Navigasi Halaman
+function changeLogPage(step) {
+    logPage += step;
+    if (logPage < 0) logPage = 0;
+    fetchLogs(true);
+}
+
+        async function fetchAreas(force = false) { 
+            if (!force && globalAreas.length > 0) return renderAreas(); 
+            const { data } = await db.from('master_areas').select('*').order('area_name'); 
+            if (data) { globalAreas = data; populateAreaDropdowns(); renderAreas(); } 
+        }
+
+        async function fetchRunners(force = false) { 
+            if (!force && globalRunners.length > 0) return renderRunners(); 
+            let q = db.from('master_runners').select('*'); 
+            const adminArea = getAdminArea(); 
+            if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
+            const { data } = await q.order('runner_name'); 
+            if (data) { globalRunners = data; renderRunners(); } 
+        }
+
+        async function fetchSDRs(force = false) { 
+            if (!force && globalSDRs.length > 0) return renderSDRs(); 
+            let q = db.from('master_sdrs').select('*'); 
+            const adminArea = getAdminArea(); 
+            if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
+            const { data } = await q.order('sdr_name'); 
+            if (data) { globalSDRs = data; renderSDRs(); } 
+        }
+
+        async function fetchBusinesses(force = false) { 
+            if (!force && globalBusinesses.length > 0) return renderBusinesses(); 
+            let q = db.from('master_businesses').select('*'); 
+            const adminArea = getAdminArea(); 
+            if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
+            const { data } = await q.order('business_name'); 
+            if (data) { 
+                globalBusinesses = data; 
+                renderBusinesses(); 
+                updateLogBusinessDropdown(); 
+            } 
+        }
+
+        async function fetchKitTypes(force = false) { 
+            if (!force && globalKitTypes.length > 0) return renderKitTypes(); 
+            const { data } = await db.from('master_kit_types').select('*').order('type_name'); 
+            if (data) {
+                globalKitTypes = data; 
+                renderKitTypes(); 
+                document.getElementById('input-kit-type-dropdown').innerHTML = `<option value="">-- Choose Recipe --</option>` + data.map(i => `<option value="${i.type_name}">${i.type_name}</option>`).join('');
+                document.getElementById('filter-kits-type').innerHTML = `<option value="">All Recipes</option>` + data.map(i => `<option value="${i.type_name}">${i.type_name}</option>`).join('');
+            } 
+        }
+
+        async function fetchKits(force = false) { 
+            if (!force && globalKits.length > 0) return renderKits(); 
+            let q = db.from('master_kits').select('*'); 
+            const adminArea = getAdminArea(); 
+            if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
+            const { data } = await q.order('kit_id'); 
+            
+            if (data) { 
+                globalKits = data; 
+                renderKits(); 
+                
+                // 1. Tarik pemetaan lokasi yang akurat dulu
+                await fetchKitLocations();
+                
+                // 2. BARU render tabel bisnis/merchant karena data lokasi sudah siap
+                if (globalBusinesses.length > 0) renderBusinesses();
+                
+                // 3. Tarik logs paginasi untuk tabel activity logs
+                await fetchLogs(true); 
+            } 
+        }
+
+        async function fetchUsers(force = false) { 
+            if (!force && globalUsers.length > 0) return renderUsers(); 
+            let q = db.from('master_users').select('*'); 
+            const adminArea = getAdminArea(); 
+            if (adminArea !== 'All') q = q.eq('assigned_area', adminArea); 
+            const { data } = await q.order('id', { ascending: false }); 
+            if (data) { globalUsers = data; renderUsers(); } 
+        }
+
+        async function fetchAdminLogs(force = false) { 
+            if (!force && globalAdminLogs.length > 0) return renderAdminLogs(); 
+            const { data } = await db.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100); 
+            if (data) { globalAdminLogs = data; renderAdminLogs(); } 
+        }
+
+        function updateLogBusinessDropdown() {
+            const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
+            const bizSelect = document.getElementById('filter-logs-business');
+            if(!bizSelect) return;
+            
+            let filteredBiz = globalBusinesses;
+            if(fA) filteredBiz = globalBusinesses.filter(b => b.area_name === fA);
+            
+            bizSelect.innerHTML = `<option value="">All Merchants</option>` + 
+                filteredBiz.map(b => `<option value="${b.business_name}">${b.business_name}</option>`).join('');
+        }
+
+        function renderLogs() {
+    const s = document.getElementById('search-logs').value.toLowerCase();
+    // Jika user mencari sesuatu, kita ingatkan bahwa ini hanya mencari di halaman aktif
+    // Atau opsional: reset page ke 0 jika ingin search global (tapi butuh query server lagi)            const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : ''; 
+            const fPhase = document.getElementById('filter-logs-phase') ? document.getElementById('filter-logs-phase').value : '';
+            const fBiz = document.getElementById('filter-logs-business') ? document.getElementById('filter-logs-business').value : '';
+
+            const f = globalLogs.filter(i => {
+                const matchArea = !fA || i.area === fA;
+                const matchPhase = !fPhase || i.phase === fPhase;
+                const matchBiz = !fBiz || i.business_name === fBiz;
+                const matchSearch = i.business_name.toLowerCase().includes(s) || i.runner_name.toLowerCase().includes(s) || (i.kit_id||'').toLowerCase().includes(s);
+                return matchArea && matchPhase && matchBiz && matchSearch;
+            }); 
+
+            document.getElementById('table-logs').innerHTML = f.map(i => {
+                const isDamaged = i.device_condition === 'Damaged';
+                const conditionBadge = i.device_condition ? `
+                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase border ${isDamaged ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}">
+                        ${i.device_condition}
+                    </span>` : '';
+
+                const photoBtn = i.proof_photo ? `
+                    <a href="${i.proof_photo}" target="_blank" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg border border-blue-100 transition" title="View Photo">
+                        <i class="fa-solid fa-image"></i>
+                    </a>` : '<span class="text-slate-300 p-2"><i class="fa-solid fa-image-slash"></i></span>';
+
+                const notes = (i.missing_or_issue || i.other_item) ? `
+                    <div class="mt-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-800 leading-relaxed italic">
+                        <i class="fa-solid fa-comment-dots mr-1"></i> ${[i.missing_or_issue, i.other_item].filter(Boolean).join(' | ')}
+                    </div>` : '';
+
+                const timeInfo = `<div class="text-[9px] text-slate-400 font-bold mt-1 uppercase flex gap-2">
+                    ${i.pickup_time ? `<span><i class="fa-solid fa-arrow-up"></i> ${i.pickup_time}</span>` : ''}
+                    ${i.drop_off_time ? `<span><i class="fa-solid fa-arrow-down"></i> ${i.drop_off_time}</span>` : ''}
+                    ${i.sdr_name ? `<span><i class="fa-solid fa-user-tie"></i> ${i.sdr_name}</span>` : ''}
+                </div>`;
+
+                return `
+                <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
+                    <td class="p-4 align-top">
+                        <div class="text-[11px] font-black text-slate-800 whitespace-nowrap">${new Date(i.created_at).toLocaleDateString('en-GB')}</div>
+                        <div class="text-[10px] text-slate-400 font-bold">${new Date(i.created_at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                    </td>
+                    <td class="p-4 align-top">
+                        <div class="font-black text-slate-800 text-xs">${i.runner_name}</div>
+                        <div class="text-[9px] text-slate-400 font-black uppercase tracking-widest">${i.area}</div>
+                    </td>
+                    <td class="p-4 align-top">
+                        <span class="bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-600 shadow-sm inline-block mb-1">
+                            ${i.phase}
+                        </span>
+                        ${timeInfo}
+                    </td>
+                    <td class="p-4 align-top">
+                        <div class="font-black text-blue-700 text-xs">${i.business_name}</div>
+                        <div class="flex items-center gap-2 mt-1.5">
+                            <span class="text-[11px] font-bold text-slate-600">
+                                <i class="fa-solid ${(i.kit_id && i.phase !== 'Phase 2' && i.phase !== 'Phase 3') ? 'fa-box' : 'fa-sd-card'} mr-1 opacity-50"></i>
+                                ${(i.phase === 'Phase 2' || i.phase === 'Phase 3') ? ((i.sd_qty || 0) + ' SD Cards') : (i.kit_id || ((i.sd_qty || 0) + ' SD Cards'))}
+                            </span>
+                            ${conditionBadge}
+                            ${i.sd_uploaded > 0 ? `<span class="bg-blue-50 text-blue-600 border border-blue-100 text-[9px] px-2 py-0.5 rounded font-black uppercase">UP: ${i.sd_uploaded}</span>` : ''}
+                        </div>
+                        ${notes}
+                    </td>
+                    <td class="p-4 align-top text-right">
+                        <div class="flex justify-end items-center gap-1">
+                            ${photoBtn}
+                            <button onclick="editLog(${i.id})" class="text-slate-400 hover:text-blue-600 p-2 transition"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteRow('transactions', ${i.id})" class="text-slate-400 hover:text-red-500 p-2 transition"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join(''); 
+        }
+        
+        function renderAreas() { 
+            const s = document.getElementById('search-areas').value.toLowerCase(); 
+            const f = globalAreas.filter(i => i.area_name.toLowerCase().includes(s)); 
+            document.getElementById('table-areas').innerHTML = f.map(i => `
+                <tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-4 font-black">${i.area_name}</td>
+                    <td class="p-4 text-right"><span class="text-[10px] font-black bg-slate-100 text-slate-400 px-2 py-1 rounded border border-slate-200"><i class="fa-solid fa-lock mr-1"></i> LOCKED</span></td>
+                </tr>
+            `).join(''); 
+        }
+
+        function renderRunners() { 
+            const s = document.getElementById('search-runners').value.toLowerCase(); 
+            const fA = document.getElementById('filter-runners-area') ? document.getElementById('filter-runners-area').value : ''; 
+            const f = globalRunners.filter(i => (!fA || i.area_name === fA) && i.runner_name.toLowerCase().includes(s)); 
+            document.getElementById('table-runners').innerHTML = f.map(i => `
+                <tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-4 font-black">${i.runner_name}</td>
+                    <td class="p-4"><span class="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 uppercase">${i.area_name}</span></td>
+                    <td class="p-4 text-right">
+                        <button onclick="editRunner(${i.id})" class="text-slate-400 hover:text-blue-600 p-2"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteRow('master_runners', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join(''); 
+        }
+
+        function renderSDRs() { 
+            const s = document.getElementById('search-sdrs').value.toLowerCase(); 
+            const fA = document.getElementById('filter-sdrs-area') ? document.getElementById('filter-sdrs-area').value : ''; 
+            const f = globalSDRs.filter(i => (!fA || i.area_name === fA) && i.sdr_name.toLowerCase().includes(s)); 
+            document.getElementById('table-sdrs').innerHTML = f.map(i => `
+                <tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-4 font-black">${i.sdr_name}</td>
+                    <td class="p-4"><span class="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-1 rounded border border-indigo-100 uppercase">${i.area_name}</span></td>
+                    <td class="p-4 text-right">
+                        <button onclick="editSDR(${i.id})" class="text-slate-400 hover:text-blue-600 p-2"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteRow('master_sdrs', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join(''); 
+        }
+
+        function renderBusinesses() { 
+            const s = document.getElementById('search-businesses').value.toLowerCase(); 
+            const fA = document.getElementById('filter-businesses-area') ? document.getElementById('filter-businesses-area').value : ''; 
+            const f = globalBusinesses.filter(i => (!fA || i.area_name === fA) && i.business_name.toLowerCase().includes(s)); 
+            
+            document.getElementById('table-businesses').innerHTML = f.map(i => {
+                const activeKits = globalKits.filter(k => getKitLocation(k.kit_id).loc === i.business_name);
+                
+                let totalItems = 0;
+                let kitBadges = activeKits.length === 0 ? '<span class="text-slate-400 italic text-[10px]">No active kits</span>' : activeKits.map(k => {
+                    const recipe = globalKitTypes.find(t => t.type_name === k.kit_type);
+                    const itemCount = recipe && recipe.checklist_items ? recipe.checklist_items.split(',').length : 0;
+                    totalItems += itemCount;
+
+                    let colorClass = recipe && recipe.ui_color ? `bg-${recipe.ui_color}-50 text-${recipe.ui_color}-700 border-${recipe.ui_color}-200` : 'bg-slate-50 text-slate-700 border-slate-200';
+                    let icon = recipe && recipe.ui_icon ? `<i class="fa-solid ${recipe.ui_icon} mr-1 opacity-70"></i>` : '<i class="fa-solid fa-box mr-1 opacity-70"></i>';
+
+                    return `<span class="text-[10px] ${colorClass} font-black px-2 py-1 rounded border mr-1 inline-block mb-1 shadow-sm">${icon}${k.kit_id}</span>`;
+                }).join('');
+
+                return `
+                <tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-4">
+                        <button onclick="filterKitsByMerchant('${i.business_name}')" class="font-black text-blue-600 hover:underline text-left">
+                            ${i.business_name}
+                        </button>
+                        <div class="text-[9px] text-slate-400 font-bold uppercase">Click to view assets</div>
+                    </td>
+                    <td class="p-4 align-top"><span class="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200 uppercase">${i.area_name}</span></td>
+                    <td class="p-4 max-w-[200px] flex-wrap align-top">${kitBadges}</td>
+                    <td class="p-4 text-center align-top"><span class="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">${totalItems} Items</span></td>
+                    <td class="p-4 text-right align-top">
+                        <button onclick="editBusiness(${i.id})" class="text-slate-400 hover:text-blue-600 p-2"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteRow('master_businesses', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join(''); 
+        }
+
+        function renderKitTypes() { 
+            const s = document.getElementById('search-kit_types').value.toLowerCase(); 
+            const f = globalKitTypes.filter(i => i.type_name.toLowerCase().includes(s)); 
+            
+            document.getElementById('table-kit-types').innerHTML = f.map(i => {
+                let badgeClass = i.ui_color ? `bg-${i.ui_color}-50 text-${i.ui_color}-700 border-${i.ui_color}-200` : 'bg-slate-100 text-slate-600 border-slate-200';
+                let icon = i.ui_icon ? `<i class="fa-solid ${i.ui_icon} mr-2 opacity-70"></i>` : '<i class="fa-solid fa-box text-slate-400 mr-2"></i>';
+                
+                let pairingLabel = i.requires_pairing ? `<span class="inline-block ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 border border-amber-200 rounded text-[9px] font-black uppercase tracking-widest"><i class="fa-solid fa-link mr-1"></i>Paired to: ${i.paired_with_type}</span>` : '';
+
+                const checklistHtml = (i.checklist_items || '').split(',').map(item => 
+                    `<span class="inline-block px-2 py-1 bg-white border border-slate-200 rounded text-[10px] font-bold text-slate-600 mr-1 mb-1 shadow-sm"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${item.trim()}</span>`
+                ).join('');
+
+                return `
+                <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
+                    <td class="p-4 align-top">
+                        <div class="flex items-center mb-2">
+                            <span class="px-3 py-1.5 rounded-lg border text-[11px] font-black uppercase tracking-widest ${badgeClass} flex items-center shadow-sm">
+                                ${icon} ${i.type_name}
+                            </span>
+                            ${pairingLabel}
+                        </div>
+                        <div class="flex flex-wrap gap-1 mt-2">${checklistHtml}</div>
+                    </td>
+                    <td class="p-4 text-right align-top w-24">
+                        <button onclick="editKitType(${i.id})" class="text-slate-400 hover:text-blue-600 p-2 transition"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteRow('master_kit_types', ${i.id})" class="text-slate-400 hover:text-red-500 p-2 transition"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join(''); 
+        }
+
+        function renderAdminLogs() { 
+            const s = document.getElementById('search-admin_logs').value.toLowerCase(); 
+            const f = globalAdminLogs.filter(i => i.admin_email.toLowerCase().includes(s) || i.action_type.toLowerCase().includes(s)); 
+            document.getElementById('table-admin_logs').innerHTML = f.map(i => `
+                <tr class="hover:bg-amber-50/50 border-b border-slate-100">
+                    <td class="p-4 whitespace-nowrap">${new Date(i.created_at).toLocaleString('en-US')}</td>
+                    <td class="p-4 font-bold text-slate-800">${i.admin_email}</td>
+                    <td class="p-4"><span class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-black tracking-widest uppercase">${i.action_type}</span></td>
+                    <td class="p-4 text-slate-600 italic">${i.description}</td>
+                </tr>
+            `).join(''); 
+        }
+
+        // FUNGSI BARU: Tarik data lokasi langsung secara penuh tanpa pagination
+        async function fetchKitLocations() {
+            const { data, error } = await db.from('transactions')
+                .select('kit_id, business_name, phase, created_at')
+                .in('phase', ['Phase 1', 'Phase 4'])
+                .order('created_at', { ascending: false });
+
+            if (data) {
+                globalKitLocations = {};
+                data.forEach(log => {
+                    if (log.kit_id && !globalKitLocations[log.kit_id]) {
+                        if (log.phase === 'Phase 4') {
+                            globalKitLocations[log.kit_id] = { loc: 'Warehouse', isOffice: true };
+                        } else {
+                            globalKitLocations[log.kit_id] = { loc: log.business_name, isOffice: false };
+                        }
+                    }
+                });
+            }
+        }
+
+        // FUNGSI GET LOKASI YANG SUDAH DIPERBAIKI (Cepat & Akurat)
+        function getKitLocation(kitId) {
+            return globalKitLocations[kitId] || { loc: 'Warehouse', isOffice: true };
+        }
+
+        function filterKitsByMerchant(merchantName) {
+            switchTab('kits');
+            document.getElementById('search-kits').value = merchantName;
+            renderKits();
+        }
+
+        function renderKits() {
+            const s = document.getElementById('search-kits').value.toUpperCase();
+            const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
+            const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
+            
+            const f = globalKits.filter(i => {
+                const locData = getKitLocation(i.kit_id);
+                const matchArea = !filterArea || i.area_name === filterArea;
+                const matchType = !filterType || i.kit_type === filterType;
+                const matchSearch = i.kit_id.includes(s) || locData.loc.toUpperCase().includes(s);
+                return matchArea && matchType && matchSearch;
+            });
+
+            document.getElementById('table-kits').innerHTML = f.map(i => {
+                const locData = getKitLocation(i.kit_id);
+                return `
+                <tr class="hover:bg-slate-50 border-b border-slate-100 ${i.current_status === 'Damaged' ? 'bg-red-50/30' : ''}">
+                    <td class="p-4">
+                        <div class="font-black">${i.kit_id}</div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">${i.kit_type} | ${i.area_name}</div>
+                    </td>
+                    <td class="p-4">
+                        <span class="font-bold ${locData.isOffice ? 'text-slate-400' : 'text-blue-600'}">${locData.loc}</span>
+                    </td>
+                    <td class="p-4">
+                        <span class="text-[10px] font-black px-2 py-1 rounded border ${i.current_status === 'Damaged' ? 'bg-red-500 text-white border-red-600' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}">
+                            ${i.current_status.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="p-4 text-right flex justify-end gap-1 items-center h-full">
+                        ${i.current_status === 'Damaged' ? `<button onclick="repairKit(${i.id})" class="text-[10px] bg-amber-400 text-amber-900 font-black px-3 py-1.5 rounded hover:bg-amber-500 transition"><i class="fa-solid fa-wrench mr-1"></i> Repair</button>` : ''}
+                        <button onclick="deleteRow('master_kits', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+            
+            // Panggil render mismatch tiap kali render kits selesai
+            renderKitMismatches();
+        }
+
+        // --- NEW: LOGIKA PENGECEKAN MISMATCH KIT ---
+        function renderKitMismatches() {
+            // Kita cari log transaksi Phase 4
+            const phase4Logs = globalLogs.filter(l => l.phase === 'Phase 4' && l.kit_id);
+            let auditList = [];
+
+            phase4Logs.forEach(p4 => {
+                // Cari Phase 1 sebelumnya untuk Kit ID yang sama
+                const p1 = globalLogs.find(l => l.phase === 'Phase 1' && l.kit_id === p4.kit_id && new Date(l.created_at) < new Date(p4.created_at));
+                
+                if (p1) {
+                    // Asumsi: Checklist item disimpan dalam string (misal dipisah koma) 
+                    // di tabel transaksi. Jika mobile app save di field "checked_items", ganti nama field di bawah ini.
+                    // Jika tidak ada di transaksi P1, kita ambil standard list dari "master_kit_types" (Recipe).
+                    
+                    let p1ChecklistStr = p1.checked_items || p1.missing_or_issue || ""; 
+                    const recipe = globalKitTypes.find(t => t.type_name === p4.kit_type);
+                    
+                    if (!p1ChecklistStr || p1ChecklistStr.trim() === "") {
+                        p1ChecklistStr = recipe ? recipe.checklist_items : "";
+                    }
+
+                    // Checklist dari Phase 4
+                    const p4ChecklistStr = p4.checked_items || p4.missing_or_issue || "";
+
+                    // Ubah jadi Array, bersihkan spasi, dan jadikan lowercase agar gampang dicompare
+                    const p1Items = p1ChecklistStr.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+                    const p4Items = p4ChecklistStr.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+
+                    // Cari barang yang ADA di P1, tapi TIDAK ADA di P4
+                    const missingItems = p1Items.filter(item => !p4Items.includes(item));
+
+                    // Tampilkan hanya jika ada selisih/hilang
+                    if (missingItems.length > 0) {
+                        auditList.push({
+                            kitId: p4.kit_id,
+                            kitType: p4.kit_type,
+                            dateP1: p1.created_at,
+                            dateP4: p4.created_at,
+                            p1ItemsOrg: p1ChecklistStr.split(',').map(i => i.trim()).filter(Boolean),
+                            p4ItemsOrg: p4ChecklistStr.split(',').map(i => i.trim()).filter(Boolean),
+                            missingItemsOrg: missingItems // versi raw
+                        });
+                    }
+                }
+            });
+
+            document.getElementById('table-kit-audit').innerHTML = auditList.length === 0 ? 
+                `<tr><td colspan="4" class="p-6 text-center text-slate-400 italic bg-slate-50">Semua Kit kembali dengan checklist komplit. Tidak ada anomali.</td></tr>` : 
+                auditList.map(a => {
+                    const badgeP1 = a.p1ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
+                    const badgeP4 = a.p4ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
+                    
+                    // Highlight item yang missing dengan warna merah
+                    const missingBadges = a.missingItemsOrg.map(i => `<span class="inline-block px-2 py-1 bg-red-100 border border-red-300 rounded text-[10px] font-black uppercase text-red-700 mr-1 mb-1 shadow-sm"><i class="fa-solid fa-xmark mr-1"></i>${i}</span>`).join('');
+
+                    return `
+                    <tr class="hover:bg-rose-50/30 transition border-b border-slate-100">
+                        <td class="p-4 align-top">
+                            <div class="font-black text-slate-800">${a.kitId}</div>
+                            <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${a.kitType}</div>
+                        </td>
+                        <td class="p-4 align-top w-1/4">
+                            <div class="text-[10px] font-bold text-slate-500 mb-1">${new Date(a.dateP1).toLocaleDateString('en-GB')}</div>
+                            <div class="flex flex-wrap">${badgeP1}</div>
+                        </td>
+                        <td class="p-4 align-top w-1/4">
+                            <div class="text-[10px] font-bold text-slate-500 mb-1">${new Date(a.dateP4).toLocaleDateString('en-GB')}</div>
+                            <div class="flex flex-wrap">${badgeP4}</div>
+                        </td>
+                        <td class="p-4 align-top w-1/4">
+                            <div class="flex flex-wrap">${missingBadges}</div>
+                        </td>
+                    </tr>`;
+                }).join('');
+        }
+
+        function renderUsers() { 
+            const s = document.getElementById('search-users').value.toLowerCase(); 
+            const f = globalUsers.filter(i => i.email.toLowerCase().includes(s)); 
+            document.getElementById('table-users').innerHTML = f.map(i => `
+                <tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-4">
+                        <div class="font-black">${i.email}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">PWD: ****</div>
+                    </td>
+                    <td class="p-4">
+                        <span class="text-[10px] font-black px-2 py-1 rounded border uppercase ${i.role === 'Admin' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-orange-50 text-orange-600 border-orange-200'}">${i.role}</span>
+                        <span class="text-[10px] ml-1 font-bold text-slate-400">[${i.assigned_area || 'N/A'}]</span>
+                    </td>
+                    <td class="p-4 text-xs font-bold text-slate-500">${i.runner_name || '-'}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="editUser(${i.id})" class="text-slate-400 hover:text-blue-600 p-2"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteRow('master_users', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join(''); 
+        }
+
+        async function editLog(id) { 
+            const log = globalLogs.find(x => x.id === id); 
+            
+            document.getElementById('edit-log-id').value = log.id; 
+            document.getElementById('edit-log-phase').value = log.phase; 
+            document.getElementById('edit-log-kit').value = log.kit_id || ''; 
+            document.getElementById('edit-log-sd').value = log.sd_qty || ''; 
+            document.getElementById('edit-log-condition').value = log.device_condition || ''; 
+            document.getElementById('edit-log-notes').value = log.missing_or_issue || ''; 
+            
+            await fetchBusinesses(true);
+            
+            let bizOptions = globalBusinesses
+                .filter(b => b.area_name === log.area)
+                .map(b => `<option value="${b.business_name}" ${b.business_name === log.business_name ? 'selected' : ''}>${b.business_name}</option>`)
+                .join('');
+            
+            if(!bizOptions.includes('selected') && log.business_name) {
+                bizOptions += `<option value="${log.business_name}" selected>${log.business_name} (Current)</option>`;
+            }
+            if(!bizOptions) {
+                bizOptions = `<option value="">-- No Merchant Found in ${log.area} --</option>`;
+            }
+            
+            document.getElementById('edit-log-business').innerHTML = bizOptions;
+            showModal('modal-log'); 
+        }
+        
+        document.getElementById('form-log').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const p = {
+                phase: document.getElementById('edit-log-phase').value, 
+                business_name: document.getElementById('edit-log-business').value, 
+                kit_id: document.getElementById('edit-log-kit').value.toUpperCase() || null, 
+                sd_qty: parseInt(document.getElementById('edit-log-sd').value) || null, 
+                device_condition: document.getElementById('edit-log-condition').value || null, 
+                missing_or_issue: document.getElementById('edit-log-notes').value
+            }; 
+            await db.from('transactions').update(p).eq('id', document.getElementById('edit-log-id').value); 
+            await logAdminAction('UPDATE_LOG', `Modified log ID ${document.getElementById('edit-log-id').value}`); 
+            closeModal('modal-log'); 
+            fetchLogs(true); 
+        });
+
+        document.getElementById('form-area').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const name = document.getElementById('input-area-name').value; 
+            await db.from('master_areas').insert([{ area_name: name }]); 
+            await logAdminAction('CREATE_AREA', `Added new area: ${name}`); 
+            fetchAreas(true); 
+            e.target.reset(); 
+            closeModal('modal-area'); 
+        });
+
+        function openAddRunnerModal() { 
+            document.getElementById('form-runner').reset(); 
+            document.getElementById('input-runner-id').value = ''; 
+            document.getElementById('runner-auth-section').classList.remove('hidden-view'); 
+            document.getElementById('runner-modal-title').innerText = 'Add Runner'; 
+            document.getElementById('input-runner-email').required = true; 
+            document.getElementById('input-runner-pin').required = true; 
+            showModal('modal-runner'); 
+        }
+
+        function editRunner(id) { 
+            const r = globalRunners.find(x => x.id === id); 
+            document.getElementById('input-runner-id').value = r.id; 
+            document.getElementById('input-runner-area').value = r.area_name; 
+            document.getElementById('input-runner-name').value = r.runner_name; 
+            document.getElementById('runner-auth-section').classList.add('hidden-view'); 
+            document.getElementById('runner-modal-title').innerText = 'Edit Runner'; 
+            document.getElementById('input-runner-email').required = false; 
+            document.getElementById('input-runner-pin').required = false; 
+            showModal('modal-runner'); 
+        }
+
+        document.getElementById('form-runner').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const id = document.getElementById('input-runner-id').value;
+            const area = document.getElementById('input-runner-area').value;
+            const name = document.getElementById('input-runner-name').value; 
+            
+            if (!id) { 
+                const em = document.getElementById('input-runner-email').value;
+                const pin = document.getElementById('input-runner-pin').value; 
+                const { error } = await db.from('master_users').insert([{ email: em, pin: pin, role: 'Staff', runner_name: name }]); 
+                if (error) { alert("Email exists or error occurred."); return; } 
+                await db.from('master_runners').insert([{ area_name: area, runner_name: name }]); 
+                await logAdminAction('CREATE_RUNNER', `Added runner: ${name}`); 
+            } else { 
+                await db.from('master_runners').update({ area_name: area, runner_name: name }).eq('id', id); 
+                await logAdminAction('UPDATE_RUNNER', `Updated runner ID ${id}`); 
+            } 
+            fetchRunners(true); 
+            e.target.reset(); 
+            closeModal('modal-runner'); 
+        });
+
+        function openAddSdrModal() { 
+            document.getElementById('form-sdr').reset(); 
+            document.getElementById('input-sdr-id').value = ''; 
+            document.getElementById('sdr-modal-title').innerText = 'Add SDR'; 
+            showModal('modal-sdr'); 
+        }
+
+        function editSDR(id) { 
+            const r = globalSDRs.find(x => x.id === id); 
+            document.getElementById('input-sdr-id').value = r.id; 
+            document.getElementById('input-sdr-area').value = r.area_name; 
+            document.getElementById('input-sdr-name').value = r.sdr_name; 
+            document.getElementById('sdr-modal-title').innerText = 'Edit SDR'; 
+            showModal('modal-sdr'); 
+        }
+
+        document.getElementById('form-sdr').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const id = document.getElementById('input-sdr-id').value;
+            const p = { area_name: document.getElementById('input-sdr-area').value, sdr_name: document.getElementById('input-sdr-name').value }; 
+            if (!id) {
+                await db.from('master_sdrs').insert([p]); 
+                await logAdminAction('CREATE_SDR', `Added SDR: ${p.sdr_name}`);
+            } else {
+                await db.from('master_sdrs').update(p).eq('id', id); 
+                await logAdminAction('UPDATE_SDR', `Updated SDR ID ${id}`);
+            } 
+            fetchSDRs(true); 
+            e.target.reset(); 
+            closeModal('modal-sdr'); 
+        });
+
+        function openAddBizModal() { 
+            document.getElementById('form-business').reset(); 
+            document.getElementById('input-biz-id').value = ''; 
+            document.getElementById('biz-modal-title').innerText = 'Add Merchant'; 
+            showModal('modal-business'); 
+        }
+
+        function editBusiness(id) { 
+            const r = globalBusinesses.find(x => x.id === id); 
+            document.getElementById('input-biz-id').value = r.id; 
+            document.getElementById('input-biz-area').value = r.area_name; 
+            document.getElementById('input-biz-name').value = r.business_name.replace(` - ${r.area_name}`, ''); 
+            document.getElementById('biz-modal-title').innerText = 'Edit Merchant'; 
+            showModal('modal-business'); 
+        }
+
+        document.getElementById('form-business').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const id = document.getElementById('input-biz-id').value;
+            const area = document.getElementById('input-biz-area').value;
+            const fN = `${document.getElementById('input-biz-name').value.trim()} - ${area}`;
+            const p = { area_name: area, business_name: fN }; 
+            
+            if (!id) {
+                await db.from('master_businesses').insert([p]); 
+                await logAdminAction('CREATE_BIZ', `Added merchant: ${fN}`);
+            } else {
+                await db.from('master_businesses').update(p).eq('id', id); 
+                await logAdminAction('UPDATE_BIZ', `Updated merchant ID ${id}`);
+            } 
+            fetchBusinesses(true); 
+            e.target.reset(); 
+            closeModal('modal-business'); 
+        });
+
+        function openAddKitTypeModal() { 
+            document.getElementById('form-kit-type').reset(); 
+            document.getElementById('input-type-id').value = ''; 
+            document.getElementById('type-modal-title').innerText = 'Add Recipe'; 
+            showModal('modal-kit-type'); 
+        }
+
+        function editKitType(id) { 
+            const k = globalKitTypes.find(x => x.id === id); 
+            document.getElementById('input-type-id').value = k.id; 
+            document.getElementById('input-type-name').value = k.type_name; 
+            document.getElementById('input-type-items').value = k.checklist_items; 
+            document.getElementById('input-type-pairing').value = k.requires_pairing ? "true" : "false";
+            document.getElementById('input-type-pair-target').value = k.paired_with_type || "";
+            document.getElementById('input-type-icon').value = k.ui_icon || "fa-box";
+            document.getElementById('input-type-color').value = k.ui_color || "slate";
+            document.getElementById('input-type-metric').value = k.upload_metric_type || "None";
+            document.getElementById('input-type-sd-yield').value = k.yields_sd_qty || 0;
+            document.getElementById('type-modal-title').innerText = 'Edit Recipe'; 
+            showModal('modal-kit-type'); 
+        }
+
+        document.getElementById('form-kit-type').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const id = document.getElementById('input-type-id').value;
+            const p = {
+                type_name: document.getElementById('input-type-name').value,
+                checklist_items: document.getElementById('input-type-items').value,
+                requires_pairing: document.getElementById('input-type-pairing').value === "true",
+                paired_with_type: document.getElementById('input-type-pair-target').value || null,
+                ui_icon: document.getElementById('input-type-icon').value || "fa-box",
+                ui_color: document.getElementById('input-type-color').value || "slate",
+                upload_metric_type: document.getElementById('input-type-metric').value,
+                yields_sd_qty: parseInt(document.getElementById('input-type-sd-yield').value) || 0
+            };
+            
+            let dbError = null;
+            if (!id) {
+                const { error } = await db.from('master_kit_types').insert([p]); 
+                dbError = error;
+                if (!error) await logAdminAction('CREATE_RECIPE', `Added recipe: ${p.type_name}`);
+            } else {
+                const { error } = await db.from('master_kit_types').update(p).eq('id', id); 
+                dbError = error;
+                if (!error) await logAdminAction('UPDATE_RECIPE', `Updated recipe ID ${id}`);
+            } 
+
+            if (dbError) {
+                alert("❌ FAILED TO SAVE!\n\nDatabase Message: " + dbError.message);
+            } else {
+                fetchKitTypes(true); 
+                e.target.reset(); 
+                closeModal('modal-kit-type'); 
+            }
+        });
+
+        function openAddKitModal() { 
+            document.getElementById('form-kit').reset(); 
+            showModal('modal-kit'); 
+        }
+
+        document.getElementById('form-kit').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const id = document.getElementById('input-kit-id').value.toUpperCase(); 
+            await db.from('master_kits').insert([{
+                area_name: document.getElementById('input-kit-area').value,
+                kit_id: id,
+                kit_type: document.getElementById('input-kit-type-dropdown').value,
+                current_status: 'Good'
+            }]); 
+            await logAdminAction('REGISTER_KIT', `Registered single kit: ${id}`); 
+            fetchKits(true); 
+            e.target.reset(); 
+            closeModal('modal-kit'); 
+        });
+
+        async function repairKit(id) { 
+            if(confirm("Confirm repair?")) { 
+                await db.from('master_kits').update({current_status: 'Good'}).eq('id', id); 
+                await logAdminAction('REPAIR_KIT', `Repaired kit ID ${id}`); 
+                fetchKits(true); 
+            } 
+        }
+
+        function openManualDeployModal() {
+            document.getElementById('form-manual-deploy').reset();
+            document.getElementById('deploy-kit-list').innerHTML = ''; // Kosongkan datalist
+            document.getElementById('deploy-business').innerHTML = `<option value="">-- Select Area First --</option>`;
+            toggleDeployBiz(); 
+            showModal('modal-manual-deploy');
+        }
+
+        document.getElementById('deploy-area').addEventListener('change', () => {
+            const area = document.getElementById('deploy-area').value;
+            const kitInput = document.getElementById('deploy-kit-id');
+            const kitList = document.getElementById('deploy-kit-list');
+            const bizSelect = document.getElementById('deploy-business');
+            
+            kitInput.value = ''; // Reset ketikan user
+
+            if(!area) {
+                kitList.innerHTML = '';
+                bizSelect.innerHTML = `<option value="">-- Select Area First --</option>`;
+                return;
+            }
+
+            // Memasukkan daftar Kit ID ke dalam Datalist
+            const kits = globalKits.filter(k => k.area_name === area && k.current_status === 'Good');
+            kitList.innerHTML = kits.map(k => `<option value="${k.kit_id}">${k.kit_id}</option>`).join('');
+
+            const biz = globalBusinesses.filter(b => b.area_name === area);
+            bizSelect.innerHTML = `<option value="">-- Select Merchant --</option>` + biz.map(b => `<option value="${b.business_name}">${b.business_name}</option>`).join('');
+        });
+
+        function toggleDeployBiz() {
+            const phase = document.getElementById('deploy-phase').value;
+            const container = document.getElementById('deploy-biz-container');
+            const bizSelect = document.getElementById('deploy-business');
+            if (phase === 'Phase 1') {
+                container.classList.remove('hidden-view');
+                bizSelect.required = true;
+            } else {
+                container.classList.add('hidden-view');
+                bizSelect.required = false;
+            }
+            document.getElementById('deploy-area').dispatchEvent(new Event('change'));
+        }
+
+        document.getElementById('form-manual-deploy').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            const phase = document.getElementById('deploy-phase').value;
+            const biz = phase === 'Phase 1' ? document.getElementById('deploy-business').value : 'Warehouse';
+            const kitId = document.getElementById('deploy-kit-id').value.toUpperCase(); 
+            
+            const kitMaster = globalKits.find(k => k.kit_id === kitId);
+            if(!kitMaster) { alert("Error: Kit ID tidak ditemukan atau ejaan salah!"); return; }
+
+            // Ambil data lokasi alat ini SAAT INI
+            const currentLoc = getKitLocation(kitId);
+            let payload = [];
+
+            // LOGIKA OTOMATIS: Jika mau dipindah ke Merchant baru (Phase 1), 
+            // TAPI alat saat ini MENGGANTUNG di Merchant lama (bukan di Office/Warehouse)
+            if (phase === 'Phase 1' && !currentLoc.isOffice && currentLoc.loc !== biz) {
+                payload.push({
+                    area: kitMaster.area_name,
+                    phase: 'Phase 4',
+                    runner_name: admin.runner_name || 'System Admin',
+                    business_name: currentLoc.loc, // Catat nama Merchant yang LAMA
+                    kit_id: kitId,
+                    kit_type: kitMaster.kit_type,
+                    device_condition: 'Good',
+                    missing_or_issue: `Auto-Phase 4 (Ditarik otomatis dari ${currentLoc.loc} sebelum dipindah ke ${biz})`
+                });
+            }
+
+            // Buat transaksi utama (Tujuan akhirnya)
+            payload.push({
+                area: document.getElementById('deploy-area').value,
+                phase: phase,
+                runner_name: admin.runner_name || 'System Admin',
+                business_name: biz,
+                kit_id: kitId,
+                kit_type: kitMaster.kit_type,
+                device_condition: 'Good',
+                missing_or_issue: 'Manual allocation/override by Admin'
+            });
+
+            // Eksekusi semua payload ke Supabase sekaligus
+            await db.from('transactions').insert(payload);
+            
+            await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
+            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
+            alert("Manual allocation berhasil dieksekusi!");
+        });
+
+        function openAddUserModal() { 
+            document.getElementById('form-user').reset(); 
+            document.getElementById('input-user-id').value = ''; 
+            document.getElementById('user-modal-title').innerText = 'Add System User'; 
+            document.getElementById('input-user-pin').required = true; 
+
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            const roleSelect = document.getElementById('input-user-role');
+            if(admin.email === 'rainhardjohanes@gmail.com') {
+                roleSelect.innerHTML = `<option value="Staff">Field Staff</option><option value="Admin">Administrator</option>`;
+            } else {
+                roleSelect.innerHTML = `<option value="Staff">Field Staff</option>`;
+            }
+            showModal('modal-user'); 
+        }
+
+        function editUser(id) { 
+            const u = globalUsers.find(x => x.id === id); 
+            document.getElementById('input-user-id').value = u.id; 
+            document.getElementById('input-user-fullname').value = u.runner_name || ''; 
+            document.getElementById('input-user-email').value = u.email; 
+            document.getElementById('input-user-pin').value = ''; 
+            document.getElementById('input-user-pin').required = false; 
+
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            const roleSelect = document.getElementById('input-user-role');
+            if(admin.email === 'rainhardjohanes@gmail.com' || u.role === 'Admin') {
+                roleSelect.innerHTML = `<option value="Staff">Field Staff</option><option value="Admin">Administrator</option>`;
+            } else {
+                roleSelect.innerHTML = `<option value="Staff">Field Staff</option>`;
+            }
+            roleSelect.value = u.role;
+            
+            document.getElementById('input-user-area-admin').value = u.assigned_area || ''; 
+            document.getElementById('user-modal-title').innerText = 'Edit User'; 
+            showModal('modal-user'); 
+        }
+        
+        document.getElementById('form-user').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('input-user-id').value;
+            const role = document.getElementById('input-user-role').value;
+            const emailInput = document.getElementById('input-user-email').value.trim();
+            const pinInput = document.getElementById('input-user-pin').value;
+            const fullName = document.getElementById('input-user-fullname').value.trim();
+            const area = document.getElementById('input-user-area-admin').value;
+
+            const payload = {
+                email: emailInput.toLowerCase(),
+                role: role,
+                assigned_area: role === 'Admin' && area === 'All' ? 'All' : area,
+                runner_name: fullName
+            };
+            if (pinInput) payload.pin = pinInput;
+
+            if (!id) {
+                if (!pinInput) { alert("PIN/Password is required for new users!"); return; }
+
+                const ghostDb = window.supabase.createClient(
+                    'https://ksdulyitxvtfvxgoqotd.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzZHVseWl0eHZ0ZnZ4Z29xb3RkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODgzNzEsImV4cCI6MjA5MTE2NDM3MX0.nJ4lUtAKKBt_NQu0vZo8Dn6R7GfuE4qpgEfGYkkvh40',
+                    { auth: { persistSession: false } }
+                );
+
+                const { data: authData, error: authError } = await ghostDb.auth.signUp({
+                    email: emailInput,
+                    password: pinInput
+                });
+                if (authError) { alert("Failed to create user in Auth system: " + authError.message); return; }
+
+                const { error: dbError } = await db.from('master_users').insert([payload]);
+                if (dbError) { alert("Failed to save user profile: " + dbError.message); return; }
+
+                if (role === 'Staff') {
+                    await db.from('master_runners').insert([{
+                        runner_name: fullName,
+                        area_name: area
+                    }]);
+                    fetchRunners(true); 
+                }
+
+                await logAdminAction('CREATE_USER', `Created ${role}: ${fullName} (${emailInput})`);
+                alert("Account successfully created!");
+
+            } else {
+                if (pinInput && pinInput.trim() !== "") {
+                    const { error: rpcError } = await db.rpc('admin_update_user_password', {
+                        target_email: emailInput,
+                        new_password: pinInput
+                    });
+                    
+                    if (rpcError) {
+                        alert("Failed to update password in Auth system: " + rpcError.message);
+                        return;
+                    }
+                    delete payload.pin; 
+                } else {
+                    delete payload.pin; 
+                }
+
+                const { error: profileError } = await db.from('master_users').update(payload).eq('id', id);
+                if (profileError) { 
+                    alert("Failed to update profile: " + profileError.message); 
+                    return; 
+                }
+                
+                await logAdminAction('UPDATE_USER', `Updated user profile/credentials for: ${emailInput}`);
+                alert("Account successfully updated!");
+            }
+
+            fetchUsers(true);
+            e.target.reset();
+            closeModal('modal-user');
+        });
+
+        async function deleteRow(tbl, id) { 
+            if(confirm("DANGER: This action is permanent. Continue deleting?")) {
+                
+                const { data, error } = await db.from(tbl).delete().eq('id', id).select(); 
+                
+                if (error) {
+                    alert("❌ FAILED TO DELETE!\n\nServer Reason: " + error.message);
+                    return; 
+                }
+
+                if (!data || data.length === 0) {
+                    alert("❌ FAILED TO DELETE!\n\nDatabase blocked this action (Row Level Security). Data not deleted.");
+                    return;
+                }
+
+                await logAdminAction('DELETE', `Deleted record ID ${id} from ${tbl}`);
+                
+                if (tbl === 'master_users') {
+                    await fetchUsers(true);
+                } else if (tbl === 'transactions') {
+                    await fetchLogs(true);
+                    await fetchKits(true); 
+                } else { 
+                    const view = tbl.replace('master_', ''); 
+                    if(view === 'areas') await fetchAreas(true); 
+                    if(view === 'runners') await fetchRunners(true); 
+                    if(view === 'sdrs') await fetchSDRs(true); 
+                    if(view === 'businesses') await fetchBusinesses(true); 
+                    if(view === 'kit_types') await fetchKitTypes(true); 
+                    if(view === 'kits') await fetchKits(true); 
+                }
+                
+                alert("✅ Data successfully deleted from database!");
+            } 
+        }
+
+        function downloadTemplate() {
+            const ws = XLSX.utils.aoa_to_sheet([
+                ["Kit ID", "Recipe Type", "Area Name"], 
+                ["K-1001", "Standard Kit", "Jakarta"],   
+                ["K-1002", "Premium Kit", "Bali"]        
+            ]);
+            
+            ws['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 20 }];
+            
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Data Import");
+            XLSX.writeFile(wb, "RunnerTrack_Kit_Template.xlsx");
+        }
+
+        async function processExcel() {
+            const fI = document.getElementById('excel-file');
+            const lg = document.getElementById('import-log');
+            const btn = document.getElementById('btn-process-excel');
+            
+            if(!fI.files.length){ alert("Select file."); return; } 
+            
+            lg.classList.remove('hidden'); 
+            lg.innerHTML = 'Reading...'; 
+            btn.disabled = true;
+            
+            const r = new FileReader();
+            r.onload = async(e) => {
+                try {
+                    const json = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).SheetNames[0]], {header: 1});
+                    if(json.length <= 1) { lg.innerHTML = 'Empty file.'; btn.disabled = false; return; }
+                    
+                    let errs = [], pl = [], seen = new Set(), aA = getAdminArea();
+                    
+                    for(let i = 1; i < json.length; i++) {
+                        const r = json[i]; if(!r || r.length === 0) continue;
+                        const kI = (r[0] || '').toString().trim().toUpperCase();
+                        const tN = (r[1] || '').toString().trim();
+                        const aN = (r[2] || '').toString().trim();
+                        
+                        if(!kI || !tN || !aN) { errs.push(`Row ${i + 1}: Missing cols.`); continue; }
+                        if(aA !== 'All' && aN !== aA) { errs.push(`Row ${i + 1}: Area restriction.`); continue; }
+                        if(!globalAreas.find(a => a.area_name === aN)) { errs.push(`Row ${i + 1}: Area missing.`); continue; }
+                        if(seen.has(kI)) { errs.push(`Row ${i + 1}: Duplicate in file.`); continue; } seen.add(kI);
+                        if(globalKits.find(k => k.kit_id === kI)) { errs.push(`Row ${i + 1}: Exists in DB.`); continue; }
+                        if(!globalKitTypes.find(t => t.type_name === tN)) { errs.push(`Row ${i + 1}: Recipe missing.`); continue; }
+                        
+                        pl.push({ kit_id: kI, kit_type: tN, area_name: aN, current_status: 'Good' });
+                    }
+                    
+                    if(errs.length > 0) {
+                        lg.innerHTML = `<p class="text-red-600">Errors found:</p>` + errs.map(e => `<p>${e}</p>`).join('');
+                    } else {
+                        lg.innerHTML = 'Uploading...';
+                        for(let i = 0; i < pl.length; i += 100) { 
+                            const {error} = await db.from('master_kits').insert(pl.slice(i, i + 100)); 
+                            if(error) { lg.innerHTML = `Error: ${error.message}`; btn.disabled = false; return; } 
+                        }
+                        await logAdminAction('BULK_IMPORT', `Imported ${pl.length} kits.`);
+                        lg.innerHTML = 'Success!'; 
+                        setTimeout(() => { closeModal('modal-import'); fetchKits(true); }, 2000);
+                    }
+                } catch(err) { lg.innerHTML = `Error: ${err.message}`; } 
+                btn.disabled = false;
+            }; 
+            r.readAsArrayBuffer(fI.files[0]);
+        }
+
+        window.onload = () => { if(localStorage.getItem('admin_user')) initApp(); };
+    
+        async function refreshAllData() {
+            await Promise.all([fetchLogs(true), fetchKits(true), fetchKitTypes(true), fetchBusinesses(true)]);
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const dateInput = document.getElementById('dash-date-filter');
+            if(!dateInput.value) {
+                const today = new Date();
+                const y = today.getFullYear();
+                const m = String(today.getMonth() + 1).padStart(2, '0');
+                const d = String(today.getDate()).padStart(2, '0');
+                dateInput.value = `${y}-${m}-${d}`;
+            }
+            const filterDate = dateInput.value;
+
+            const filterArea = document.getElementById('dash-area-filter').value;
+            const startTime = document.getElementById('dash-start-time').value; 
+            const endTime = document.getElementById('dash-end-time').value;
+
+            let totalSD = 0;
+            let totalIphone = 0;
+
+            globalLogs.forEach(log => {
+                const logDateObj = new Date(log.created_at);
+                const logLocalFormat = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+                
+                const logTimeStr = logDateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+                const isDateMatch = logLocalFormat === filterDate;
+                const isAreaMatch = !filterArea || log.area === filterArea;
+                const isTimeMatch = logTimeStr >= startTime && logTimeStr <= endTime;
+
+                // Cek kecocokan Tanggal, Area, dan Waktu
+            if(isDateMatch && isAreaMatch && isTimeMatch) {
+                
+                // 1. Identifikasi tipe alat
+                let isIphone = false;
+                
+                if (log.kit_type) {
+                    const recipe = globalKitTypes.find(t => t.type_name === log.kit_type);
+                    // Cek apakah alat ini ditandai sebagai iPhone di Recipe
+                    if (recipe && recipe.upload_metric_type === 'iPhone') {
+                        isIphone = true;
+                    } else if (!recipe) {
+                        // Fallback: Jika tidak ada recipe, cek namanya
+                        const kt = log.kit_type.toUpperCase();
+                        if(kt.includes('MONO') || kt.includes('IPHONE')) isIphone = true;
+                    }
+                }
+
+                // =======================================================
+                // BENTENG KEAMANAN: Paksa data menjadi Angka (Integer) murni!
+                // Jika isinya "No", null, teks kosong, atau false, akan otomatis jadi 0
+                // =======================================================
+                const uploadVal = parseInt(log.sd_uploaded) || 0;
+
+                // 2. LOGIKA MUTLAK iPHONE (Hanya Phase 4 + Upload Yes)
+                if (log.phase === 'Phase 4' && isIphone && uploadVal > 0) {
+                    totalIphone += 1;
+                }
+
+                // 3. LOGIKA MUTLAK SD CARD (Blokir semua data iPhone)
+                if (!isIphone) {
+                    if (log.phase === 'Phase 3' && uploadVal > 0) {
+                        // Phase 3: Tambah sesuai jumlah yang diketik
+                        totalSD += uploadVal;
+                    }
+                    else if (log.phase === 'Phase 4' && uploadVal > 0) {
+                        // Phase 4 alat standar: Tambah 1 SD
+                        totalSD += 1;
+                    }
+                }
+            }
+
+            });
+
+            document.getElementById('stat-sd-today').innerText = totalSD;
+            document.getElementById('stat-iphone-today').innerText = totalIphone;
+
+            
+            const tbody = document.getElementById('table-dash-kits');
+            tbody.innerHTML = globalKitTypes.map(type => {
+                const kitsOfType = globalKits.filter(k => k.kit_type === type.type_name);
+                let atBusiness = 0, inOffice = 0, damaged = 0;
+
+                kitsOfType.forEach(kit => {
+                    if(kit.current_status === 'Damaged') {
+                        damaged++; 
+                    } else {
+                        const history = globalLogs.filter(l => {
+                            const logDateObj = new Date(l.created_at);
+                            const y = logDateObj.getFullYear();
+                            const m = String(logDateObj.getMonth() + 1).padStart(2, '0');
+                            const d = String(logDateObj.getDate()).padStart(2, '0');
+                            const logLocalFormat = `${y}-${m}-${d}`;
+                            
+                            return l.kit_id === kit.kit_id && logLocalFormat <= filterDate;
+                        });
+
+                        let isOffice = true;
+                        if(history.length > 0) {
+                            if(history[0].phase !== 'Phase 4') isOffice = false;
+                        }
+
+                        if(isOffice) inOffice++;
+                        else atBusiness++;
+                    }
+                });
+
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-black text-blue-700">${type.type_name}</td>
+                        <td class="p-4 text-center"><span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full">${atBusiness} Deployed</span></td>
+                        <td class="p-4 text-center"><span class="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full">${inOffice} in Office</span></td>
+                        <td class="p-4 text-center"><span class="${damaged > 0 ? 'bg-red-50 text-red-600' : 'text-slate-300'} px-3 py-1 rounded-full">${damaged} Damaged</span></td>
+                        <td class="p-4 text-right text-slate-400 font-mono">${kitsOfType.length}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            
+        }
+    
+async function renderSDTracker() {
+
+            // TARIK DATA LANGSUNG DARI DATABASE (Tidak terganggu oleh sistem Pagination)
+            const { data } = await db.from('transactions')
+                .select('*')
+                .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
+                .gte('created_at', '2026-04-15T00:00:00')
+                .order('created_at', { ascending: true });
+
+            let sdLogs = data || [];
+
+            let merchantState = {};
+            let mismatches = [];
+            let overdues = [];
+            let perfectMatches = []; // <-- Variabel baru untuk menampung history hijau
+
+            // Process Ledger
+            sdLogs.forEach(log => {
+                const biz = log.business_name;
+                if (!biz) return;
+
+                if (!merchantState[biz]) {
+                    merchantState[biz] = { balance: 0, lastP2Date: null, lastP2Runner: null };
+                }
+
+                let state = merchantState[biz];
+                let qty = parseInt(log.sd_qty) || 0;
+
+if (log.phase === 'Phase 2') {
+    if (state.balance > 0) {
+        mismatches.push({
+            date: log.created_at,
+            merchant: biz,
+            runner: state.lastP2Runner || log.runner_name || 'Unknown', // <--- TAMBAHKAN INI
+            type: 'SHORTAGE',
+            variance: state.balance,
+            desc: `${state.balance} SD remaining from previous cycle. (Detected during new Phase 2).`
+        });
+    }
+    state.balance = qty;
+    
+    state.lastP2Date = log.created_at;
+                    state.lastP2Runner = log.runner_name;
+                } 
+                else if (log.phase === 'Phase 3') {
+                    state.balance -= qty;
+                    if (state.balance < 0) {
+                        let lebihQty = Math.abs(state.balance);
+                        mismatches.push({
+                            date: log.created_at,
+                            merchant: biz,
+                            runner: log.runner_name,
+                            type: 'SURPLUS',
+                            variance: lebihQty,
+                            desc: `Runner withdrew ${qty} SD, but system records only showed ${qty - lebihQty} SD left.`
+                        });
+                        state.balance = 0; 
+                    }
+                }
+            });
+
+            // Check Overdue
+            const now = new Date();
+            Object.entries(merchantState).forEach(([biz, state]) => {
+                if (state.balance > 0 && state.lastP2Date) {
+                    const diffHours = (now - new Date(state.lastP2Date)) / (1000 * 60 * 60);
+                    if (diffHours >= 24) {
+                        overdues.push({ merchant: biz, runner: state.lastP2Runner, dateSent: state.lastP2Date, qty: state.balance, hoursOverdue: diffHours });
+                    }
+                }
+            });
+
+            // --- LOGIKA RADAR (Berdasarkan Filter Tanggal) ---
+            const radarDateInput = document.getElementById('filter-radar-date');
+            if (!radarDateInput.value) {
+                radarDateInput.value = new Date().toLocaleDateString('en-CA'); // Default ke hari ini
+            }
+            const targetDateStr = radarDateInput.value;
+            
+            let todayPending = [];
+            let radarState = {};
+            
+            sdLogs.forEach(log => {
+                // Ambil tanggal dengan zona waktu lokal yang benar
+                const logDateObj = new Date(log.created_at);
+                const logDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+                
+                if (logDate !== targetDateStr) return; // Tangkap data sesuai tanggal filter
+                const biz = log.business_name;
+                if (!radarState[biz]) radarState[biz] = { balance: 0, p2Time: null, runner: null };
+
+                const qty = parseInt(log.sd_qty) || 0;
+                if (log.phase === 'Phase 2') {
+                    radarState[biz].balance += qty;
+                    radarState[biz].p2Time = log.created_at;
+                    radarState[biz].runner = log.runner_name;
+                } else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
+                    radarState[biz].balance -= qty;
+                    if (radarState[biz].balance < 0) radarState[biz].balance = 0;
+                }
+            });
+
+            Object.entries(radarState).forEach(([biz, state]) => {
+                if (state.balance > 0) {
+                    todayPending.push({ merchant: biz, runner: state.runner, qty: state.balance, time: state.p2Time });
+                }
+            });
+
+            const radarHTML = todayPending.length === 0
+                ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>Semua lokasi hari ini terpantau aman (Sudah ditarik Phase 3).</td></tr>`
+                : todayPending.map(p => `
+                    <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
+                        <td class="p-4 font-black text-slate-800">${p.merchant}</td>
+                        <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
+                        <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner}</td>
+                        <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
+                        <td class="p-4 text-right">
+                            <span class="font-black text-amber-500 animate-pulse mr-2"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
+                            <button onclick="resolveLiveRadar('${p.merchant}', ${p.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+            const tbodyRadar = document.getElementById('table-live-radar');
+            if (tbodyRadar) tbodyRadar.innerHTML = radarHTML;
+            const badgeRadar = document.getElementById('badge-live-radar');
+            if (badgeRadar) badgeRadar.innerText = todayPending.length;
+            // -----------------------------------------------------------
+
+// --- FILTER LOGIKA CLEAR ANOMALI ---
+            const clearLogs = sdLogs.filter(t => t.phase === 'SYSTEM CLEAR');
+
+            // Hapus dari tabel OVERDUE jika sistem mendeteksi ada jejak penyelesaian
+
+
+            overdues = overdues.filter(o => {
+                const isCleared = clearLogs.some(c => c.business_name === o.merchant && c.missing_or_issue === 'OVERDUE');
+                return !isCleared;
+            });
+
+            // Hapus dari tabel MISMATCH (Shortage/Surplus) jika sistem mendeteksi ada jejak penyelesaian SETELAH jam kejadian anomali
+            mismatches = mismatches.filter(m => {
+                const isCleared = clearLogs.some(c => 
+                    c.business_name === m.merchant && 
+                    c.missing_or_issue === m.type && 
+                    c.sd_qty === m.variance && 
+                    new Date(c.created_at) > new Date(m.date) // Validasi agar hanya menghilangkan error lama yang ditekan tombol Clearnya
+                );
+                return !isCleared;
+            });
+            // ------------------------------------
+
+            // Render Overdue (Added Resolve Button)
+            const overdueHTML = overdues.length === 0
+                ? `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">All SD Cards returned on time.</td></tr>`
+                : overdues.map(o => {
+                    const days = Math.floor(o.hoursOverdue / 24);
+                    const hrs = Math.floor(o.hoursOverdue % 24);
+                    const timeStr = days > 0 ? `${days} Days ${hrs} Hours` : `${hrs} Hours`;
+                    const dateStr = new Date(o.dateSent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                    
+                    return `
+                    <tr class="hover:bg-red-50/50 transition">
+                        <td class="p-4 font-black text-slate-800">${o.merchant}</td>
+                        <td class="p-4 font-bold text-slate-500">${dateStr}</td>
+                        <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner}</td>
+                        <td class="p-4 text-center font-black text-red-600 bg-red-50/50">${o.qty} SD</td>
+                        <td class="p-4 text-right font-black text-red-600">${timeStr}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="resolveSD('${o.merchant}', 'OVERDUE', ${o.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+            // Render Mismatch (Added Resolve Button)
+            mismatches.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const mismatchHTML = mismatches.length === 0
+                ? `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">SD Card records are perfect. No discrepancies.</td></tr>`
+                : mismatches.map(m => {
+                    const dateObj = new Date(m.date);
+                    const dateStr = dateObj.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+                    const timeStr = dateObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+                    
+                    const isShort = m.type === 'SHORTAGE';
+                    const badgeClass = isShort ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+                    const icon = isShort ? 'fa-arrow-down' : 'fa-arrow-up';
+
+                    return `
+                    <tr class="hover:bg-amber-50/50 transition border-b border-slate-100">
+                        <td class="p-4">
+                            <div class="font-black text-slate-800">${dateStr}</div>
+                            <div class="text-[10px] font-bold text-slate-500">${timeStr}</div>
+                        </td>
+                        <td class="p-4 font-black text-slate-700">${m.merchant}</td>
+<td class="p-4">
+    <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span>
+</td>
+                        <td class="p-4 text-center">
+                            <span class="text-[11px] font-black px-2 py-1 rounded border shadow-sm ${badgeClass} whitespace-nowrap"><i class="fa-solid ${icon} mr-1"></i> ${m.type} ${m.variance}</span>
+                        </td>
+                        <td class="p-4 text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="resolveSD('${m.merchant}', '${m.type}', ${m.variance})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+            document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
+            document.getElementById('badge-overdue-count').innerText = overdues.length;
+            
+            const tbodyMismatch = document.getElementById('table-sd-mismatch');
+            if(tbodyMismatch) tbodyMismatch.innerHTML = mismatchHTML;
+            document.getElementById('badge-mismatch-count').innerText = mismatches.length;
+
+            // --- NEW: LOGIKA HISTORY SD CARD (P2 -> P3) ---
+            let historyList = [];
+            let tempP2 = {}; // Simpan Phase 2 yang belum ada pasangannya
+
+            sdLogs.forEach(log => {
+                const biz = log.business_name;
+                if (!biz) return;
+                
+                if (log.phase === 'Phase 2') {
+                    // Timpa/simpan Phase 2 terbaru untuk merchant ini
+                    tempP2[biz] = log; 
+                } else if (log.phase === 'Phase 3' && tempP2[biz]) {
+                    // Ketemu Phase 3, cocokkan dengan Phase 2 sebelumnya
+                    const p2Log = tempP2[biz];
+                    const diffMs = new Date(log.created_at) - new Date(p2Log.created_at);
+                    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+                    
+                    historyList.push({
+                        merchant: biz,
+                        p2Time: p2Log.created_at,
+                        p2Runner: p2Log.runner_name,
+                        p3Time: log.created_at,
+                        p3Runner: log.runner_name,
+                        qty: log.sd_qty,
+                        duration: `${diffHrs} Jam`
+                    });
+                    delete tempP2[biz]; // Selesai dipasangkan
+                }
+            });
+
+            // Urutkan history dari yang paling baru selesai
+            historyList.sort((a, b) => new Date(b.p3Time) - new Date(a.p3Time));
+            
+            document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ? 
+                `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Belum ada history penukaran komplit.</td></tr>` : 
+                historyList.map(h => `
+                <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
+                    <td class="p-4 font-black text-slate-800">${h.merchant}</td>
+                    <td class="p-4">
+                        <div class="font-bold text-slate-600">${new Date(h.p2Time).toLocaleDateString('en-GB')} ${new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="text-[10px] uppercase text-slate-400">${h.p2Runner}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="font-bold text-slate-600">${new Date(h.p3Time).toLocaleDateString('en-GB')} ${new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
+                    </td>
+                    <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
+                    <td class="p-4 text-center font-black bg-indigo-50 text-indigo-600">${h.qty} SD</td>
+                </tr>
+            `).join('');
+        }
+        
+        async function resolveLiveRadar(merchant, pendingQty) {
+            // Pop-up dialog untuk konfirmasi upload
+            const isUploaded = confirm(`Menyelesaikan status Live Radar untuk ${merchant} (${pendingQty} SD).\n\nAPAKAH SD CARD INI AKAN DI-UPLOAD?\n\nTekan [OK / Yes] = Ya, hitung masuk Dashboard\nTekan [Cancel / No] = Tidak, hitung 0 Upload`);
+            
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
+
+            // Simulasikan sebagai Phase 3 agar Live Radar otomatis menganggapnya "Selesai ditarik"
+            const payload = {
+                area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
+                phase: 'Phase 3', 
+                runner_name: adminName,
+                business_name: merchant,
+                sd_qty: pendingQty,
+                sd_uploaded: isUploaded ? pendingQty : 0, // Kunci utama: Masuk ke upload atau tidak
+                device_condition: 'Good',
+                missing_or_issue: 'Manual Clear Radar by Admin'
+            };
+
+            const { error } = await db.from('transactions').insert([payload]);
+
+            if (error) {
+                alert("Error database: " + error.message);
+                return;
+            }
+
+            if (typeof logAdminAction === "function") {
+                await logAdminAction('CLEAR_RADAR', `Admin cleared radar for ${merchant} (${pendingQty} SD) - Uploaded: ${isUploaded ? 'Yes' : 'No'}`);
+            }
+
+            // Render ulang tanpa perlu refresh browser
+            await renderSDTracker(); 
+            await fetchLogs(true); // Update log halaman utama
+            renderDashboard(); // Update angka di Dashboard Atas
+        }
+
+        
+        async function resolveSD(merchant, type, variance) {
+    const confirmAction = confirm(`Yakin ingin menyembunyikan/clear anomali ini dari sistem?\n\nMerchant: ${merchant}\nTipe: ${type}\nJumlah: ${variance} SD`);
+    
+    if (confirmAction) {
+        const admin = JSON.parse(localStorage.getItem('admin_user'));
+        const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
+
+        // 1. Buat jejak 'SYSTEM CLEAR' di tabel transactions Anda
+        const payload = {
+            area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
+            phase: 'SYSTEM CLEAR',
+            runner_name: adminName,
+            business_name: merchant,
+            sd_qty: variance, // Jumlah yang di-clear
+            device_condition: 'Good',
+            missing_or_issue: type // Menyimpan tipe anomali (OVERDUE/SHORTAGE/SURPLUS)
+        };
+
+        const { error } = await db.from('transactions').insert([payload]);
+
+        if (error) {
+            console.error("Gagal menyimpan ke Supabase:", error);
+            alert("Error database: " + error.message);
+            return;
+        }
+
+        // 2. Catat juga di Audit Log (agar bos tahu siapa yang menekan Clear)
+        if (typeof logAdminAction === "function") {
+            await logAdminAction('CLEAR_ANOMALY', `Admin resolved ${type} for ${merchant} (${variance} SD)`);
+        }
+
+        // 3. Tarik data transaksi terbaru dari server & render ulang tabel
+        await fetchLogs(true);
+        renderSDTracker(); 
+    }
+}
+
+// -----------------------------------------------------
+// SUPABASE REALTIME SYNC (NO REFRESH REQUIRED)
+// -----------------------------------------------------
+let realtimeTimeout = null; // Penahan (Debounce) mencegah spam request
+
+function enableRealtimeSync() {
+    db.channel('admin-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+          console.log('⚡ Realtime Triggered:', payload.table, payload.eventType);
+          
+          // Hapus antrean sebelumnya jika ada perubahan baru masuk bertubi-tubi (mencegah DDoS sendiri)
+          if (realtimeTimeout) clearTimeout(realtimeTimeout);
+          
+          // Tunggu 1.5 detik. Jika tidak ada perubahan lagi, baru tarik data ke server
+          realtimeTimeout = setTimeout(async () => {
+              if (payload.table === 'transactions') {
+                  await fetchLogs(true);
+                  await fetchKitLocations(); // Update lokasi kit secara background
+              }
+              else if (payload.table === 'master_kits') await fetchKits(true);
+              else if (payload.table === 'master_businesses') await fetchBusinesses(true);
+              
+              // Re-render UI yang sedang aktif
+              const activeTab = document.querySelector('aside nav button.bg-blue-600') || document.querySelector('aside nav button.bg-amber-500');
+              if (activeTab) {
+                  const tabId = activeTab.id.replace('btn-', '');
+                  if(tabId === 'dashboard') renderDashboard();
+                  if(tabId === 'sd_tracker') renderSDTracker();
+                  if(tabId === 'kits') { renderKits(); renderKitMismatches(); }
+                  if(tabId === 'businesses') renderBusinesses(); // Tambahan: Refresh tabel merchant!
+              }
+          }, 1500); 
+      })
+      .subscribe((status) => {
+          if(status === 'SUBSCRIBED') console.log("⚡ Global Realtime Sync Active.");
+      });
+}
+
+// Aktifkan Realtime otomatis saat admin selesai login dan inisialisasi aplikasi
+const originalInitApp = initApp;
+initApp = async function() {
+    await originalInitApp();
+    enableRealtimeSync();
+};
+</script>
+
+</body>
+</html>
