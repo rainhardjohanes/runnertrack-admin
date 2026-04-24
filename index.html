@@ -224,17 +224,17 @@
 
                 <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden mt-6">
                     <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
-                        <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>History Penukaran SD Card (P2 -> P3)</h3>
-                    </div>
-                    <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
-                            <tr>
-                                <th class="p-4">Merchant</th>
-                                <th class="p-4">Phase 2 (Drop)</th>
-                                <th class="p-4">Phase 3 (Ambil)</th>
-                                <th class="p-4 text-center">Durasi Terpasang</th>
-                                <th class="p-4 text-center">SD Qty</th>
-                            </tr>
+                        <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>SD Card Exchange History (P2 -> P3)</h3>
+                    </div>
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
+                            <tr>
+                                <th class="p-4">Merchant</th>
+                                <th class="p-4">Phase 2 (Drop)</th>
+                                <th class="p-4">Phase 3 (Pick Up)</th>
+                                <th class="p-4 text-center">Installed Duration</th>
+                                <th class="p-4 text-center">SD Qty</th>
+                            </tr>
                         </thead>
                         <tbody id="table-sd-history" class="divide-y divide-indigo-50 text-xs"></tbody>
                     </table>
@@ -249,19 +249,19 @@
                 <div class="flex gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-logs" onkeyup="renderLogs()" placeholder="Search logs..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-48">
-                    </div>
-                    <select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); renderLogs();"></select>
-                    
-                    <select id="filter-logs-phase" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="renderLogs()">
-                        <option value="">All Phases</option>
-                        <option value="Phase 1">Phase 1</option>
-                        <option value="Phase 2">Phase 2</option>
-                        <option value="Phase 3">Phase 3</option>
-                        <option value="Phase 4">Phase 4</option>
-                    </select>
+                        <input type="text" id="search-logs" onkeyup="logPage=0; fetchLogs(true)" placeholder="Search merchant/runner..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-48">
+</div>
+<select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); logPage=0; fetchLogs(true);"></select>
+                    
+<select id="filter-logs-phase" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="logPage=0; fetchLogs(true)">
+    <option value="">All Phases</option>
+    <option value="Phase 1">Phase 1</option>
+    <option value="Phase 2">Phase 2</option>
+    <option value="Phase 3">Phase 3</option>
+    <option value="Phase 4">Phase 4</option>
+</select>
 
-                    <select id="filter-logs-business" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 w-32" onchange="renderLogs()">
+<select id="filter-logs-business" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 w-32" onchange="logPage=0; fetchLogs(true)">
                         <option value="">All Merchants</option>
                     </select>
 
@@ -439,10 +439,10 @@
                 <div class="flex gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-kits" onkeyup="renderKits()" placeholder="Search Kit ID..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                        <input type="text" id="search-kits" onkeyup="kitPage=0; renderKits()" placeholder="Search Kit ID..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
                     </div>
-                    <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderKits()"></select>
-                    <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="renderKits()">
+                    <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="kitPage=0; renderKits()"></select>
+                    <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="kitPage=0; renderKits()">
                         <option value="">All Recipes</option>
                     </select>
                     <button onclick="fetchKits(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
@@ -450,16 +450,25 @@
                     <button onclick="openManualDeployModal()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-600 shadow-md transition"><i class="fa-solid fa-truck-fast mr-1"></i> Manual Override</button>
                     
                     <button onclick="showModal('modal-import')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition"><i class="fa-solid fa-file-excel mr-1"></i> Import</button>
+                    <div class="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                        <button onclick="changeKitPage(-1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-r border-slate-200 disabled:opacity-30" id="btn-kit-prev"><i class="fa-solid fa-chevron-left"></i></button>
+                        <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">Page <span id="kit-page-display">1</span></div>
+                        <button onclick="changeKitPage(1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-l border-slate-200 disabled:opacity-30" id="btn-kit-next"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <button onclick="deleteSelectedKits()" id="btn-delete-kits" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white border border-red-200 shadow-sm transition hidden"><i class="fa-solid fa-trash-can mr-1"></i> Delete Selected (<span id="selected-kit-count">0</span>)</button>
                     <button onclick="openAddKitModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Register New</button>
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
-                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
-                                <th class="p-4 font-black">Kit ID & Recipe</th>
-                                <th class="p-4 font-black">Current Location</th>
+                       <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 w-10">
+                                    <input type="checkbox" id="kit-master-checkbox" onclick="toggleSelectAllKits(this)" class="rounded border-slate-300">
+                                </th>
+                                <th class="p-4 font-black">Kit ID & Recipe</th>
+                                <th class="p-4 font-black">Current Location</th>
                                 <th class="p-4 font-black">Condition Status</th>
                                 <th class="p-4 font-black text-right">Actions</th>
                             </tr>
@@ -470,17 +479,17 @@
 
                 <div class="bg-white rounded-2xl shadow-sm border border-rose-200 overflow-hidden mt-6">
                     <div class="p-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
-                        <h3 class="font-black text-rose-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Audit Discrepancy Kit (Phase 1 vs 4)</h3>
-                        <button onclick="renderKitMismatches()" class="bg-white border border-rose-200 text-rose-600 p-1.5 rounded hover:bg-rose-600 hover:text-white transition"><i class="fa-solid fa-rotate-right"></i></button>
-                    </div>
-                    <table class="w-full text-left">
-                        <thead class="bg-white border-b border-rose-100 text-[10px] uppercase text-rose-500 font-black tracking-widest whitespace-nowrap">
-                            <tr>
-                                <th class="p-4">Kit ID & Tipe</th>
-                                <th class="p-4">Data Keluar (Phase 1)</th>
-                                <th class="p-4">Data Kembali (Phase 4)</th>
-                                <th class="p-4">Barang Hilang / Selisih</th>
-                            </tr>
+                        <h3 class="font-black text-rose-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Kit Audit Discrepancy (Phase 1 vs 4)</h3>
+                        <button onclick="renderKitMismatches()" class="bg-white border border-rose-200 text-rose-600 p-1.5 rounded hover:bg-rose-600 hover:text-white transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-white border-b border-rose-100 text-[10px] uppercase text-rose-500 font-black tracking-widest whitespace-nowrap">
+                            <tr>
+                                <th class="p-4">Kit ID & Type</th>
+                                <th class="p-4">Outgoing Data (Phase 1)</th>
+                                <th class="p-4">Return Data (Phase 4)</th>
+                                <th class="p-4">Missing Item / Variance</th>
+                            </tr>
                         </thead>
                         <tbody id="table-kit-audit" class="divide-y divide-rose-50 text-xs"></tbody>
                     </table>
@@ -566,11 +575,11 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID *</label>
-                    <input list="deploy-kit-list" id="deploy-kit-id" autocomplete="off" placeholder="Ketik atau Pilih Kit ID..." class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs uppercase font-bold" required>
-                    <datalist id="deploy-kit-list">
-                    </datalist>
-                </div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID *</label>
+                    <input list="deploy-kit-list" id="deploy-kit-id" autocomplete="off" placeholder="Type or Select Kit ID..." class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs uppercase font-bold" required>
+                    <datalist id="deploy-kit-list">
+                    </datalist>
+                </div>
                 <div id="deploy-biz-container">
                     <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Destination Merchant *</label>
                     <select id="deploy-business" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
@@ -887,6 +896,15 @@
         // State untuk pagination
         let logPage = 0;
         const logPageSize = 20;
+        
+        let kitPage = 0;
+        const kitPageSize = 50; // Tampilkan 50 aset per halaman
+
+        function changeKitPage(step) {
+            kitPage += step;
+            if (kitPage < 0) kitPage = 0;
+            renderKits();
+        }
 
         function getAdminArea() {
             const admin = JSON.parse(localStorage.getItem('admin_user'));
@@ -1040,12 +1058,21 @@
         }
 
         async function fetchLogs(force = false) {
-            if (!force && globalLogs.length > 0) return renderLogs();
+            const searchInput = document.getElementById('search-logs');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+            // Jika sedang mencari, kita abaikan cache agar data akurat dari DB
+            if (!force && globalLogs.length > 0 && !searchTerm) return renderLogs();
 
             const from = logPage * logPageSize;
             const to = from + logPageSize - 1;
 
             let q = db.from('transactions').select('*', { count: 'exact' });
+            
+            // LOGIKA SEARCH BARU: Jika ada pencarian, cari di Merchant atau Runner
+            if (searchTerm) {
+                q = q.or(`business_name.ilike.%${searchTerm}%,runner_name.ilike.%${searchTerm}%,kit_id.ilike.%${searchTerm}%`);
+            }
             
             const adminArea = getAdminArea();
             if (adminArea !== 'All') q = q.eq('area', adminArea);
@@ -1069,8 +1096,20 @@
                 document.getElementById('log-page-display').innerText = logPage + 1;
                 
                 // FIXED PAGINATION (count || 0)
-                document.getElementById('btn-log-prev').disabled = (logPage === 0);
-                document.getElementById('btn-log-next').disabled = (to >= (count || 0) - 1);
+                const searchInput = document.getElementById('search-logs');
+                const isSearching = searchInput && searchInput.value.length > 0;
+
+                // Sembunyikan navigasi jika sedang mencari
+                const paginationControls = document.getElementById('btn-log-prev').parentElement;
+                if (isSearching) {
+                    paginationControls.style.opacity = '0.3';
+                    paginationControls.style.pointerEvents = 'none';
+                } else {
+                    paginationControls.style.opacity = '1';
+                    paginationControls.style.pointerEvents = 'auto';
+                    document.getElementById('btn-log-prev').disabled = (logPage === 0);
+                    document.getElementById('btn-log-next').disabled = (to >= (count || 0) - 1);
+                }
 
                 renderLogs();
                 if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
@@ -1188,7 +1227,7 @@
                 const matchArea = !fA || i.area === fA;
                 const matchPhase = !fPhase || i.phase === fPhase;
                 const matchBiz = !fBiz || i.business_name === fBiz;
-                const matchSearch = i.business_name.toLowerCase().includes(s) || i.runner_name.toLowerCase().includes(s) || (i.kit_id||'').toLowerCase().includes(s);
+                const matchSearch = (i.business_name || '').toLowerCase().includes(s) || (i.runner_name || '').toLowerCase().includes(s) || (i.kit_id || '').toLowerCase().includes(s);
                 return matchArea && matchPhase && matchBiz && matchSearch;
             }); 
 
@@ -1320,7 +1359,7 @@
                 return `
                 <tr class="hover:bg-slate-50 border-b border-slate-100">
                     <td class="p-4">
-                        <button onclick="filterKitsByMerchant('${i.business_name}')" class="font-black text-blue-600 hover:underline text-left">
+                        <button onclick="filterKitsByMerchant('${i.business_name.replace(/'/g, "\\'")}')" class="font-black text-blue-600 hover:underline text-left">
                             ${i.business_name}
                         </button>
                         <div class="text-[9px] text-slate-400 font-bold uppercase">Click to view assets</div>
@@ -1421,16 +1460,38 @@
                 const locData = getKitLocation(i.kit_id);
                 const matchArea = !filterArea || i.area_name === filterArea;
                 const matchType = !filterType || i.kit_type === filterType;
-                const matchSearch = i.kit_id.includes(s) || locData.loc.toUpperCase().includes(s);
+                const matchSearch = (i.kit_id || '').toUpperCase().includes(s) || (locData.loc || '').toUpperCase().includes(s);
                 return matchArea && matchType && matchSearch;
             });
 
-            document.getElementById('table-kits').innerHTML = f.map(i => {
+            // 1. Hitung total halaman
+            const totalPages = Math.ceil(f.length / kitPageSize);
+            if (kitPage >= totalPages && totalPages > 0) kitPage = totalPages - 1; // Cegah page kelebihan
+
+            // 2. Slice data (Client-Side Pagination)
+            const paginatedKits = f.slice(kitPage * kitPageSize, (kitPage + 1) * kitPageSize);
+
+            // 3. Update UI Tombol Navigasi
+            document.getElementById('kit-page-display').innerText = f.length > 0 ? (kitPage + 1) : 0;
+            const btnPrev = document.getElementById('btn-kit-prev');
+            const btnNext = document.getElementById('btn-kit-next');
+            if (btnPrev) btnPrev.disabled = (kitPage === 0);
+            if (btnNext) btnNext.disabled = (kitPage >= totalPages - 1);
+
+            // 4. Reset checkbox "Select All" & sembunyikan tombol delete tiap ganti halaman
+            const masterCheckbox = document.getElementById('kit-master-checkbox');
+            if(masterCheckbox) masterCheckbox.checked = false;
+            updateKitSelection();
+
+            document.getElementById('table-kits').innerHTML = paginatedKits.map(i => {
                 const locData = getKitLocation(i.kit_id);
                 return `
-                <tr class="hover:bg-slate-50 border-b border-slate-100 ${i.current_status === 'Damaged' ? 'bg-red-50/30' : ''}">
-                    <td class="p-4">
-                        <div class="font-black">${i.kit_id}</div>
+<tr class="hover:bg-slate-50 border-b border-slate-100 ${i.current_status === 'Damaged' ? 'bg-red-50/30' : ''}">
+    <td class="p-4">
+        <input type="checkbox" class="kit-checkbox rounded border-slate-300" value="${i.id}" onchange="updateKitSelection()">
+    </td>
+    <td class="p-4">
+        <div class="font-black">${i.kit_id}</div>
                         <div class="text-[10px] font-bold text-slate-400 uppercase">${i.kit_type} | ${i.area_name}</div>
                     </td>
                     <td class="p-4">
@@ -1438,7 +1499,7 @@
                     </td>
                     <td class="p-4">
                         <span class="text-[10px] font-black px-2 py-1 rounded border ${i.current_status === 'Damaged' ? 'bg-red-500 text-white border-red-600' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}">
-                            ${i.current_status.toUpperCase()}
+                            ${(i.current_status || 'Good').toUpperCase()}
                         </span>
                     </td>
                     <td class="p-4 text-right flex justify-end gap-1 items-center h-full">
@@ -1451,12 +1512,20 @@
             renderKitMismatches();
         }
 
-        function renderKitMismatches() {
-            const phase4Logs = globalLogs.filter(l => l.phase === 'Phase 4' && l.kit_id);
+        async function renderKitMismatches() {
+            // Ambil langsung dari DB agar tidak terpengaruh paginasi tabel Log
+            const adminArea = getAdminArea();
+            let q = db.from('transactions').select('*').in('phase', ['Phase 1', 'Phase 4']).order('created_at', { ascending: false });
+            if (adminArea !== 'All') q = q.eq('area', adminArea);
+            
+            const { data: auditLogs } = await q;
+            if (!auditLogs) return;
+
+            const phase4Logs = auditLogs.filter(l => l.phase === 'Phase 4' && l.kit_id);
             let auditList = [];
 
             phase4Logs.forEach(p4 => {
-                const p1 = globalLogs.find(l => l.phase === 'Phase 1' && l.kit_id === p4.kit_id && new Date(l.created_at) < new Date(p4.created_at));
+                const p1 = auditLogs.find(l => l.phase === 'Phase 1' && l.kit_id === p4.kit_id && new Date(l.created_at) < new Date(p4.created_at));
                 
                 if (p1) {
                     let p1ChecklistStr = p1.checked_items || p1.missing_or_issue || ""; 
@@ -1487,8 +1556,8 @@
                 }
             });
 
-            document.getElementById('table-kit-audit').innerHTML = auditList.length === 0 ? 
-                `<tr><td colspan="4" class="p-6 text-center text-slate-400 italic bg-slate-50">Semua Kit kembali dengan checklist komplit. Tidak ada anomali.</td></tr>` : 
+            document.getElementById('table-kit-audit').innerHTML = auditList.length === 0 ? 
+                `<tr><td colspan="4" class="p-6 text-center text-slate-400 italic bg-slate-50">All kits returned with complete checklists. No anomalies found.</td></tr>` :
                 auditList.map(a => {
                     const badgeP1 = a.p1ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
                     const badgeP4 = a.p4ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
@@ -1870,9 +1939,9 @@
             await db.from('transactions').insert(payload);
             
             await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
-            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
-            alert("Manual allocation berhasil dieksekusi!");
-        });
+            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
+            alert("Manual allocation successfully executed!");
+        });
 
         function openAddUserModal() { 
             document.getElementById('form-user').reset(); 
@@ -2054,16 +2123,18 @@
             const r = new FileReader();
             r.onload = async(e) => {
                 try {
-                    const json = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).SheetNames[0]], {header: 1});
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+const firstSheetName = workbook.SheetNames[0];
+const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 1});
                     if(json.length <= 1) { lg.innerHTML = 'Empty file.'; btn.disabled = false; return; }
                     
                     let errs = [], pl = [], seen = new Set(), aA = getAdminArea();
                     
                     for(let i = 1; i < json.length; i++) {
-                        const r = json[i]; if(!r || r.length === 0) continue;
-                        const kI = (r[0] || '').toString().trim().toUpperCase();
-                        const tN = (r[1] || '').toString().trim();
-                        const aN = (r[2] || '').toString().trim();
+    const rowData = json[i]; if(!rowData || rowData.length === 0) continue;
+    const kI = (rowData[0] || '').toString().trim().toUpperCase();
+    const tN = (rowData[1] || '').toString().trim();
+    const aN = (rowData[2] || '').toString().trim();
                         
                         if(!kI || !tN || !aN) { errs.push(`Row ${i + 1}: Missing cols.`); continue; }
                         if(aA !== 'All' && aN !== aA) { errs.push(`Row ${i + 1}: Area restriction.`); continue; }
@@ -2117,9 +2188,9 @@ async function renderDashboard() {
 
             // 1. STATS UPLOAD: Query langsung ke DB agar tidak terpotong paginasi 20 baris
             let q = db.from('transactions')
-                .select('phase, sd_uploaded, kit_type, created_at, area')
-                .gte('created_at', `${filterDate}T00:00:00`)
-                .lte('created_at', `${filterDate}T23:59:59`);
+    .select('phase, sd_uploaded, kit_type, created_at, area')
+    .gte('created_at', `${filterDate}T00:00:00+08:00`)
+    .lte('created_at', `${filterDate}T23:59:59+08:00`);
 
             if (filterArea && filterArea !== 'All') {
                 q = q.eq('area', filterArea);
@@ -2201,7 +2272,6 @@ async function renderDashboard() {
         
         
 async function renderSDTracker() {
-            // 1. Ambil tanggal dari filter. Jika kosong, gunakan hari ini.
             const radarDateInput = document.getElementById('filter-radar-date');
             if (!radarDateInput.value) {
                 const today = new Date();
@@ -2209,50 +2279,46 @@ async function renderSDTracker() {
             }
             const targetDateStr = radarDateInput.value;
 
-            // Ambil data transaksi dari database
-            const { data } = await db.from('transactions')
+            // 1. SIKLUS HARIAN: Hanya tarik data HARI INI (Sangat cepat & hemat kuota)
+            const { data: dailyData } = await db.from('transactions')
                 .select('*')
                 .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
+                .gte('created_at', `${targetDateStr}T00:00:00+08:00`)
+                .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
                 .order('created_at', { ascending: true });
 
-            let allLogs = data || [];
+            let allLogs = dailyData || [];
 
             // --- A. LOGIKA SIKLUS HARIAN (Radar, Mismatch, Perfect Match) ---
             let dailyState = {};
             let systemClears = [];
 
-            // Filter log HANYA untuk tanggal yang dipilih di filter
             allLogs.forEach(log => {
-                const logDateObj = new Date(log.created_at);
-                const logDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
-                
-                if (logDate === targetDateStr) {
-                    const biz = log.business_name;
-                    if (!biz) return;
+                const biz = log.business_name;
+                if (!biz) return;
 
-                    if (log.phase === 'SYSTEM CLEAR') {
-                        systemClears.push(log);
-                        return;
-                    }
+                if (log.phase === 'SYSTEM CLEAR') {
+                    systemClears.push(log);
+                    return;
+                }
 
-                    if (!dailyState[biz]) {
-                        dailyState[biz] = { 
-                            p2Qty: 0, p3Qty: 0, 
-                            p2Runner: null, p3Runner: null, 
-                            lastP2Time: null, lastP3Time: null 
-                        };
-                    }
+                if (!dailyState[biz]) {
+                    dailyState[biz] = { 
+                        p2Qty: 0, p3Qty: 0, 
+                        p2Runner: null, p3Runner: null, 
+                        lastP2Time: null, lastP3Time: null 
+                    };
+                }
 
-                    let qty = parseInt(log.sd_qty) || 0;
-                    if (log.phase === 'Phase 2') {
-                        dailyState[biz].p2Qty += qty;  // Tambah Target
-                        dailyState[biz].p2Runner = log.runner_name;
-                        dailyState[biz].lastP2Time = log.created_at;
-                    } else if (log.phase === 'Phase 3') {
-                        dailyState[biz].p3Qty += qty;  // Tambah Realisasi Pick Up
-                        dailyState[biz].p3Runner = log.runner_name;
-                        dailyState[biz].lastP3Time = log.created_at;
-                    }
+                let qty = parseInt(log.sd_qty) || 0;
+                if (log.phase === 'Phase 2') {
+                    dailyState[biz].p2Qty += qty;
+                    dailyState[biz].p2Runner = log.runner_name;
+                    dailyState[biz].lastP2Time = log.created_at;
+                } else if (log.phase === 'Phase 3') {
+                    dailyState[biz].p3Qty += qty;
+                    dailyState[biz].p3Runner = log.runner_name;
+                    dailyState[biz].lastP3Time = log.created_at;
                 }
             });
 
@@ -2262,12 +2328,11 @@ async function renderSDTracker() {
             let historyList = []; 
 
             Object.entries(dailyState).forEach(([biz, state]) => {
-                const diff = state.p2Qty - state.p3Qty; // Sisa Target
+                const diff = state.p2Qty - state.p3Qty; 
                 const isCleared = systemClears.some(c => c.business_name === biz);
 
-                if (isCleared) return; // Jika sudah di-clear manual oleh admin hari itu
+                if (isCleared) return; 
 
-                // Hitung History Penukaran
                 if (state.p2Qty > 0 && state.p3Qty > 0) {
                     const diffMs = new Date(state.lastP3Time) - new Date(state.lastP2Time);
                     const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
@@ -2278,12 +2343,8 @@ async function renderSDTracker() {
                     });
                 }
 
-                // LOGIKA STATUS
                 if (diff > 0) {
-                    // 1. Masih ada sisa target -> Masuk Radar Pending
                     radarList.push({ merchant: biz, runner: state.p2Runner || state.p3Runner, qty: diff, time: state.lastP2Time || state.lastP3Time });
-                    
-                    // 2. Jika SUDAH ADA pergerakan Phase 3, tapi kok target belum habis? -> Mismatch Shortage
                     if (state.p3Qty > 0) {
                         mismatchList.push({
                             date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SHORTAGE', variance: diff,
@@ -2291,53 +2352,21 @@ async function renderSDTracker() {
                         });
                     }
                 } else if (diff < 0) {
-                    // 3. Ambil Phase 3 lebih banyak dari drop Phase 2 hari ini -> Mismatch Surplus
                     mismatchList.push({
                         date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SURPLUS', variance: Math.abs(diff),
                         desc: `Phase 3 picked up ${state.p3Qty} SD, but today's drop record is only ${state.p2Qty} SD.`
                     });
                 } else if (diff === 0 && state.p2Qty > 0) {
-                    // 4. Target Terpenuhi (Phase 2 = Phase 3) -> Perfect Match!
                     perfectMatchList.push({
                         date: state.lastP3Time, merchant: biz, runner: state.p3Runner, qty: state.p3Qty
                     });
                 }
             });
 
-            // --- B. LOGIKA OVERDUE (Cek masa lalu yang belum diambil lebih dari 24 jam) ---
-            let runningBalance = {};
-            allLogs.forEach(log => {
-                 const logDateObj = new Date(log.created_at);
-                 const logDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
-                 
-                 // Abaikan log masa depan dari tanggal filter
-                 if (logDate > targetDateStr) return; 
+            // 2. OVERDUE: Fetch dari SQL View (Tugas berat diserahkan ke Server Supabase)
+            const { data: overdueData } = await db.from('view_sd_overdue').select('*');
+            let overdues = overdueData || [];
 
-                 const biz = log.business_name;
-                 if(!biz) return;
-                 if(!runningBalance[biz]) runningBalance[biz] = { balance: 0, lastP2Date: null, lastP2Runner: null };
-
-                 let qty = parseInt(log.sd_qty) || 0;
-                 if (log.phase === 'Phase 2') {
-                     runningBalance[biz].balance += qty;
-                     runningBalance[biz].lastP2Date = log.created_at;
-                     runningBalance[biz].lastP2Runner = log.runner_name;
-                 } else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
-                     runningBalance[biz].balance -= qty;
-                     if(runningBalance[biz].balance < 0) runningBalance[biz].balance = 0;
-                 }
-            });
-
-            let overdues = [];
-            const now = new Date();
-            Object.entries(runningBalance).forEach(([biz, state]) => {
-                 if (state.balance > 0 && state.lastP2Date) {
-                     const diffHours = (now - new Date(state.lastP2Date)) / (1000 * 60 * 60);
-                     if (diffHours >= 24) {
-                         overdues.push({ merchant: biz, runner: state.lastP2Runner, dateSent: state.lastP2Date, qty: state.balance, hoursOverdue: diffHours });
-                     }
-                 }
-            });
 
             // --- C. RENDER KE HTML ---
 
@@ -2352,9 +2381,10 @@ async function renderSDTracker() {
                             <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
                             <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
                             <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
-                            <td class="p-4 text-right">
-                                <span class="font-black text-amber-500 animate-pulse mr-2"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
-                            </td>
+                            <td class="p-4 text-right flex justify-end gap-2 items-center">
+    <span class="font-black text-amber-500 animate-pulse mt-1 text-[10px] uppercase tracking-widest"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
+    <button onclick="resolveLiveRadar('${p.merchant.replace(/'/g, "\\'")}', ${p.qty})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+</td>
                         </tr>
                     `).join('');
             }
@@ -2384,7 +2414,7 @@ async function renderSDTracker() {
                             <td class="p-4">
                                 <div class="flex items-center justify-between gap-4">
                                     <span class="text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</span>
-                                    <button onclick="resolveSD('${m.merchant}', '${m.type}', ${m.variance})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                                    <button onclick="resolveSD('${m.merchant.replace(/'/g, "\\'")}', '${m.type}', ${m.variance})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
                                 </div>
                             </td>
                         </tr>`;
@@ -2429,24 +2459,25 @@ async function renderSDTracker() {
                 </tr>
             `).join('');
 
-            // 5. Overdue (Cek 24 jam kebelakang)
+            // 5. Overdue (Render dari Data SQL View)
             const overdueHTML = overdues.length === 0
                 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">All clear! No SD Cards pending over 24 hours.</td></tr>`
                 : overdues.map(o => {
-                    const days = Math.floor(o.hoursOverdue / 24);
-                    const hrs = Math.floor(o.hoursOverdue % 24);
+                    const hoursOvd = parseFloat(o.hours_overdue);
+                    const days = Math.floor(hoursOvd / 24);
+                    const hrs = Math.floor(hoursOvd % 24);
                     const timeStr = days > 0 ? `${days} Days ${hrs} Hrs` : `${hrs} Hrs`;
-                    const dateStr = new Date(o.dateSent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                    const dateStr = new Date(o.date_sent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
                     return `
                     <tr class="hover:bg-red-50/50 transition border-b border-red-50">
                         <td class="p-4 font-black text-slate-800">${o.merchant}</td>
                         <td class="p-4 font-bold text-slate-500">${dateStr}</td>
-                        <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner}</td>
+                        <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner || 'Unknown'}</td>
                         <td class="p-4 text-center font-black text-red-600 bg-red-50/50">${o.qty} SD</td>
                         <td class="p-4">
                             <div class="flex items-center justify-end gap-3">
                                 <span class="font-black text-red-600">${timeStr}</span>
-                                <button onclick="resolveSD('${o.merchant}', 'OVERDUE', ${o.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                                <button onclick="resolveSD('${o.merchant.replace(/'/g, "\\'")}', 'OVERDUE', ${o.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
                             </div>
                         </td>
                     </tr>`;
@@ -2456,7 +2487,7 @@ async function renderSDTracker() {
         }
         
         async function resolveLiveRadar(merchant, pendingQty) {
-            const isUploaded = confirm(`Menyelesaikan status Live Radar untuk ${merchant} (${pendingQty} SD).\n\nAPAKAH SD CARD INI AKAN DI-UPLOAD?\n\nTekan [OK / Yes] = Ya, hitung masuk Dashboard\nTekan [Cancel / No] = Tidak, hitung 0 Upload`);
+            const isUploaded = confirm(`Resolving Live Radar status for ${merchant} (${pendingQty} SD).\n\nWILL THIS SD CARD BE UPLOADED?\n\nPress [OK / Yes] = Yes, count towards Dashboard\nPress [Cancel / No] = No, count as 0 Upload`);
             
             const admin = JSON.parse(localStorage.getItem('admin_user'));
             const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
@@ -2530,31 +2561,73 @@ async function renderSDTracker() {
         function enableRealtimeSync() {
             db.channel('admin-realtime')
               .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-                  console.log('⚡ Realtime Triggered:', payload.table, payload.eventType);
+                  console.log('⚡ Data changed by another user:', payload.table);
                   
-                  if (realtimeTimeout) clearTimeout(realtimeTimeout);
-                  
-                  realtimeTimeout = setTimeout(async () => {
-                      if (payload.table === 'transactions') {
-                          await fetchLogs(true);
-                          await fetchKitLocations(); 
-                      }
-                      else if (payload.table === 'master_kits') await fetchKits(true);
-                      else if (payload.table === 'master_businesses') await fetchBusinesses(true);
+                  // Daripada auto-fetch yang bikin server jebol, kita ubah warna tombol refresh 
+                  // menjadi hijau/merah berkedip untuk memberi tahu admin ada data baru.
+                  const activeTab = document.querySelector('aside nav button.bg-blue-600');
+                  if (activeTab) {
+                      const tabId = activeTab.id.replace('btn-', '');
+                      const refreshBtn = document.querySelector(`#view-${tabId} button[onclick^="fetch"]`) || 
+                   document.querySelector(`#view-${tabId} button[onclick^="render"]`) || 
+                   document.querySelector(`#view-${tabId} button[onclick^="refresh"]`);
                       
-                      const activeTab = document.querySelector('aside nav button.bg-blue-600') || document.querySelector('aside nav button.bg-amber-500');
-                      if (activeTab) {
-                          const tabId = activeTab.id.replace('btn-', '');
-                          if(tabId === 'dashboard') renderDashboard();
-                          if(tabId === 'sd_tracker') renderSDTracker();
-                          if(tabId === 'kits') { renderKits(); renderKitMismatches(); }
-                          if(tabId === 'businesses') renderBusinesses(); 
+                      if (refreshBtn && !refreshBtn.classList.contains('bg-emerald-500')) {
+                          const originalClass = refreshBtn.className;
+                          refreshBtn.className = "bg-emerald-500 text-white px-3 py-2 rounded-lg shadow-md animate-pulse transition";
+                          refreshBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down mr-1"></i> New Data';
+                          
+                          // Kembalikan tombol ke semula setelah di-klik
+                          refreshBtn.addEventListener('click', function resetBtn() {
+                              refreshBtn.className = originalClass;
+                              refreshBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
+                              refreshBtn.removeEventListener('click', resetBtn);
+                          }, { once: true });
                       }
-                  }, 1500); 
+                  }
               })
-              .subscribe((status) => {
-                  if(status === 'SUBSCRIBED') console.log("⚡ Global Realtime Sync Active.");
-              });
+              .subscribe();
+        }
+
+
+        // Fungsi untuk centang semua
+        function toggleSelectAllKits(master) {
+            const checkboxes = document.querySelectorAll('.kit-checkbox');
+            checkboxes.forEach(cb => cb.checked = master.checked);
+            updateKitSelection();
+        }
+
+        // Fungsi untuk update tampilan tombol delete
+        function updateKitSelection() {
+            const selected = document.querySelectorAll('.kit-checkbox:checked');
+            const btnDelete = document.getElementById('btn-delete-kits');
+            const countLabel = document.getElementById('selected-kit-count');
+            
+            if (selected.length > 0) {
+                btnDelete.classList.remove('hidden');
+                countLabel.innerText = selected.length;
+            } else {
+                btnDelete.classList.add('hidden');
+                document.getElementById('kit-master-checkbox').checked = false;
+            }
+        }
+
+        // Fungsi Eksekusi Hapus Massal
+        async function deleteSelectedKits() {
+            const selected = Array.from(document.querySelectorAll('.kit-checkbox:checked')).map(cb => cb.value);
+            
+            if (confirm(`CRITICAL: Are you sure you want to delete ${selected.length} assets permanently?`)) {
+                const { data, error } = await db.from('master_kits').delete().in('id', selected).select();
+
+                if (error) {
+                    alert("Error: " + error.message);
+                } else {
+                    await logAdminAction('BULK_DELETE', `Deleted ${selected.length} assets from Asset Allocation.`);
+                    alert(`Successfully deleted ${selected.length} assets.`);
+                    document.getElementById('kit-master-checkbox').checked = false;
+                    fetchKits(true);
+                }
+            }
         }
     </script>
 </body>
