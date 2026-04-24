@@ -224,17 +224,17 @@
 
                 <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden mt-6">
                     <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
-                        <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>SD Card Exchange History (P2 -> P3)</h3>
-                    </div>
-                    <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
-                            <tr>
-                                <th class="p-4">Merchant</th>
-                                <th class="p-4">Phase 2 (Drop)</th>
-                                <th class="p-4">Phase 3 (Pick Up)</th>
-                                <th class="p-4 text-center">Installed Duration</th>
-                                <th class="p-4 text-center">SD Qty</th>
-                            </tr>
+                        <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>SD Card Exchange History (P2 -> P3)</h3>
+                    </div>
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
+                            <tr>
+                                <th class="p-4">Merchant</th>
+                                <th class="p-4">Phase 2 (Drop)</th>
+                                <th class="p-4">Phase 3 (Pick Up)</th>
+                                <th class="p-4 text-center">Installed Duration</th>
+                                <th class="p-4 text-center">SD Qty</th>
+                            </tr>
                         </thead>
                         <tbody id="table-sd-history" class="divide-y divide-indigo-50 text-xs"></tbody>
                     </table>
@@ -252,7 +252,7 @@
                         <input type="text" id="search-logs" onkeyup="logPage=0; fetchLogs(true)" placeholder="Search merchant/runner..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-48">
 </div>
 <select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); logPage=0; fetchLogs(true);"></select>
-                    
+                    
 <select id="filter-logs-phase" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="logPage=0; fetchLogs(true)">
     <option value="">All Phases</option>
     <option value="Phase 1">Phase 1</option>
@@ -463,12 +463,12 @@
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <table class="w-full text-left whitespace-nowrap">
                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
-                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
-                                <th class="p-4 w-10">
-                                    <input type="checkbox" id="kit-master-checkbox" onclick="toggleSelectAllKits(this)" class="rounded border-slate-300">
-                                </th>
-                                <th class="p-4 font-black">Kit ID & Recipe</th>
-                                <th class="p-4 font-black">Current Location</th>
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 w-10">
+                                    <input type="checkbox" id="kit-master-checkbox" onclick="toggleSelectAllKits(this)" class="rounded border-slate-300">
+                                </th>
+                                <th class="p-4 font-black">Kit ID & Recipe</th>
+                                <th class="p-4 font-black">Current Location</th>
                                 <th class="p-4 font-black">Condition Status</th>
                                 <th class="p-4 font-black text-right">Actions</th>
                             </tr>
@@ -479,17 +479,17 @@
 
                 <div class="bg-white rounded-2xl shadow-sm border border-rose-200 overflow-hidden mt-6">
                     <div class="p-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
-                        <h3 class="font-black text-rose-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Kit Audit Discrepancy (Phase 1 vs 4)</h3>
-                        <button onclick="renderKitMismatches()" class="bg-white border border-rose-200 text-rose-600 p-1.5 rounded hover:bg-rose-600 hover:text-white transition"><i class="fa-solid fa-rotate-right"></i></button>
-                    </div>
-                    <table class="w-full text-left">
-                        <thead class="bg-white border-b border-rose-100 text-[10px] uppercase text-rose-500 font-black tracking-widest whitespace-nowrap">
-                            <tr>
-                                <th class="p-4">Kit ID & Type</th>
-                                <th class="p-4">Outgoing Data (Phase 1)</th>
-                                <th class="p-4">Return Data (Phase 4)</th>
-                                <th class="p-4">Missing Item / Variance</th>
-                            </tr>
+                        <h3 class="font-black text-rose-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Kit Audit Discrepancy (Phase 1 vs 4)</h3>
+                        <button onclick="renderKitMismatches()" class="bg-white border border-rose-200 text-rose-600 p-1.5 rounded hover:bg-rose-600 hover:text-white transition"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead class="bg-white border-b border-rose-100 text-[10px] uppercase text-rose-500 font-black tracking-widest whitespace-nowrap">
+                            <tr>
+                                <th class="p-4">Kit ID & Type</th>
+                                <th class="p-4">Outgoing Data (Phase 1)</th>
+                                <th class="p-4">Return Data (Phase 4)</th>
+                                <th class="p-4">Missing Item / Variance</th>
+                            </tr>
                         </thead>
                         <tbody id="table-kit-audit" class="divide-y divide-rose-50 text-xs"></tbody>
                     </table>
@@ -575,11 +575,11 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID *</label>
-                    <input list="deploy-kit-list" id="deploy-kit-id" autocomplete="off" placeholder="Type or Select Kit ID..." class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs uppercase font-bold" required>
-                    <datalist id="deploy-kit-list">
-                    </datalist>
-                </div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID *</label>
+                    <input list="deploy-kit-list" id="deploy-kit-id" autocomplete="off" placeholder="Type or Select Kit ID..." class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs uppercase font-bold" required>
+                    <datalist id="deploy-kit-list">
+                    </datalist>
+                </div>
                 <div id="deploy-biz-container">
                     <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Destination Merchant *</label>
                     <select id="deploy-business" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
@@ -892,6 +892,16 @@
 
         let globalLogs = [], globalAreas = [], globalRunners = [], globalSDRs = [], globalBusinesses = [], globalKitTypes = [], globalKits = [], globalUsers = [], globalAdminLogs = [];
         let globalKitLocations = {}; 
+
+        function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
         
         // State untuk pagination
         let logPage = 0;
@@ -1244,9 +1254,9 @@
                     </a>` : '<span class="text-slate-300 p-2"><i class="fa-solid fa-image-slash"></i></span>';
 
                 const notes = (i.missing_or_issue || i.other_item) ? `
-                    <div class="mt-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-800 leading-relaxed italic">
-                        <i class="fa-solid fa-comment-dots mr-1"></i> ${[i.missing_or_issue, i.other_item].filter(Boolean).join(' | ')}
-                    </div>` : '';
+    <div class="mt-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-800 leading-relaxed italic">
+        <i class="fa-solid fa-comment-dots mr-1"></i> ${escapeHTML([i.missing_or_issue, i.other_item].filter(Boolean).join(' | '))}
+    </div>` : '';
 
                 const timeInfo = `<div class="text-[9px] text-slate-400 font-bold mt-1 uppercase flex gap-2">
                     ${i.pickup_time ? `<span><i class="fa-solid fa-arrow-up"></i> ${i.pickup_time}</span>` : ''}
@@ -1556,8 +1566,8 @@
                 }
             });
 
-            document.getElementById('table-kit-audit').innerHTML = auditList.length === 0 ? 
-                `<tr><td colspan="4" class="p-6 text-center text-slate-400 italic bg-slate-50">All kits returned with complete checklists. No anomalies found.</td></tr>` :
+            document.getElementById('table-kit-audit').innerHTML = auditList.length === 0 ? 
+                `<tr><td colspan="4" class="p-6 text-center text-slate-400 italic bg-slate-50">All kits returned with complete checklists. No anomalies found.</td></tr>` :
                 auditList.map(a => {
                     const badgeP1 = a.p1ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
                     const badgeP4 = a.p4ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
@@ -1745,10 +1755,13 @@
         }
 
         function editBusiness(id) { 
-            const r = globalBusinesses.find(x => x.id === id); 
-            document.getElementById('input-biz-id').value = r.id; 
-            document.getElementById('input-biz-area').value = r.area_name; 
-            document.getElementById('input-biz-name').value = r.business_name.replace(` - ${r.area_name}`, ''); 
+    const r = globalBusinesses.find(x => x.id === id); 
+    document.getElementById('input-biz-id').value = r.id; 
+    document.getElementById('input-biz-area').value = r.area_name; 
+    
+    // Gunakan Regex untuk menghapus " - NamaArea" di akhir kalimat terlepas dari jumlah spasinya
+    const regex = new RegExp(`\\s*-\\s*${r.area_name}$`, 'i');
+    document.getElementById('input-biz-name').value = r.business_name.replace(regex, '');
             document.getElementById('biz-modal-title').innerText = 'Edit Merchant'; 
             showModal('modal-business'); 
         }
@@ -1939,9 +1952,9 @@
             await db.from('transactions').insert(payload);
             
             await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
-            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
-            alert("Manual allocation successfully executed!");
-        });
+            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
+            alert("Manual allocation successfully executed!");
+        });
 
         function openAddUserModal() { 
             document.getElementById('form-user').reset(); 
@@ -2167,9 +2180,10 @@ const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 
         window.onload = () => { if(localStorage.getItem('admin_user')) initApp(); };
     
         async function refreshAllData() {
-            await Promise.all([fetchLogs(true), fetchKits(true), fetchKitTypes(true), fetchBusinesses(true)]);
-            renderDashboard();
-        }
+    // Menghapus fetchLogs(true) dari array karena sudah dipanggil otomatis di dalam fetchKits()
+    await Promise.all([fetchKits(true), fetchKitTypes(true), fetchBusinesses(true)]);
+    renderDashboard();
+}
 
 async function renderDashboard() {
             const dateInput = document.getElementById('dash-date-filter');
@@ -2207,29 +2221,40 @@ async function renderDashboard() {
                     
                     if(logTimeStr >= startTime && logTimeStr <= endTime) {
                         let isIphone = false;
-                        
+
+                        // 1. PERBAIKAN LOGIKA DETEKSI IPHONE / MONO
                         if (log.kit_type) {
+                            const kt = log.kit_type.toUpperCase();
                             const recipe = globalKitTypes.find(t => t.type_name === log.kit_type);
-                            if (recipe && recipe.upload_metric_type === 'iPhone') {
+
+                            // Deteksi akan bernilai true jika metrik di set 'iPhone' ATAU namanya mengandung IPHONE/MONO
+                            if ((recipe && recipe.upload_metric_type === 'iPhone') || kt.includes('MONO') || kt.includes('IPHONE')) {
                                 isIphone = true;
-                            } else if (!recipe) {
-                                const kt = log.kit_type.toUpperCase();
-                                if(kt.includes('MONO') || kt.includes('IPHONE')) isIphone = true;
                             }
                         }
 
-                        const uploadVal = parseInt(log.sd_uploaded) || 0;
+                        // 2. PERBAIKAN LOGIKA BACA DATA "YES" / Boolean / Angka
+                        const sdUp = log.sd_uploaded;
+                        const isUploaded = (typeof sdUp === 'string' && sdUp.toLowerCase() === 'yes') || 
+                                           sdUp === true || 
+                                           (!isNaN(parseInt(sdUp)) && parseInt(sdUp) > 0);
 
-                        if (log.phase === 'Phase 4' && isIphone && uploadVal > 0) {
+                        // Menyiapkan kuantitas angka untuk SD Card (fallback ke 1 jika nilainya teks "yes")
+                        let uploadQty = parseInt(sdUp) || 0;
+                        if (isUploaded && uploadQty === 0) uploadQty = 1;
+
+                        // 3. PENGHITUNGAN TOTAL IPHONE (Hanya Phase 4, Tipe iPhone/Mono, dan Uploaded)
+                        if (log.phase === 'Phase 4' && isIphone && isUploaded) {
                             totalIphone += 1;
                         }
 
+                        // 4. PENGHITUNGAN TOTAL SD CARD (Non-iPhone)
                         if (!isIphone) {
-                            if (log.phase === 'Phase 3' && uploadVal > 0) {
-                                totalSD += uploadVal;
+                            if (log.phase === 'Phase 3' && uploadQty > 0) {
+                                totalSD += uploadQty;
                             }
-                            else if (log.phase === 'Phase 4' && uploadVal > 0) {
-                                totalSD += 1;
+                            else if (log.phase === 'Phase 4' && uploadQty > 0) {
+                                totalSD += 1; 
                             }
                         }
                     }
@@ -2485,9 +2510,9 @@ async function renderSDTracker() {
             document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
             document.getElementById('badge-overdue-count').innerText = overdues.length;
         }
-        
+
         async function resolveLiveRadar(merchant, pendingQty) {
-            const isUploaded = confirm(`Resolving Live Radar status for ${merchant} (${pendingQty} SD).\n\nWILL THIS SD CARD BE UPLOADED?\n\nPress [OK / Yes] = Yes, count towards Dashboard\nPress [Cancel / No] = No, count as 0 Upload`);
+            const isUploaded = confirm(`Resolving Live Radar status for ${merchant} (${pendingQty} SD).\n\nWILL THIS SD CARD BE UPLOADED?\n\nPress [OK / Yes] = Yes, count towards Dashboard\nPress [Cancel / No] = No, count as 0 Upload`);
             
             const admin = JSON.parse(localStorage.getItem('admin_user'));
             const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
