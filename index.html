@@ -21,6 +21,7 @@
 </head>
 <body class="w-screen h-screen overflow-hidden bg-slate-50 text-slate-800 font-sans flex text-sm">
 
+    <!-- ==================== LOGIN SCREEN ==================== -->
     <div id="login-screen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-6">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
             <h1 class="text-3xl font-black text-blue-600 mb-2 italic">RunnerTrack</h1>
@@ -34,6 +35,7 @@
         </div>
     </div>
 
+    <!-- ==================== SIDEBAR ==================== -->
     <aside id="sidebar" class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col hidden-view shadow-2xl z-20">
         <div class="p-6 text-center border-b border-slate-800">
             <h1 class="text-xl font-black text-blue-400 italic">RunnerTrack</h1>
@@ -43,8 +45,8 @@
         
         <nav class="p-4 space-y-1 flex-1 overflow-y-auto">
             <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-chart-line w-6"></i> Dashboard</button>
-
             <button onclick="switchTab('sd_tracker')" id="btn-sd_tracker" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-microchip w-6"></i> SD Tracker</button>
+            <button onclick="switchTab('fo_tracker')" id="btn-fo_tracker" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-list-check w-6"></i> FO Tracker</button>
             <button onclick="switchTab('logs')" id="btn-logs" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-list-ul w-6"></i> Activity Logs</button>
             <button onclick="switchTab('runners')" id="btn-runners" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-users w-6"></i> Field Personnel</button>
             <button onclick="switchTab('sdrs')" id="btn-sdrs" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-user-tie w-6"></i> SDR / Sales</button>
@@ -65,12 +67,13 @@
         </div>
     </aside>
 
+    <!-- ==================== MAIN CONTENT ==================== -->
     <main id="main-content" class="flex-1 flex flex-col hidden-view bg-white relative">
         
+        <!-- Dashboard View -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-5 border-b border-slate-200 bg-white flex flex-col 2xl:flex-row justify-between 2xl:items-center gap-4 shadow-sm z-10">
                 <h2 class="text-xl font-black text-slate-800 shrink-0">Operational Dashboard</h2>
-                
                 <div class="flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Region</label>
@@ -130,6 +133,7 @@
             </div>
         </div>
         
+        <!-- SD Tracker View -->
         <div id="view-sd_tracker" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <div>
@@ -142,7 +146,6 @@
             </div>
             
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
-                
                 <div class="bg-white rounded-2xl shadow-sm border border-blue-200 overflow-hidden">
                     <div class="p-4 bg-blue-50 border-b border-blue-100 flex justify-between items-center flex-wrap gap-2">
                         <h3 class="font-black text-blue-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-satellite-dish animate-pulse text-red-500 mr-2"></i>Radar Pending Phase 3</h3>
@@ -243,25 +246,99 @@
             </div>
         </div>
 
+        <!-- FO Tracker View -->
+        <div id="view-fo_tracker" class="flex-1 flex flex-col hidden-view h-full">
+            <div class="p-6 border-b border-slate-200 bg-white flex flex-col md:flex-row justify-between md:items-center gap-4 shadow-sm z-10 flex-shrink-0">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800"><i class="fa-solid fa-route text-blue-600 mr-2"></i>Field Officer (FO) Tracker</h2>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time FO Movement & Efficiency</p>
+                </div>
+                
+                <div class="flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Filter Date</label>
+                        <input type="date" id="filter-fo-date" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Officer Name</label>
+                        <select id="filter-fo-name" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none min-w-[150px]">
+                            <option value="">All Officers</option>
+                        </select>
+                    </div>
+                    <button onclick="fetchAndRenderFOTracker()" class="h-[34px] w-[34px] flex items-center justify-center bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-blue-600 hover:text-white transition shadow-sm mb-[1px]" title="Refresh Tracker">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
+                <!-- TABEL 1: RINGKASAN TRIP -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left whitespace-nowrap">
+                        <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                            <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                <th class="p-4 font-black">Officer Name</th>
+                                <th class="p-4 font-black text-center">Total Trips</th>
+                                <th class="p-4 font-black text-center">First Dispatch</th>
+                                <th class="p-4 font-black text-center">Last Return</th>
+                                <th class="p-4 font-black text-center">Current Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-fo-tracker" class="divide-y divide-slate-100">
+                            <!-- Diisi oleh JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TABEL 2: LOG AKTIVITAS DETAIL -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6">
+                    <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-black text-slate-700 uppercase text-xs tracking-widest"><i class="fa-solid fa-list-ul mr-2 text-slate-400"></i>Detailed Visit Logs</h3>
+                        <button onclick="exportFOTrackerToExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-md transition"><i class="fa-solid fa-file-excel mr-1"></i> Export Data</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left whitespace-nowrap">
+                            <thead class="bg-white border-b border-slate-100 text-[10px] uppercase text-slate-500 font-black tracking-widest">
+                                <tr>
+                                    <th class="p-4">Time (In - Out)</th>
+                                    <th class="p-4">Officer Name</th>
+                                    <th class="p-4">Merchant & Purpose</th>
+                                    <th class="p-4">Outcome & Notes</th>
+                                    <th class="p-4 text-center">Proof</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-fo-logs" class="divide-y divide-slate-50 text-xs">
+                                <tr>
+                                    <td colspan="5" class="text-center py-8 text-gray-400 italic">Data will appear here...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Logs View -->
         <div id="view-logs" class="flex-1 flex flex-col hidden-view h-full">
-            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+            <div class="p-6 border-b border-slate-200 bg-white flex flex-wrap justify-between items-center shadow-sm z-10 flex-shrink-0 gap-4">
                 <h2 class="text-xl font-black text-slate-800">Activity Logs</h2>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-logs" onkeyup="logPage=0; fetchLogs(true)" placeholder="Search merchant/runner..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-48">
-</div>
-<select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); logPage=0; fetchLogs(true);"></select>
+                        <input type="text" id="search-logs" onkeyup="logPage=0; fetchLogs(true)" placeholder="Search logs..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-48">
+                    </div>
                     
-<select id="filter-logs-phase" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="logPage=0; fetchLogs(true)">
-    <option value="">All Phases</option>
-    <option value="Phase 1">Phase 1</option>
-    <option value="Phase 2">Phase 2</option>
-    <option value="Phase 3">Phase 3</option>
-    <option value="Phase 4">Phase 4</option>
-</select>
+                    <select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); logPage=0; fetchLogs(true);"></select>
+                    
+                    <select id="filter-logs-phase" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="logPage=0; fetchLogs(true)">
+                        <option value="">All Phases</option>
+                        <option value="Phase 1">Phase 1</option>
+                        <option value="Phase 2">Phase 2</option>
+                        <option value="Phase 3">Phase 3</option>
+                        <option value="Phase 4">Phase 4</option>
+                    </select>
 
-<select id="filter-logs-business" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 w-32" onchange="logPage=0; fetchLogs(true)">
+                    <select id="filter-logs-business" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 w-32" onchange="logPage=0; fetchLogs(true)">
                         <option value="">All Merchants</option>
                     </select>
 
@@ -270,9 +347,11 @@
                         <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">Page <span id="log-page-display">1</span></div>
                         <button onclick="changeLogPage(1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-l border-slate-200 disabled:opacity-30" id="btn-log-next"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
+                    
                     <button onclick="fetchLogs(true)" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
                 </div>
             </div>
+            
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <table class="w-full text-left whitespace-nowrap">
@@ -291,6 +370,7 @@
             </div>
         </div>
 
+        <!-- Areas View -->
         <div id="view-areas" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Regional Areas</h2>
@@ -318,6 +398,7 @@
             </div>
         </div>
 
+        <!-- Runners View -->
         <div id="view-runners" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Field Personnel</h2>
@@ -346,6 +427,7 @@
             </div>
         </div>
 
+        <!-- SDRs View -->
         <div id="view-sdrs" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">SDR / Sales Team</h2>
@@ -375,6 +457,7 @@
             </div>
         </div>
 
+        <!-- Businesses View -->
         <div id="view-businesses" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Merchants</h2>
@@ -386,6 +469,7 @@
                     <select id="filter-businesses-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderBusinesses()"></select>
                     <button onclick="fetchBusinesses(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
                     <button onclick="openAddBizModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Add Merchant</button>
+                    <button onclick="exportMerchantAssetsToExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
@@ -406,6 +490,7 @@
             </div>
         </div>
 
+        <!-- Kit Types View -->
         <div id="view-kit_types" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Kit Recipes</h2>
@@ -433,6 +518,7 @@
             </div>
         </div>
 
+        <!-- Kits View -->
         <div id="view-kits" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Asset Allocation</h2>
@@ -498,6 +584,7 @@
             </div>
         </div>
 
+        <!-- Users View -->
         <div id="view-users" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">User Accounts</h2>
@@ -527,6 +614,7 @@
             </div>
         </div>
 
+        <!-- Admin Logs View -->
         <div id="view-admin_logs" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-amber-600"><i class="fa-solid fa-shield-halved mr-2"></i>Security Audit Trail</h2>
@@ -554,9 +642,9 @@
                 </div>
             </div>
         </div>
-
     </main>
 
+    <!-- ==================== MODALS ==================== -->
     <div id="modal-manual-deploy" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <button onclick="closeModal('modal-manual-deploy')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -577,8 +665,7 @@
                 <div>
                     <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID *</label>
                     <input list="deploy-kit-list" id="deploy-kit-id" autocomplete="off" placeholder="Type or Select Kit ID..." class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs uppercase font-bold" required>
-                    <datalist id="deploy-kit-list">
-                    </datalist>
+                    <datalist id="deploy-kit-list"></datalist>
                 </div>
                 <div id="deploy-biz-container">
                     <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Destination Merchant *</label>
@@ -883,37 +970,44 @@
         </div>
     </div>
     
+    <!-- ==================== JAVASCRIPT ==================== -->
     <script>
+        // ----------------------------------------------------------------------
+        // 1. SUPABASE INIT & GLOBALS
+        // ----------------------------------------------------------------------
         const { createClient } = window.supabase;
         const db = createClient(
-          'https://ksdulyitxvtfvxgoqotd.supabase.co',
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzZHVseWl0eHZ0ZnZ4Z29xb3RkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODgzNzEsImV4cCI6MjA5MTE2NDM3MX0.nJ4lUtAKKBt_NQu0vZo8Dn6R7GfuE4qpgEfGYkkvh40'
+            'https://ksdulyitxvtfvxgoqotd.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzZHVseWl0eHZ0ZnZ4Z29xb3RkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODgzNzEsImV4cCI6MjA5MTE2NDM3MX0.nJ4lUtAKKBt_NQu0vZo8Dn6R7GfuE4qpgEfGYkkvh40'
         );
 
-        let globalLogs = [], globalAreas = [], globalRunners = [], globalSDRs = [], globalBusinesses = [], globalKitTypes = [], globalKits = [], globalUsers = [], globalAdminLogs = [];
+        let globalLogs = [];
+        let globalAreas = [];
+        let globalRunners = [];
+        let globalSDRs = [];
+        let globalBusinesses = [];
+        let globalKitTypes = [];
+        let globalKits = [];
+        let globalUsers = [];
+        let globalAdminLogs = [];
         let globalKitLocations = {}; 
-
-        function escapeHTML(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
         
-        // State untuk pagination
         let logPage = 0;
         const logPageSize = 20;
-        
         let kitPage = 0;
-        const kitPageSize = 50; // Tampilkan 50 aset per halaman
+        const kitPageSize = 50;
 
-        function changeKitPage(step) {
-            kitPage += step;
-            if (kitPage < 0) kitPage = 0;
-            renderKits();
+        // ----------------------------------------------------------------------
+        // 2. UTILITIES & HELPERS
+        // ----------------------------------------------------------------------
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         function getAdminArea() {
@@ -924,8 +1018,37 @@
         async function logAdminAction(actionType, description) {
             const admin = JSON.parse(localStorage.getItem('admin_user'));
             if (!admin) return;
-            await db.from('admin_logs').insert([{ admin_email: admin.email, action_type: actionType, description: description }]);
+            await db.from('admin_logs').insert([{ 
+                admin_email: admin.email, 
+                action_type: actionType, 
+                description: description 
+            }]);
         }
+
+        function changeKitPage(step) {
+            kitPage += step;
+            if (kitPage < 0) kitPage = 0;
+            renderKits();
+        }
+
+        function changeLogPage(step) {
+            logPage += step;
+            if (logPage < 0) logPage = 0;
+            fetchLogs(true);
+        }
+
+        function showModal(id) { document.getElementById(id).classList.replace('hidden-view', 'flex'); }
+        function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden-view'); }
+
+        // ----------------------------------------------------------------------
+        // 3. AUTHENTICATION & INIT
+        // ----------------------------------------------------------------------
+        window.addEventListener('load', async () => {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) {
+                initApp();
+            }
+        });
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault(); 
@@ -945,10 +1068,10 @@
             }
 
             const { data: userData, error: userError } = await db
-              .from('master_users')
-              .select('*')
-              .ilike('email', email)
-              .single();
+                .from('master_users')
+                .select('*')
+                .ilike('email', email)
+                .single();
 
             if (userError || !userData) {
                 document.getElementById('login-error').innerText = "Access Denied: Account not found in database.";
@@ -975,13 +1098,6 @@
             localStorage.removeItem('admin_user'); 
             window.location.reload(); 
         }
-
-        window.addEventListener('load', async () => {
-            const { data: { session } } = await db.auth.getSession();
-            if (session) {
-                initApp();
-            }
-        });
 
         async function initApp() {
             const { data: { session } } = await db.auth.getSession();
@@ -1010,11 +1126,14 @@
             
             await fetchAreas(); 
             switchTab('dashboard');
-            enableRealtimeSync(); // DIPINDAHKAN KE SINI (Aman dari race condition)
+            enableRealtimeSync();
         }
 
+        // ----------------------------------------------------------------------
+        // 4. UI NAVIGATION & DROPDOWNS
+        // ----------------------------------------------------------------------
         function switchTab(tab) {
-            ['dashboard', 'sd_tracker', 'logs', 'runners', 'sdrs', 'businesses', 'areas', 'kit_types', 'kits', 'users', 'admin_logs'].forEach(n => {
+            ['dashboard', 'sd_tracker', 'fo_tracker', 'logs', 'runners', 'sdrs', 'businesses', 'areas', 'kit_types', 'kits', 'users', 'admin_logs'].forEach(n => {
                 const view = document.getElementById(`view-${n}`);
                 if(view) view.classList.add('hidden-view'); 
                 const btn = document.getElementById(`btn-${n}`);
@@ -1027,6 +1146,7 @@
             
             if(tab === 'dashboard') refreshAllData();
             if(tab === 'sd_tracker') renderSDTracker(); 
+            if(tab === 'fo_tracker') fetchAndRenderFOTracker(); 
             if(tab === 'logs') fetchLogs();
             if(tab === 'areas') fetchAreas(); 
             if(tab === 'runners') fetchRunners(); 
@@ -1037,9 +1157,6 @@
             if(tab === 'users') fetchUsers();
             if(tab === 'admin_logs') fetchAdminLogs();
         }
-        
-        function showModal(id) { document.getElementById(id).classList.replace('hidden-view', 'flex'); }
-        function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden-view'); }
 
         function populateAreaDropdowns() {
             const adminArea = getAdminArea();
@@ -1067,11 +1184,41 @@
             }
         }
 
+        function updateLogBusinessDropdown() {
+            const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
+            const bizSelect = document.getElementById('filter-logs-business');
+            if(!bizSelect) return;
+            
+            let filteredBiz = globalBusinesses;
+            if(fA) filteredBiz = globalBusinesses.filter(b => b.area_name === fA);
+            
+            bizSelect.innerHTML = `<option value="">All Merchants</option>` + 
+                filteredBiz.map(b => `<option value="${b.business_name}">${b.business_name}</option>`).join('');
+        }
+
+        async function refreshAllData() {
+            await Promise.all([fetchKits(true), fetchKitTypes(true), fetchBusinesses(true)]);
+            renderDashboard();
+        }
+
+        function initFOTrackerFilters() {
+            const dateInput = document.getElementById('filter-fo-date');
+            if (!dateInput.value) {
+                const today = new Date();
+                const y = today.getFullYear();
+                const m = String(today.getMonth() + 1).padStart(2, '0');
+                const d = String(today.getDate()).padStart(2, '0');
+                dateInput.value = `${y}-${m}-${d}`;
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // 5. FETCH DATA FUNCTIONS
+        // ----------------------------------------------------------------------
         async function fetchLogs(force = false) {
             const searchInput = document.getElementById('search-logs');
             const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
-            // Jika sedang mencari, kita abaikan cache agar data akurat dari DB
             if (!force && globalLogs.length > 0 && !searchTerm) return renderLogs();
 
             const from = logPage * logPageSize;
@@ -1079,7 +1226,6 @@
 
             let q = db.from('transactions').select('*', { count: 'exact' });
             
-            // LOGIKA SEARCH BARU: Jika ada pencarian, cari di Merchant atau Runner
             if (searchTerm) {
                 q = q.or(`business_name.ilike.%${searchTerm}%,runner_name.ilike.%${searchTerm}%,kit_id.ilike.%${searchTerm}%`);
             }
@@ -1105,12 +1251,9 @@
                 globalLogs = data;
                 document.getElementById('log-page-display').innerText = logPage + 1;
                 
-                // FIXED PAGINATION (count || 0)
-                const searchInput = document.getElementById('search-logs');
                 const isSearching = searchInput && searchInput.value.length > 0;
-
-                // Sembunyikan navigasi jika sedang mencari
                 const paginationControls = document.getElementById('btn-log-prev').parentElement;
+                
                 if (isSearching) {
                     paginationControls.style.opacity = '0.3';
                     paginationControls.style.pointerEvents = 'none';
@@ -1125,12 +1268,6 @@
                 if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
                 if(!document.getElementById('view-dashboard').classList.contains('hidden-view')) renderDashboard();
             }
-        }
-
-        function changeLogPage(step) {
-            logPage += step;
-            if (logPage < 0) logPage = 0;
-            fetchLogs(true);
         }
 
         async function fetchAreas(force = false) { 
@@ -1190,10 +1327,8 @@
             
             if (data) { 
                 globalKits = data; 
-                
                 await fetchKitLocations(); 
                 await fetchLogs(true);     
-                
                 renderKits(); 
                 if (globalBusinesses.length > 0) renderBusinesses(); 
             }
@@ -1214,21 +1349,463 @@
             if (data) { globalAdminLogs = data; renderAdminLogs(); } 
         }
 
-        function updateLogBusinessDropdown() {
-            const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
-            const bizSelect = document.getElementById('filter-logs-business');
-            if(!bizSelect) return;
+        async function fetchKitLocations() {
+            const { data, error } = await db.from('transactions')
+                .select('kit_id, business_name, phase, created_at')
+                .in('phase', ['Phase 1', 'Phase 4'])
+                .order('created_at', { ascending: false });
+
+            if (data) {
+                globalKitLocations = {};
+                data.forEach(log => {
+                    if (log.kit_id && !globalKitLocations[log.kit_id]) {
+                        if (log.phase === 'Phase 4') {
+                            globalKitLocations[log.kit_id] = { loc: 'Warehouse', isOffice: true };
+                        } else {
+                            globalKitLocations[log.kit_id] = { loc: log.business_name, isOffice: false };
+                        }
+                    }
+                });
+            }
+        }
+
+        function getKitLocation(kitId) {
+            return globalKitLocations[kitId] || { loc: 'Warehouse', isOffice: true };
+        }
+
+        async function fetchAndRenderFOTracker() {
+            const tableSummary = document.getElementById('table-fo-tracker');
+            const tableLogs = document.getElementById('table-fo-logs');
             
-            let filteredBiz = globalBusinesses;
-            if(fA) filteredBiz = globalBusinesses.filter(b => b.area_name === fA);
-            
-            bizSelect.innerHTML = `<option value="">All Merchants</option>` + 
-                filteredBiz.map(b => `<option value="${b.business_name}">${b.business_name}</option>`).join('');
+            initFOTrackerFilters();
+
+            const targetDateStr = document.getElementById('filter-fo-date').value;
+            const targetFO = document.getElementById('filter-fo-name').value;
+
+            tableSummary.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Calculating FO visits...</td></tr>`;
+            tableLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading detailed logs...</td></tr>`;
+
+            try {
+                const startOfDay = `${targetDateStr}T00:00:00+08:00`;
+                const endOfDay = `${targetDateStr}T23:59:59+08:00`;
+
+                let query = db.from('fo_visits') 
+                    .select('*')
+                    .gte('check_in_time', startOfDay)
+                    .lte('check_in_time', endOfDay)
+                    .order('check_in_time', { ascending: true });
+
+                if (targetFO) query = query.eq('runner_name', targetFO);
+
+                const { data, error } = await query;
+                if (error) throw error;
+
+                window.currentFOData = data || [];
+
+                const foSelect = document.getElementById('filter-fo-name');
+                if (foSelect.options.length <= 1 && data && data.length > 0) {
+                    const uniqueFOs = [...new Set(data.map(item => item.runner_name))].sort();
+                    let opts = '<option value="">All Officers</option>';
+                    uniqueFOs.forEach(fo => { opts += `<option value="${fo}" ${targetFO === fo ? 'selected' : ''}>${fo}</option>`; });
+                    foSelect.innerHTML = opts;
+                }
+
+                if (!data || data.length === 0) {
+                    tableSummary.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>No FO visits recorded.</td></tr>`;
+                    tableLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400 italic">No detailed logs found.</td></tr>`;
+                    return;
+                }
+
+                // Render Summary
+                const runnerStats = {};
+                data.forEach(visit => {
+                    const runner = visit.runner_name;
+                    if (!runnerStats[runner]) {
+                        runnerStats[runner] = {
+                            nama_fo: runner, jumlah_trip: 0, jam_pergi: visit.check_in_time, 
+                            jam_pulang: visit.check_out_time, status_posisi: 'Standby', last_activity: visit.check_in_time
+                        };
+                    }
+                    runnerStats[runner].jumlah_trip += 1;
+                    if (visit.check_out_time) {
+                        if (!runnerStats[runner].jam_pulang || new Date(visit.check_out_time) > new Date(runnerStats[runner].jam_pulang)) {
+                            runnerStats[runner].jam_pulang = visit.check_out_time;
+                        }
+                    }
+                    if (!visit.check_out_time) runnerStats[runner].status_posisi = `At ${visit.business_name}`;
+                    else if (new Date(visit.check_in_time) >= new Date(runnerStats[runner].last_activity)) runnerStats[runner].status_posisi = 'Transit / Completed';
+                    runnerStats[runner].last_activity = visit.check_in_time;
+                });
+
+                tableSummary.innerHTML = Object.values(runnerStats).map(stat => {
+                    const formatTime = (iso) => !iso ? '<span class="text-slate-300 italic">Not Yet</span>' : new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                    const badge = stat.status_posisi.startsWith('At ') 
+                        ? `<span class="px-3 py-1 bg-rose-50 border border-rose-100 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><i class="fa-solid fa-location-dot mr-1"></i> ${stat.status_posisi}</span>` 
+                        : `<span class="px-3 py-1 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><i class="fa-solid fa-person-walking-arrow-right mr-1"></i> ${stat.status_posisi}</span>`;
+                    return `
+                        <tr class="border-b hover:bg-slate-50 transition border-slate-100">
+                            <td class="py-4 px-4 font-black text-slate-800">${stat.nama_fo}</td>
+                            <td class="py-4 px-4 text-center"><span class="bg-blue-50 text-blue-700 font-black px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">${stat.jumlah_trip} Trips</span></td>
+                            <td class="py-4 px-4 text-center font-bold text-slate-600 text-base">${formatTime(stat.jam_pergi)}</td>
+                            <td class="py-4 px-4 text-center font-bold text-slate-600 text-base">${formatTime(stat.jam_pulang)}</td>
+                            <td class="py-4 px-4 text-center">${badge}</td>
+                        </tr>`;
+                }).join('');
+
+                // Render Logs
+                const sortedLogs = [...data].reverse();
+                tableLogs.innerHTML = sortedLogs.map(log => {
+                    const timeIn = new Date(log.check_in_time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+                    const timeOut = log.check_out_time ? new Date(log.check_out_time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '<i class="fa-solid fa-spinner fa-spin text-rose-400"></i>';
+                    
+                    const outcomeBadge = !log.outcome_status 
+                        ? `<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-400 border border-slate-200">IN PROGRESS</span>` 
+                        : (log.outcome_status.includes('Success') || log.outcome_status.includes('Resolved') 
+                            ? `<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">${log.outcome_status}</span>` 
+                            : `<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-50 text-amber-600 border border-amber-200">${log.outcome_status}</span>`);
+
+                    const notes = log.notes ? `<div class="mt-1.5 text-[10px] text-slate-500 italic whitespace-normal leading-relaxed break-words max-w-xs"><i class="fa-solid fa-comment-dots mr-1"></i>${log.notes}</div>` : '';
+                    const photoBtn = log.proof_photo 
+                        ? `<a href="${log.proof_photo}" target="_blank" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2.5 rounded-lg border border-blue-100 transition shadow-sm" title="View Proof Photo"><i class="fa-solid fa-image"></i></a>` 
+                        : '<span class="text-slate-300 p-2"><i class="fa-solid fa-image-slash"></i></span>';
+
+                    return `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
+                        <td class="p-4 align-top w-32">
+                            <div class="font-black text-slate-800 flex items-center gap-2"><i class="fa-solid fa-arrow-right-to-bracket text-emerald-500"></i> ${timeIn}</div>
+                            <div class="font-black text-slate-500 flex items-center gap-2 mt-1"><i class="fa-solid fa-arrow-right-from-bracket text-rose-400"></i> ${timeOut}</div>
+                        </td>
+                        <td class="p-4 align-top font-bold text-slate-700">${log.runner_name}</td>
+                        <td class="p-4 align-top">
+                            <div class="font-black text-blue-700 text-xs">${log.business_name}</div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">${log.visit_type || '-'}</div>
+                        </td>
+                        <td class="p-4 align-top">
+                            ${outcomeBadge}
+                            ${notes}
+                        </td>
+                        <td class="p-4 align-top text-center">${photoBtn}</td>
+                    </tr>`;
+                }).join('');
+
+            } catch (error) {
+                console.error("Error fetching FO Tracker logs:", error);
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // 6. RENDER FUNCTIONS
+        // ----------------------------------------------------------------------
+        async function renderDashboard() {
+            const dateInput = document.getElementById('dash-date-filter');
+            if(!dateInput.value) {
+                const today = new Date();
+                const y = today.getFullYear();
+                const m = String(today.getMonth() + 1).padStart(2, '0');
+                const d = String(today.getDate()).padStart(2, '0');
+                dateInput.value = `${y}-${m}-${d}`;
+            }
+            const filterDate = dateInput.value;
+            const filterArea = document.getElementById('dash-area-filter').value;
+            const startTime = document.getElementById('dash-start-time').value; 
+            const endTime = document.getElementById('dash-end-time').value;
+
+            let q = db.from('transactions')
+                .select('phase, sd_uploaded, kit_type, created_at, area')
+                .gte('created_at', `${filterDate}T00:00:00+08:00`)
+                .lte('created_at', `${filterDate}T23:59:59+08:00`);
+
+            if (filterArea && filterArea !== 'All') {
+                q = q.eq('area', filterArea);
+            }
+
+            const { data: dashLogs } = await q;
+
+            let totalSD = 0;
+            let totalIphone = 0;
+
+            if (dashLogs) {
+                dashLogs.forEach(log => {
+                    const logTimeStr = new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                    
+                    if(logTimeStr >= startTime && logTimeStr <= endTime) {
+                        let isIphone = false;
+
+                        if (log.kit_type) {
+                            const kt = log.kit_type.toUpperCase();
+                            const recipe = globalKitTypes.find(t => t.type_name === log.kit_type);
+                            if ((recipe && recipe.upload_metric_type === 'iPhone') || kt.includes('MONO') || kt.includes('IPHONE')) {
+                                isIphone = true;
+                            }
+                        }
+
+                        const sdUp = log.sd_uploaded;
+                        const isUploaded = (typeof sdUp === 'string' && sdUp.toLowerCase() === 'yes') || 
+                                           sdUp === true || 
+                                           (!isNaN(parseInt(sdUp)) && parseInt(sdUp) > 0);
+
+                        let uploadQty = parseInt(sdUp) || 0;
+                        if (isUploaded && uploadQty === 0) uploadQty = 1;
+
+                        if (log.phase === 'Phase 4' && isIphone && isUploaded) {
+                            totalIphone += 1;
+                        }
+
+                        if (!isIphone) {
+                            if (log.phase === 'Phase 3' && uploadQty > 0) {
+                                totalSD += uploadQty;
+                            }
+                            else if (log.phase === 'Phase 4' && uploadQty > 0) {
+                                totalSD += 1; 
+                            }
+                        }
+                    }
+                });
+            }
+
+            document.getElementById('stat-sd-today').innerText = totalSD;
+            document.getElementById('stat-iphone-today').innerText = totalIphone;
+
+            const tbody = document.getElementById('table-dash-kits');
+            tbody.innerHTML = globalKitTypes.map(type => {
+                const kitsOfType = globalKits.filter(k => k.kit_type === type.type_name);
+                let atBusiness = 0, inOffice = 0, damaged = 0;
+
+                kitsOfType.forEach(kit => {
+                    if(kit.current_status === 'Damaged') {
+                        damaged++; 
+                    } else {
+                        const locData = getKitLocation(kit.kit_id);
+                        if(locData.isOffice) {
+                            inOffice++;
+                        } else {
+                            atBusiness++;
+                        }
+                    }
+                });
+
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-black text-blue-700">${type.type_name}</td>
+                        <td class="p-4 text-center"><span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full">${atBusiness} Deployed</span></td>
+                        <td class="p-4 text-center"><span class="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full">${inOffice} in Office</span></td>
+                        <td class="p-4 text-center"><span class="${damaged > 0 ? 'bg-red-50 text-red-600' : 'text-slate-300'} px-3 py-1 rounded-full">${damaged} Damaged</span></td>
+                        <td class="p-4 text-right text-slate-400 font-mono">${kitsOfType.length}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function renderSDTracker() {
+            const radarDateInput = document.getElementById('filter-radar-date');
+            if (!radarDateInput.value) {
+                const today = new Date();
+                radarDateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+            }
+            const targetDateStr = radarDateInput.value;
+
+            const { data: dailyData } = await db.from('transactions')
+                .select('*')
+                .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
+                .gte('created_at', `${targetDateStr}T00:00:00+08:00`)
+                .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
+                .order('created_at', { ascending: true });
+
+            let allLogs = dailyData || [];
+            let dailyState = {};
+            let systemClears = [];
+
+            allLogs.forEach(log => {
+                const biz = log.business_name;
+                if (!biz) return;
+
+                if (log.phase === 'SYSTEM CLEAR') {
+                    systemClears.push(log);
+                    return;
+                }
+
+                if (!dailyState[biz]) {
+                    dailyState[biz] = { 
+                        p2Qty: 0, p3Qty: 0, 
+                        p2Runner: null, p3Runner: null, 
+                        lastP2Time: null, lastP3Time: null 
+                    };
+                }
+
+                let qty = parseInt(log.sd_qty) || 0;
+                if (log.phase === 'Phase 2') {
+                    dailyState[biz].p2Qty += qty;
+                    dailyState[biz].p2Runner = log.runner_name;
+                    dailyState[biz].lastP2Time = log.created_at;
+                } else if (log.phase === 'Phase 3') {
+                    dailyState[biz].p3Qty += qty;
+                    dailyState[biz].p3Runner = log.runner_name;
+                    dailyState[biz].lastP3Time = log.created_at;
+                }
+            });
+
+            let radarList = [];
+            let mismatchList = [];
+            let perfectMatchList = [];
+            let historyList = []; 
+
+            Object.entries(dailyState).forEach(([biz, state]) => {
+                const diff = state.p2Qty - state.p3Qty; 
+                const isCleared = systemClears.some(c => c.business_name === biz);
+
+                if (isCleared) return; 
+
+                if (state.p2Qty > 0 && state.p3Qty > 0) {
+                    const diffMs = new Date(state.lastP3Time) - new Date(state.lastP2Time);
+                    const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+                    historyList.push({
+                        merchant: biz, p2Time: state.lastP2Time, p2Runner: state.p2Runner,
+                        p3Time: state.lastP3Time, p3Runner: state.p3Runner, qty: state.p3Qty,
+                        duration: `${diffHrs} Hours`
+                    });
+                }
+
+                if (diff > 0) {
+                    radarList.push({ merchant: biz, runner: state.p2Runner || state.p3Runner, qty: diff, time: state.lastP2Time || state.lastP3Time });
+                    if (state.p3Qty > 0) {
+                        mismatchList.push({
+                            date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SHORTAGE', variance: diff,
+                            desc: `Target drop ${state.p2Qty} SD, but Phase 3 only picked up ${state.p3Qty} SD. Missing ${diff} SD.`
+                        });
+                    }
+                } else if (diff < 0) {
+                    mismatchList.push({
+                        date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SURPLUS', variance: Math.abs(diff),
+                        desc: `Phase 3 picked up ${state.p3Qty} SD, but today's drop record is only ${state.p2Qty} SD.`
+                    });
+                } else if (diff === 0 && state.p2Qty > 0) {
+                    perfectMatchList.push({
+                        date: state.lastP3Time, merchant: biz, runner: state.p3Runner, qty: state.p3Qty
+                    });
+                }
+            });
+
+            const { data: overdueData } = await db.from('view_sd_overdue').select('*');
+            let overdues = overdueData || [];
+
+            // Render Radar
+            const tbodyRadar = document.getElementById('table-live-radar');
+            if (tbodyRadar) {
+                tbodyRadar.innerHTML = radarList.length === 0
+                    ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>All clear! All targets today have been picked up.</td></tr>`
+                    : radarList.map(p => `
+                        <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
+                            <td class="p-4 font-black text-slate-800">${p.merchant}</td>
+                            <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
+                            <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
+                            <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
+                            <td class="p-4 text-right flex justify-end gap-2 items-center">
+                                <span class="font-black text-amber-500 animate-pulse mt-1 text-[10px] uppercase tracking-widest"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
+                                <button onclick="resolveLiveRadar('${p.merchant.replace(/'/g, "\\'")}', ${p.qty})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                            </td>
+                        </tr>
+                    `).join('');
+            }
+            const badgeRadar = document.getElementById('badge-live-radar');
+            if (badgeRadar) badgeRadar.innerText = radarList.length;
+
+            // Render Mismatch
+            mismatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const tbodyMismatch = document.getElementById('table-sd-mismatch');
+            if(tbodyMismatch) {
+                tbodyMismatch.innerHTML = mismatchList.length === 0
+                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Perfect daily cycle. No discrepancies between Phase 2 and Phase 3.</td></tr>`
+                    : mismatchList.map(m => {
+                        const timeStr = new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+                        const isShort = m.type === 'SHORTAGE';
+                        const badgeClass = isShort ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+                        const icon = isShort ? 'fa-arrow-down' : 'fa-arrow-up';
+                        return `
+                        <tr class="hover:bg-amber-50/50 transition border-b border-slate-100">
+                            <td class="p-4">
+                                <div class="font-black text-slate-800">${targetDateStr}</div>
+                                <div class="text-[10px] font-bold text-slate-500">${timeStr}</div>
+                            </td>
+                            <td class="p-4 font-black text-slate-700">${m.merchant}</td>
+                            <td class="p-4"><span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span></td>
+                            <td class="p-4 text-center"><span class="text-[11px] font-black px-2 py-1 rounded border shadow-sm ${badgeClass} whitespace-nowrap"><i class="fa-solid ${icon} mr-1"></i> ${m.type} ${m.variance}</span></td>
+                            <td class="p-4">
+                                <div class="flex items-center justify-between gap-4">
+                                    <span class="text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</span>
+                                    <button onclick="resolveSD('${m.merchant.replace(/'/g, "\\'")}', '${m.type}', ${m.variance})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                                </div>
+                            </td>
+                        </tr>`;
+                    }).join('');
+            }
+            document.getElementById('badge-mismatch-count').innerText = mismatchList.length;
+
+            // Render Perfect Match
+            perfectMatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const tbodyMatch = document.getElementById('table-sd-match');
+            if(tbodyMatch) {
+                tbodyMatch.innerHTML = perfectMatchList.length === 0
+                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No 100% reconciled cycles yet today.</td></tr>`
+                    : perfectMatchList.map(m => `
+                        <tr class="hover:bg-emerald-50/30 transition border-b border-emerald-50">
+                            <td class="p-4 font-black text-slate-800">${targetDateStr} <span class="text-[10px] font-bold text-slate-500 block">${new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</span></td>
+                            <td class="p-4 font-black text-slate-700">${m.merchant}</td>
+                            <td class="p-4 text-slate-500 uppercase tracking-widest text-[11px]">${m.runner || '-'}</td>
+                            <td class="p-4 text-center font-black text-emerald-600 bg-emerald-50/50">${m.qty} SD</td>
+                            <td class="p-4 text-right"><span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span></td>
+                        </tr>
+                    `).join('');
+            }
+            document.getElementById('badge-match-count').innerText = perfectMatchList.length;
+
+            // Render History
+            document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ? 
+                `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` : 
+                historyList.map(h => `
+                <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
+                    <td class="p-4 font-black text-slate-800">${h.merchant}</td>
+                    <td class="p-4">
+                        <div class="font-bold text-slate-600">${new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="text-[10px] uppercase text-slate-400">${h.p2Runner}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="font-bold text-slate-600">${new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
+                    </td>
+                    <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
+                    <td class="p-4 text-center font-black bg-indigo-50 text-indigo-600">${h.qty} SD</td>
+                </tr>
+            `).join('');
+
+            // Render Overdue
+            const overdueHTML = overdues.length === 0
+                ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">All clear! No SD Cards pending over 24 hours.</td></tr>`
+                : overdues.map(o => {
+                    const hoursOvd = parseFloat(o.hours_overdue);
+                    const days = Math.floor(hoursOvd / 24);
+                    const hrs = Math.floor(hoursOvd % 24);
+                    const timeStr = days > 0 ? `${days} Days ${hrs} Hrs` : `${hrs} Hrs`;
+                    const dateStr = new Date(o.date_sent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                    return `
+                    <tr class="hover:bg-red-50/50 transition border-b border-red-50">
+                        <td class="p-4 font-black text-slate-800">${o.merchant}</td>
+                        <td class="p-4 font-bold text-slate-500">${dateStr}</td>
+                        <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner || 'Unknown'}</td>
+                        <td class="p-4 text-center font-black text-red-600 bg-red-50/50">${o.qty} SD</td>
+                        <td class="p-4">
+                            <div class="flex items-center justify-end gap-3">
+                                <span class="font-black text-red-600">${timeStr}</span>
+                                <button onclick="resolveSD('${o.merchant.replace(/'/g, "\\'")}', 'OVERDUE', ${o.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
+            document.getElementById('badge-overdue-count').innerText = overdues.length;
         }
 
         function renderLogs() {
             const s = document.getElementById('search-logs').value.toLowerCase();
-            // FIXED JAVASCRIPT COMMENT ERROR
             const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : ''; 
             const fPhase = document.getElementById('filter-logs-phase') ? document.getElementById('filter-logs-phase').value : '';
             const fBiz = document.getElementById('filter-logs-business') ? document.getElementById('filter-logs-business').value : '';
@@ -1254,15 +1831,16 @@
                     </a>` : '<span class="text-slate-300 p-2"><i class="fa-solid fa-image-slash"></i></span>';
 
                 const notes = (i.missing_or_issue || i.other_item) ? `
-    <div class="mt-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-800 leading-relaxed italic">
-        <i class="fa-solid fa-comment-dots mr-1"></i> ${escapeHTML([i.missing_or_issue, i.other_item].filter(Boolean).join(' | '))}
-    </div>` : '';
+                    <div class="mt-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-800 leading-relaxed italic">
+                        <i class="fa-solid fa-comment-dots mr-1"></i> ${escapeHTML([i.missing_or_issue, i.other_item].filter(Boolean).join(' | '))}
+                    </div>` : '';
 
-                const timeInfo = `<div class="text-[9px] text-slate-400 font-bold mt-1 uppercase flex gap-2">
-                    ${i.pickup_time ? `<span><i class="fa-solid fa-arrow-up"></i> ${i.pickup_time}</span>` : ''}
-                    ${i.drop_off_time ? `<span><i class="fa-solid fa-arrow-down"></i> ${i.drop_off_time}</span>` : ''}
-                    ${i.sdr_name ? `<span><i class="fa-solid fa-user-tie"></i> ${i.sdr_name}</span>` : ''}
-                </div>`;
+                const timeInfo = `
+                    <div class="text-[9px] text-slate-400 font-bold mt-1 uppercase flex gap-2">
+                        ${i.pickup_time ? `<span><i class="fa-solid fa-arrow-up"></i> ${i.pickup_time}</span>` : ''}
+                        ${i.drop_off_time ? `<span><i class="fa-solid fa-arrow-down"></i> ${i.drop_off_time}</span>` : ''}
+                        ${i.sdr_name ? `<span><i class="fa-solid fa-user-tie"></i> ${i.sdr_name}</span>` : ''}
+                    </div>`;
 
                 return `
                 <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
@@ -1302,7 +1880,7 @@
                 </tr>`;
             }).join(''); 
         }
-        
+
         function renderAreas() { 
             const s = document.getElementById('search-areas').value.toLowerCase(); 
             const f = globalAreas.filter(i => i.area_name.toLowerCase().includes(s)); 
@@ -1418,43 +1996,6 @@
             }).join(''); 
         }
 
-        function renderAdminLogs() { 
-            const s = document.getElementById('search-admin_logs').value.toLowerCase(); 
-            const f = globalAdminLogs.filter(i => i.admin_email.toLowerCase().includes(s) || i.action_type.toLowerCase().includes(s)); 
-            document.getElementById('table-admin_logs').innerHTML = f.map(i => `
-                <tr class="hover:bg-amber-50/50 border-b border-slate-100">
-                    <td class="p-4 whitespace-nowrap">${new Date(i.created_at).toLocaleString('en-US')}</td>
-                    <td class="p-4 font-bold text-slate-800">${i.admin_email}</td>
-                    <td class="p-4"><span class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-black tracking-widest uppercase">${i.action_type}</span></td>
-                    <td class="p-4 text-slate-600 italic">${i.description}</td>
-                </tr>
-            `).join(''); 
-        }
-
-        async function fetchKitLocations() {
-            const { data, error } = await db.from('transactions')
-                .select('kit_id, business_name, phase, created_at')
-                .in('phase', ['Phase 1', 'Phase 4'])
-                .order('created_at', { ascending: false });
-
-            if (data) {
-                globalKitLocations = {};
-                data.forEach(log => {
-                    if (log.kit_id && !globalKitLocations[log.kit_id]) {
-                        if (log.phase === 'Phase 4') {
-                            globalKitLocations[log.kit_id] = { loc: 'Warehouse', isOffice: true };
-                        } else {
-                            globalKitLocations[log.kit_id] = { loc: log.business_name, isOffice: false };
-                        }
-                    }
-                });
-            }
-        }
-
-        function getKitLocation(kitId) {
-            return globalKitLocations[kitId] || { loc: 'Warehouse', isOffice: true };
-        }
-
         function filterKitsByMerchant(merchantName) {
             switchTab('kits');
             document.getElementById('search-kits').value = merchantName;
@@ -1474,21 +2015,17 @@
                 return matchArea && matchType && matchSearch;
             });
 
-            // 1. Hitung total halaman
             const totalPages = Math.ceil(f.length / kitPageSize);
-            if (kitPage >= totalPages && totalPages > 0) kitPage = totalPages - 1; // Cegah page kelebihan
+            if (kitPage >= totalPages && totalPages > 0) kitPage = totalPages - 1; 
 
-            // 2. Slice data (Client-Side Pagination)
             const paginatedKits = f.slice(kitPage * kitPageSize, (kitPage + 1) * kitPageSize);
 
-            // 3. Update UI Tombol Navigasi
             document.getElementById('kit-page-display').innerText = f.length > 0 ? (kitPage + 1) : 0;
             const btnPrev = document.getElementById('btn-kit-prev');
             const btnNext = document.getElementById('btn-kit-next');
             if (btnPrev) btnPrev.disabled = (kitPage === 0);
             if (btnNext) btnNext.disabled = (kitPage >= totalPages - 1);
 
-            // 4. Reset checkbox "Select All" & sembunyikan tombol delete tiap ganti halaman
             const masterCheckbox = document.getElementById('kit-master-checkbox');
             if(masterCheckbox) masterCheckbox.checked = false;
             updateKitSelection();
@@ -1496,12 +2033,12 @@
             document.getElementById('table-kits').innerHTML = paginatedKits.map(i => {
                 const locData = getKitLocation(i.kit_id);
                 return `
-<tr class="hover:bg-slate-50 border-b border-slate-100 ${i.current_status === 'Damaged' ? 'bg-red-50/30' : ''}">
-    <td class="p-4">
-        <input type="checkbox" class="kit-checkbox rounded border-slate-300" value="${i.id}" onchange="updateKitSelection()">
-    </td>
-    <td class="p-4">
-        <div class="font-black">${i.kit_id}</div>
+                <tr class="hover:bg-slate-50 border-b border-slate-100 ${i.current_status === 'Damaged' ? 'bg-red-50/30' : ''}">
+                    <td class="p-4">
+                        <input type="checkbox" class="kit-checkbox rounded border-slate-300" value="${i.id}" onchange="updateKitSelection()">
+                    </td>
+                    <td class="p-4">
+                        <div class="font-black">${i.kit_id}</div>
                         <div class="text-[10px] font-bold text-slate-400 uppercase">${i.kit_type} | ${i.area_name}</div>
                     </td>
                     <td class="p-4">
@@ -1523,7 +2060,6 @@
         }
 
         async function renderKitMismatches() {
-            // Ambil langsung dari DB agar tidak terpengaruh paginasi tabel Log
             const adminArea = getAdminArea();
             let q = db.from('transactions').select('*').in('phase', ['Phase 1', 'Phase 4']).order('created_at', { ascending: false });
             if (adminArea !== 'All') q = q.eq('area', adminArea);
@@ -1571,7 +2107,6 @@
                 auditList.map(a => {
                     const badgeP1 = a.p1ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
                     const badgeP4 = a.p4ItemsOrg.map(i => `<span class="inline-block px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-600 mr-1 mb-1"><i class="fa-solid fa-check text-emerald-500 mr-1"></i>${i}</span>`).join('');
-                    
                     const missingBadges = a.missingItemsOrg.map(i => `<span class="inline-block px-2 py-1 bg-red-100 border border-red-300 rounded text-[10px] font-black uppercase text-red-700 mr-1 mb-1 shadow-sm"><i class="fa-solid fa-xmark mr-1"></i>${i}</span>`).join('');
 
                     return `
@@ -1617,6 +2152,25 @@
             `).join(''); 
         }
 
+        function renderAdminLogs() { 
+            const s = document.getElementById('search-admin_logs').value.toLowerCase(); 
+            const f = globalAdminLogs.filter(i => i.admin_email.toLowerCase().includes(s) || i.action_type.toLowerCase().includes(s)); 
+            document.getElementById('table-admin_logs').innerHTML = f.map(i => `
+                <tr class="hover:bg-amber-50/50 border-b border-slate-100">
+                    <td class="p-4 whitespace-nowrap">${new Date(i.created_at).toLocaleString('en-US')}</td>
+                    <td class="p-4 font-bold text-slate-800">${i.admin_email}</td>
+                    <td class="p-4"><span class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-black tracking-widest uppercase">${i.action_type}</span></td>
+                    <td class="p-4 text-slate-600 italic">${i.description}</td>
+                </tr>
+            `).join(''); 
+        }
+
+
+        // ----------------------------------------------------------------------
+        // 7. FORM SUBMITS & MODAL LOGIC (CRUD)
+        // ----------------------------------------------------------------------
+
+        // --- Logs ---
         async function editLog(id) { 
             const log = globalLogs.find(x => x.id === id); 
             
@@ -1661,6 +2215,70 @@
             fetchLogs(true); 
         });
 
+        async function resolveLiveRadar(merchant, pendingQty) {
+            const isUploaded = confirm(`Resolving Live Radar status for ${merchant} (${pendingQty} SD).\n\nWILL THIS SD CARD BE UPLOADED?\n\nPress [OK / Yes] = Yes, count towards Dashboard\nPress [Cancel / No] = No, count as 0 Upload`);
+            
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
+
+            const payload = {
+                area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
+                phase: 'Phase 3', 
+                runner_name: adminName,
+                business_name: merchant,
+                sd_qty: pendingQty,
+                sd_uploaded: isUploaded ? pendingQty : 0, 
+                device_condition: 'Good',
+                missing_or_issue: 'Manual Clear Radar by Admin'
+            };
+
+            const { error } = await db.from('transactions').insert([payload]);
+            if (error) { alert("Error database: " + error.message); return; }
+
+            if (typeof logAdminAction === "function") {
+                await logAdminAction('CLEAR_RADAR', `Admin cleared radar for ${merchant} (${pendingQty} SD) - Uploaded: ${isUploaded ? 'Yes' : 'No'}`);
+            }
+
+            await renderSDTracker(); 
+            await fetchLogs(true); 
+            renderDashboard(); 
+        }
+
+        async function resolveSD(merchant, type, variance) {
+            const confirmAction = confirm(`Are you sure you want to clear this anomaly from the system?\n\nMerchant: ${merchant}\nType: ${type}\nQuantity: ${variance} SD`);
+            
+            if (confirmAction) {
+                const admin = JSON.parse(localStorage.getItem('admin_user'));
+                const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
+
+                const payload = {
+                    area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
+                    phase: 'SYSTEM CLEAR',
+                    runner_name: adminName,
+                    business_name: merchant,
+                    sd_qty: variance, 
+                    device_condition: 'Good',
+                    missing_or_issue: type 
+                };
+
+                const { error } = await db.from('transactions').insert([payload]);
+
+                if (error) {
+                    console.error("Gagal menyimpan ke Supabase:", error);
+                    alert("Error database: " + error.message);
+                    return;
+                }
+
+                if (typeof logAdminAction === "function") {
+                    await logAdminAction('CLEAR_ANOMALY', `Admin resolved ${type} for ${merchant} (${variance} SD)`);
+                }
+
+                await fetchLogs(true);
+                renderSDTracker(); 
+            }
+        }
+
+        // --- Area ---
         document.getElementById('form-area').addEventListener('submit', async (e) => { 
             e.preventDefault(); 
             const name = document.getElementById('input-area-name').value; 
@@ -1671,6 +2289,7 @@
             closeModal('modal-area'); 
         });
 
+        // --- Runner ---
         function openAddRunnerModal() { 
             document.getElementById('form-runner').reset(); 
             document.getElementById('input-runner-id').value = ''; 
@@ -1715,6 +2334,7 @@
             closeModal('modal-runner'); 
         });
 
+        // --- SDR ---
         function openAddSdrModal() { 
             document.getElementById('form-sdr').reset(); 
             document.getElementById('input-sdr-id').value = ''; 
@@ -1747,6 +2367,7 @@
             closeModal('modal-sdr'); 
         });
 
+        // --- Business ---
         function openAddBizModal() { 
             document.getElementById('form-business').reset(); 
             document.getElementById('input-biz-id').value = ''; 
@@ -1755,13 +2376,12 @@
         }
 
         function editBusiness(id) { 
-    const r = globalBusinesses.find(x => x.id === id); 
-    document.getElementById('input-biz-id').value = r.id; 
-    document.getElementById('input-biz-area').value = r.area_name; 
-    
-    // Gunakan Regex untuk menghapus " - NamaArea" di akhir kalimat terlepas dari jumlah spasinya
-    const regex = new RegExp(`\\s*-\\s*${r.area_name}$`, 'i');
-    document.getElementById('input-biz-name').value = r.business_name.replace(regex, '');
+            const r = globalBusinesses.find(x => x.id === id); 
+            document.getElementById('input-biz-id').value = r.id; 
+            document.getElementById('input-biz-area').value = r.area_name; 
+            
+            const regex = new RegExp(`\\s*-\\s*${r.area_name}$`, 'i');
+            document.getElementById('input-biz-name').value = r.business_name.replace(regex, '');
             document.getElementById('biz-modal-title').innerText = 'Edit Merchant'; 
             showModal('modal-business'); 
         }
@@ -1785,6 +2405,7 @@
             closeModal('modal-business'); 
         });
 
+        // --- Kit Types ---
         function openAddKitTypeModal() { 
             document.getElementById('form-kit-type').reset(); 
             document.getElementById('input-type-id').value = ''; 
@@ -1819,7 +2440,7 @@
                 ui_color: document.getElementById('input-type-color').value || "slate",
                 upload_metric_type: document.getElementById('input-type-metric').value,
                 yields_sd_qty: parseInt(document.getElementById('input-type-sd-yield').value) || 0
-            };
+            }; 
             
             let dbError = null;
             if (!id) {
@@ -1841,6 +2462,7 @@
             }
         });
 
+        // --- Kits (Individual) ---
         function openAddKitModal() { 
             document.getElementById('form-kit').reset(); 
             showModal('modal-kit'); 
@@ -1869,6 +2491,7 @@
             } 
         }
 
+        // --- Manual Deploy Kit ---
         function openManualDeployModal() {
             document.getElementById('form-manual-deploy').reset();
             document.getElementById('deploy-kit-list').innerHTML = ''; 
@@ -1956,6 +2579,7 @@
             alert("Manual allocation successfully executed!");
         });
 
+        // --- Users ---
         function openAddUserModal() { 
             document.getElementById('form-user').reset(); 
             document.getElementById('input-user-id').value = ''; 
@@ -2072,9 +2696,9 @@
             closeModal('modal-user');
         });
 
+        // --- Universal Delete Row ---
         async function deleteRow(tbl, id) { 
             if(confirm("DANGER: This action is permanent. Continue deleting?")) {
-                
                 const { data, error } = await db.from(tbl).delete().eq('id', id).select(); 
                 
                 if (error) {
@@ -2103,11 +2727,82 @@
                     if(view === 'kit_types') await fetchKitTypes(true); 
                     if(view === 'kits') await fetchKits(true); 
                 }
-                
                 alert("✅ Data successfully deleted from database!");
             } 
         }
 
+        // --- Bulk Kit Delete ---
+        function toggleSelectAllKits(master) {
+            const checkboxes = document.querySelectorAll('.kit-checkbox');
+            checkboxes.forEach(cb => cb.checked = master.checked);
+            updateKitSelection();
+        }
+
+        function updateKitSelection() {
+            const selected = document.querySelectorAll('.kit-checkbox:checked');
+            const btnDelete = document.getElementById('btn-delete-kits');
+            const countLabel = document.getElementById('selected-kit-count');
+            
+            if (selected.length > 0) {
+                btnDelete.classList.remove('hidden');
+                countLabel.innerText = selected.length;
+            } else {
+                btnDelete.classList.add('hidden');
+                document.getElementById('kit-master-checkbox').checked = false;
+            }
+        }
+
+        async function deleteSelectedKits() {
+            const selected = Array.from(document.querySelectorAll('.kit-checkbox:checked')).map(cb => cb.value);
+            
+            if (confirm(`CRITICAL: Are you sure you want to delete ${selected.length} assets permanently?`)) {
+                const { data, error } = await db.from('master_kits').delete().in('id', selected).select();
+
+                if (error) {
+                    alert("Error: " + error.message);
+                } else {
+                    await logAdminAction('BULK_DELETE', `Deleted ${selected.length} assets from Asset Allocation.`);
+                    alert(`Successfully deleted ${selected.length} assets.`);
+                    document.getElementById('kit-master-checkbox').checked = false;
+                    fetchKits(true);
+                }
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // 8. REALTIME SUBSCRIPTION
+        // ----------------------------------------------------------------------
+        function enableRealtimeSync() {
+            db.channel('admin-realtime')
+              .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+                  console.log('⚡ Data changed by another user:', payload.table);
+                  
+                  const activeTab = document.querySelector('aside nav button.bg-blue-600');
+                  if (activeTab) {
+                      const tabId = activeTab.id.replace('btn-', '');
+                      const refreshBtn = document.querySelector(`#view-${tabId} button[onclick^="fetch"]`) || 
+                                         document.querySelector(`#view-${tabId} button[onclick^="render"]`) || 
+                                         document.querySelector(`#view-${tabId} button[onclick^="refresh"]`);
+                      
+                      if (refreshBtn && !refreshBtn.classList.contains('bg-emerald-500')) {
+                          const originalClass = refreshBtn.className;
+                          refreshBtn.className = "bg-emerald-500 text-white px-3 py-2 rounded-lg shadow-md animate-pulse transition";
+                          refreshBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down mr-1"></i> New Data';
+                          
+                          refreshBtn.addEventListener('click', function resetBtn() {
+                              refreshBtn.className = originalClass;
+                              refreshBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
+                              refreshBtn.removeEventListener('click', resetBtn);
+                          }, { once: true });
+                      }
+                  }
+              })
+              .subscribe();
+        }
+
+        // ----------------------------------------------------------------------
+        // 9. EXCEL IMPORT / EXPORT FUNCTIONS
+        // ----------------------------------------------------------------------
         function downloadTemplate() {
             const ws = XLSX.utils.aoa_to_sheet([
                 ["Kit ID", "Recipe Type", "Area Name"], 
@@ -2137,17 +2832,18 @@
             r.onload = async(e) => {
                 try {
                     const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
-const firstSheetName = workbook.SheetNames[0];
-const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 1});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 1});
+                    
                     if(json.length <= 1) { lg.innerHTML = 'Empty file.'; btn.disabled = false; return; }
                     
                     let errs = [], pl = [], seen = new Set(), aA = getAdminArea();
                     
                     for(let i = 1; i < json.length; i++) {
-    const rowData = json[i]; if(!rowData || rowData.length === 0) continue;
-    const kI = (rowData[0] || '').toString().trim().toUpperCase();
-    const tN = (rowData[1] || '').toString().trim();
-    const aN = (rowData[2] || '').toString().trim();
+                        const rowData = json[i]; if(!rowData || rowData.length === 0) continue;
+                        const kI = (rowData[0] || '').toString().trim().toUpperCase();
+                        const tN = (rowData[1] || '').toString().trim();
+                        const aN = (rowData[2] || '').toString().trim();
                         
                         if(!kI || !tN || !aN) { errs.push(`Row ${i + 1}: Missing cols.`); continue; }
                         if(aA !== 'All' && aN !== aA) { errs.push(`Row ${i + 1}: Area restriction.`); continue; }
@@ -2177,481 +2873,106 @@ const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 
             r.readAsArrayBuffer(fI.files[0]);
         }
 
-        window.onload = () => { if(localStorage.getItem('admin_user')) initApp(); };
-    
-        async function refreshAllData() {
-    // Menghapus fetchLogs(true) dari array karena sudah dipanggil otomatis di dalam fetchKits()
-    await Promise.all([fetchKits(true), fetchKitTypes(true), fetchBusinesses(true)]);
-    renderDashboard();
-}
-
-async function renderDashboard() {
-            const dateInput = document.getElementById('dash-date-filter');
-            if(!dateInput.value) {
-                const today = new Date();
-                const y = today.getFullYear();
-                const m = String(today.getMonth() + 1).padStart(2, '0');
-                const d = String(today.getDate()).padStart(2, '0');
-                dateInput.value = `${y}-${m}-${d}`;
-            }
-            const filterDate = dateInput.value;
-
-            const filterArea = document.getElementById('dash-area-filter').value;
-            const startTime = document.getElementById('dash-start-time').value; 
-            const endTime = document.getElementById('dash-end-time').value;
-
-            // 1. STATS UPLOAD: Query langsung ke DB agar tidak terpotong paginasi 20 baris
-            let q = db.from('transactions')
-    .select('phase, sd_uploaded, kit_type, created_at, area')
-    .gte('created_at', `${filterDate}T00:00:00+08:00`)
-    .lte('created_at', `${filterDate}T23:59:59+08:00`);
-
-            if (filterArea && filterArea !== 'All') {
-                q = q.eq('area', filterArea);
-            }
-
-            const { data: dashLogs } = await q;
-
-            let totalSD = 0;
-            let totalIphone = 0;
-
-            if (dashLogs) {
-                dashLogs.forEach(log => {
-                    const logTimeStr = new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                    
-                    if(logTimeStr >= startTime && logTimeStr <= endTime) {
-                        let isIphone = false;
-
-                        // 1. PERBAIKAN LOGIKA DETEKSI IPHONE / MONO
-                        if (log.kit_type) {
-                            const kt = log.kit_type.toUpperCase();
-                            const recipe = globalKitTypes.find(t => t.type_name === log.kit_type);
-
-                            // Deteksi akan bernilai true jika metrik di set 'iPhone' ATAU namanya mengandung IPHONE/MONO
-                            if ((recipe && recipe.upload_metric_type === 'iPhone') || kt.includes('MONO') || kt.includes('IPHONE')) {
-                                isIphone = true;
-                            }
-                        }
-
-                        // 2. PERBAIKAN LOGIKA BACA DATA "YES" / Boolean / Angka
-                        const sdUp = log.sd_uploaded;
-                        const isUploaded = (typeof sdUp === 'string' && sdUp.toLowerCase() === 'yes') || 
-                                           sdUp === true || 
-                                           (!isNaN(parseInt(sdUp)) && parseInt(sdUp) > 0);
-
-                        // Menyiapkan kuantitas angka untuk SD Card (fallback ke 1 jika nilainya teks "yes")
-                        let uploadQty = parseInt(sdUp) || 0;
-                        if (isUploaded && uploadQty === 0) uploadQty = 1;
-
-                        // 3. PENGHITUNGAN TOTAL IPHONE (Hanya Phase 4, Tipe iPhone/Mono, dan Uploaded)
-                        if (log.phase === 'Phase 4' && isIphone && isUploaded) {
-                            totalIphone += 1;
-                        }
-
-                        // 4. PENGHITUNGAN TOTAL SD CARD (Non-iPhone)
-                        if (!isIphone) {
-                            if (log.phase === 'Phase 3' && uploadQty > 0) {
-                                totalSD += uploadQty;
-                            }
-                            else if (log.phase === 'Phase 4' && uploadQty > 0) {
-                                totalSD += 1; 
-                            }
-                        }
-                    }
-                });
-            }
-
-            document.getElementById('stat-sd-today').innerText = totalSD;
-            document.getElementById('stat-iphone-today').innerText = totalIphone;
-
-            // 2. KITS BREAKDOWN: Baca dari getKitLocation (mengambil semua pergerakan tanpa paginasi)
-            const tbody = document.getElementById('table-dash-kits');
-            tbody.innerHTML = globalKitTypes.map(type => {
-                const kitsOfType = globalKits.filter(k => k.kit_type === type.type_name);
-                let atBusiness = 0, inOffice = 0, damaged = 0;
-
-                kitsOfType.forEach(kit => {
-                    if(kit.current_status === 'Damaged') {
-                        damaged++; 
-                    } else {
-                        const locData = getKitLocation(kit.kit_id);
-                        if(locData.isOffice) {
-                            inOffice++;
-                        } else {
-                            atBusiness++;
-                        }
-                    }
-                });
-
-                return `
-                    <tr class="hover:bg-slate-50">
-                        <td class="p-4 font-black text-blue-700">${type.type_name}</td>
-                        <td class="p-4 text-center"><span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full">${atBusiness} Deployed</span></td>
-                        <td class="p-4 text-center"><span class="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full">${inOffice} in Office</span></td>
-                        <td class="p-4 text-center"><span class="${damaged > 0 ? 'bg-red-50 text-red-600' : 'text-slate-300'} px-3 py-1 rounded-full">${damaged} Damaged</span></td>
-                        <td class="p-4 text-right text-slate-400 font-mono">${kitsOfType.length}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-        
-        
-async function renderSDTracker() {
-            const radarDateInput = document.getElementById('filter-radar-date');
-            if (!radarDateInput.value) {
-                const today = new Date();
-                radarDateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-            }
-            const targetDateStr = radarDateInput.value;
-
-            // 1. SIKLUS HARIAN: Hanya tarik data HARI INI (Sangat cepat & hemat kuota)
-            const { data: dailyData } = await db.from('transactions')
-                .select('*')
-                .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-                .gte('created_at', `${targetDateStr}T00:00:00+08:00`)
-                .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
-                .order('created_at', { ascending: true });
-
-            let allLogs = dailyData || [];
-
-            // --- A. LOGIKA SIKLUS HARIAN (Radar, Mismatch, Perfect Match) ---
-            let dailyState = {};
-            let systemClears = [];
-
-            allLogs.forEach(log => {
-                const biz = log.business_name;
-                if (!biz) return;
-
-                if (log.phase === 'SYSTEM CLEAR') {
-                    systemClears.push(log);
-                    return;
-                }
-
-                if (!dailyState[biz]) {
-                    dailyState[biz] = { 
-                        p2Qty: 0, p3Qty: 0, 
-                        p2Runner: null, p3Runner: null, 
-                        lastP2Time: null, lastP3Time: null 
-                    };
-                }
-
-                let qty = parseInt(log.sd_qty) || 0;
-                if (log.phase === 'Phase 2') {
-                    dailyState[biz].p2Qty += qty;
-                    dailyState[biz].p2Runner = log.runner_name;
-                    dailyState[biz].lastP2Time = log.created_at;
-                } else if (log.phase === 'Phase 3') {
-                    dailyState[biz].p3Qty += qty;
-                    dailyState[biz].p3Runner = log.runner_name;
-                    dailyState[biz].lastP3Time = log.created_at;
-                }
-            });
-
-            let radarList = [];
-            let mismatchList = [];
-            let perfectMatchList = [];
-            let historyList = []; 
-
-            Object.entries(dailyState).forEach(([biz, state]) => {
-                const diff = state.p2Qty - state.p3Qty; 
-                const isCleared = systemClears.some(c => c.business_name === biz);
-
-                if (isCleared) return; 
-
-                if (state.p2Qty > 0 && state.p3Qty > 0) {
-                    const diffMs = new Date(state.lastP3Time) - new Date(state.lastP2Time);
-                    const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
-                    historyList.push({
-                        merchant: biz, p2Time: state.lastP2Time, p2Runner: state.p2Runner,
-                        p3Time: state.lastP3Time, p3Runner: state.p3Runner, qty: state.p3Qty,
-                        duration: `${diffHrs} Hours`
-                    });
-                }
-
-                if (diff > 0) {
-                    radarList.push({ merchant: biz, runner: state.p2Runner || state.p3Runner, qty: diff, time: state.lastP2Time || state.lastP3Time });
-                    if (state.p3Qty > 0) {
-                        mismatchList.push({
-                            date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SHORTAGE', variance: diff,
-                            desc: `Target drop ${state.p2Qty} SD, but Phase 3 only picked up ${state.p3Qty} SD. Missing ${diff} SD.`
-                        });
-                    }
-                } else if (diff < 0) {
-                    mismatchList.push({
-                        date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SURPLUS', variance: Math.abs(diff),
-                        desc: `Phase 3 picked up ${state.p3Qty} SD, but today's drop record is only ${state.p2Qty} SD.`
-                    });
-                } else if (diff === 0 && state.p2Qty > 0) {
-                    perfectMatchList.push({
-                        date: state.lastP3Time, merchant: biz, runner: state.p3Runner, qty: state.p3Qty
-                    });
-                }
-            });
-
-            // 2. OVERDUE: Fetch dari SQL View (Tugas berat diserahkan ke Server Supabase)
-            const { data: overdueData } = await db.from('view_sd_overdue').select('*');
-            let overdues = overdueData || [];
-
-
-            // --- C. RENDER KE HTML ---
-
-            // 1. Radar
-            const tbodyRadar = document.getElementById('table-live-radar');
-            if (tbodyRadar) {
-                tbodyRadar.innerHTML = radarList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>All clear! All targets today have been picked up.</td></tr>`
-                    : radarList.map(p => `
-                        <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
-                            <td class="p-4 font-black text-slate-800">${p.merchant}</td>
-                            <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
-                            <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
-                            <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
-                            <td class="p-4 text-right flex justify-end gap-2 items-center">
-    <span class="font-black text-amber-500 animate-pulse mt-1 text-[10px] uppercase tracking-widest"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
-    <button onclick="resolveLiveRadar('${p.merchant.replace(/'/g, "\\'")}', ${p.qty})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-</td>
-                        </tr>
-                    `).join('');
-            }
-            const badgeRadar = document.getElementById('badge-live-radar');
-            if (badgeRadar) badgeRadar.innerText = radarList.length;
-
-            // 2. Mismatch
-            mismatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const tbodyMismatch = document.getElementById('table-sd-mismatch');
-            if(tbodyMismatch) {
-                tbodyMismatch.innerHTML = mismatchList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Perfect daily cycle. No discrepancies between Phase 2 and Phase 3.</td></tr>`
-                    : mismatchList.map(m => {
-                        const timeStr = new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-                        const isShort = m.type === 'SHORTAGE';
-                        const badgeClass = isShort ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200';
-                        const icon = isShort ? 'fa-arrow-down' : 'fa-arrow-up';
-                        return `
-                        <tr class="hover:bg-amber-50/50 transition border-b border-slate-100">
-                            <td class="p-4">
-                                <div class="font-black text-slate-800">${targetDateStr}</div>
-                                <div class="text-[10px] font-bold text-slate-500">${timeStr}</div>
-                            </td>
-                            <td class="p-4 font-black text-slate-700">${m.merchant}</td>
-                            <td class="p-4"><span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span></td>
-                            <td class="p-4 text-center"><span class="text-[11px] font-black px-2 py-1 rounded border shadow-sm ${badgeClass} whitespace-nowrap"><i class="fa-solid ${icon} mr-1"></i> ${m.type} ${m.variance}</span></td>
-                            <td class="p-4">
-                                <div class="flex items-center justify-between gap-4">
-                                    <span class="text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</span>
-                                    <button onclick="resolveSD('${m.merchant.replace(/'/g, "\\'")}', '${m.type}', ${m.variance})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                                </div>
-                            </td>
-                        </tr>`;
-                    }).join('');
-            }
-            document.getElementById('badge-mismatch-count').innerText = mismatchList.length;
-
-            // 3. Perfect Matches
-            perfectMatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const tbodyMatch = document.getElementById('table-sd-match');
-            if(tbodyMatch) {
-                tbodyMatch.innerHTML = perfectMatchList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No 100% reconciled cycles yet today.</td></tr>`
-                    : perfectMatchList.map(m => `
-                        <tr class="hover:bg-emerald-50/30 transition border-b border-emerald-50">
-                            <td class="p-4 font-black text-slate-800">${targetDateStr} <span class="text-[10px] font-bold text-slate-500 block">${new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</span></td>
-                            <td class="p-4 font-black text-slate-700">${m.merchant}</td>
-                            <td class="p-4 text-slate-500 uppercase tracking-widest text-[11px]">${m.runner || '-'}</td>
-                            <td class="p-4 text-center font-black text-emerald-600 bg-emerald-50/50">${m.qty} SD</td>
-                            <td class="p-4 text-right"><span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span></td>
-                        </tr>
-                    `).join('');
-            }
-            document.getElementById('badge-match-count').innerText = perfectMatchList.length;
-
-            // 4. History P2->P3
-            document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ? 
-                `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` : 
-                historyList.map(h => `
-                <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
-                    <td class="p-4 font-black text-slate-800">${h.merchant}</td>
-                    <td class="p-4">
-                        <div class="font-bold text-slate-600">${new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-                        <div class="text-[10px] uppercase text-slate-400">${h.p2Runner}</div>
-                    </td>
-                    <td class="p-4">
-                        <div class="font-bold text-slate-600">${new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-                        <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
-                    </td>
-                    <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
-                    <td class="p-4 text-center font-black bg-indigo-50 text-indigo-600">${h.qty} SD</td>
-                </tr>
-            `).join('');
-
-            // 5. Overdue (Render dari Data SQL View)
-            const overdueHTML = overdues.length === 0
-                ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">All clear! No SD Cards pending over 24 hours.</td></tr>`
-                : overdues.map(o => {
-                    const hoursOvd = parseFloat(o.hours_overdue);
-                    const days = Math.floor(hoursOvd / 24);
-                    const hrs = Math.floor(hoursOvd % 24);
-                    const timeStr = days > 0 ? `${days} Days ${hrs} Hrs` : `${hrs} Hrs`;
-                    const dateStr = new Date(o.date_sent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
-                    return `
-                    <tr class="hover:bg-red-50/50 transition border-b border-red-50">
-                        <td class="p-4 font-black text-slate-800">${o.merchant}</td>
-                        <td class="p-4 font-bold text-slate-500">${dateStr}</td>
-                        <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner || 'Unknown'}</td>
-                        <td class="p-4 text-center font-black text-red-600 bg-red-50/50">${o.qty} SD</td>
-                        <td class="p-4">
-                            <div class="flex items-center justify-end gap-3">
-                                <span class="font-black text-red-600">${timeStr}</span>
-                                <button onclick="resolveSD('${o.merchant.replace(/'/g, "\\'")}', 'OVERDUE', ${o.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                            </div>
-                        </td>
-                    </tr>`;
-                }).join('');
-            document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
-            document.getElementById('badge-overdue-count').innerText = overdues.length;
-        }
-
-        async function resolveLiveRadar(merchant, pendingQty) {
-            const isUploaded = confirm(`Resolving Live Radar status for ${merchant} (${pendingQty} SD).\n\nWILL THIS SD CARD BE UPLOADED?\n\nPress [OK / Yes] = Yes, count towards Dashboard\nPress [Cancel / No] = No, count as 0 Upload`);
-            
-            const admin = JSON.parse(localStorage.getItem('admin_user'));
-            const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
-
-            const payload = {
-                area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
-                phase: 'Phase 3', 
-                runner_name: adminName,
-                business_name: merchant,
-                sd_qty: pendingQty,
-                sd_uploaded: isUploaded ? pendingQty : 0, 
-                device_condition: 'Good',
-                missing_or_issue: 'Manual Clear Radar by Admin'
-            };
-
-            const { error } = await db.from('transactions').insert([payload]);
-
-            if (error) {
-                alert("Error database: " + error.message);
+        function exportFOTrackerToExcel() {
+            if (!window.currentFOData || window.currentFOData.length === 0) {
+                alert("No visit records found to export.");
                 return;
             }
 
-            if (typeof logAdminAction === "function") {
-                await logAdminAction('CLEAR_RADAR', `Admin cleared radar for ${merchant} (${pendingQty} SD) - Uploaded: ${isUploaded ? 'Yes' : 'No'}`);
-            }
+            const exportData = window.currentFOData.map(v => {
+                let durationStr = '-';
+                if (v.check_out_time) {
+                    const diffMins = Math.round((new Date(v.check_out_time) - new Date(v.check_in_time)) / 60000);
+                    durationStr = `${diffMins} Mins`;
+                }
 
-            await renderSDTracker(); 
-            await fetchLogs(true); 
-            renderDashboard(); 
-        }
-
-        async function resolveSD(merchant, type, variance) {
-            const confirmAction = confirm(`Are you sure you want to clear this anomaly from the system?\n\nMerchant: ${merchant}\nType: ${type}\nQuantity: ${variance} SD`);
-            
-            if (confirmAction) {
-                const admin = JSON.parse(localStorage.getItem('admin_user'));
-                const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
-
-                const payload = {
-                    area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
-                    phase: 'SYSTEM CLEAR',
-                    runner_name: adminName,
-                    business_name: merchant,
-                    sd_qty: variance, 
-                    device_condition: 'Good',
-                    missing_or_issue: type 
+                return {
+                    "Date": new Date(v.check_in_time).toLocaleDateString('en-GB'),
+                    "Officer Name": v.runner_name,
+                    "Merchant Name": v.business_name,
+                    "Visit Purpose": v.visit_type || '-',
+                    "Check-In": new Date(v.check_in_time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}),
+                    "Check-Out": v.check_out_time ? new Date(v.check_out_time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : 'Still at Location',
+                    "Duration": durationStr,
+                    "Outcome Status": v.outcome_status || 'In Progress',
+                    "Field Notes": v.notes || '-',
+                    "Proof Photo URL": v.proof_photo || '-'
                 };
+            });
 
-                const { error } = await db.from('transactions').insert([payload]);
-
-                if (error) {
-                    console.error("Gagal menyimpan ke Supabase:", error);
-                    alert("Error database: " + error.message);
-                    return;
-                }
-
-                if (typeof logAdminAction === "function") {
-                    await logAdminAction('CLEAR_ANOMALY', `Admin resolved ${type} for ${merchant} (${variance} SD)`);
-                }
-
-                await fetchLogs(true);
-                renderSDTracker(); 
-            }
-        }
-
-        // -----------------------------------------------------
-        // SUPABASE REALTIME SYNC (NO REFRESH REQUIRED)
-        // -----------------------------------------------------
-        let realtimeTimeout = null; 
-
-        function enableRealtimeSync() {
-            db.channel('admin-realtime')
-              .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-                  console.log('⚡ Data changed by another user:', payload.table);
-                  
-                  // Daripada auto-fetch yang bikin server jebol, kita ubah warna tombol refresh 
-                  // menjadi hijau/merah berkedip untuk memberi tahu admin ada data baru.
-                  const activeTab = document.querySelector('aside nav button.bg-blue-600');
-                  if (activeTab) {
-                      const tabId = activeTab.id.replace('btn-', '');
-                      const refreshBtn = document.querySelector(`#view-${tabId} button[onclick^="fetch"]`) || 
-                   document.querySelector(`#view-${tabId} button[onclick^="render"]`) || 
-                   document.querySelector(`#view-${tabId} button[onclick^="refresh"]`);
-                      
-                      if (refreshBtn && !refreshBtn.classList.contains('bg-emerald-500')) {
-                          const originalClass = refreshBtn.className;
-                          refreshBtn.className = "bg-emerald-500 text-white px-3 py-2 rounded-lg shadow-md animate-pulse transition";
-                          refreshBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down mr-1"></i> New Data';
-                          
-                          // Kembalikan tombol ke semula setelah di-klik
-                          refreshBtn.addEventListener('click', function resetBtn() {
-                              refreshBtn.className = originalClass;
-                              refreshBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
-                              refreshBtn.removeEventListener('click', resetBtn);
-                          }, { once: true });
-                      }
-                  }
-              })
-              .subscribe();
-        }
-
-
-        // Fungsi untuk centang semua
-        function toggleSelectAllKits(master) {
-            const checkboxes = document.querySelectorAll('.kit-checkbox');
-            checkboxes.forEach(cb => cb.checked = master.checked);
-            updateKitSelection();
-        }
-
-        // Fungsi untuk update tampilan tombol delete
-        function updateKitSelection() {
-            const selected = document.querySelectorAll('.kit-checkbox:checked');
-            const btnDelete = document.getElementById('btn-delete-kits');
-            const countLabel = document.getElementById('selected-kit-count');
+            const ws = XLSX.utils.json_to_sheet(exportData);
             
-            if (selected.length > 0) {
-                btnDelete.classList.remove('hidden');
-                countLabel.innerText = selected.length;
-            } else {
-                btnDelete.classList.add('hidden');
-                document.getElementById('kit-master-checkbox').checked = false;
-            }
+            ws['!cols'] = [
+                { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 25 },
+                { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 25 },
+                { wch: 40 }, { wch: 50 }
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "FO Visits Data");
+            
+            const dateStr = document.getElementById('filter-fo-date').value;
+            XLSX.writeFile(wb, `RunnerTrack_FO_Visits_${dateStr}.xlsx`);
         }
 
-        // Fungsi Eksekusi Hapus Massal
-        async function deleteSelectedKits() {
-            const selected = Array.from(document.querySelectorAll('.kit-checkbox:checked')).map(cb => cb.value);
-            
-            if (confirm(`CRITICAL: Are you sure you want to delete ${selected.length} assets permanently?`)) {
-                const { data, error } = await db.from('master_kits').delete().in('id', selected).select();
+        function exportMerchantAssetsToExcel() {
+            const filterArea = document.getElementById('filter-businesses-area') ? document.getElementById('filter-businesses-area').value : '';
+            let exportData = [];
 
-                if (error) {
-                    alert("Error: " + error.message);
+            const businessesToExport = globalBusinesses.filter(b => !filterArea || b.area_name === filterArea);
+
+            if (businessesToExport.length === 0) {
+                alert("Tidak ada data merchant untuk diekspor.");
+                return;
+            }
+
+            businessesToExport.forEach(biz => {
+                const activeKits = globalKits.filter(k => getKitLocation(k.kit_id).loc === biz.business_name);
+                
+                if (activeKits.length === 0) {
+                    exportData.push({
+                        "Merchant Name": biz.business_name,
+                        "Area": biz.area_name,
+                        "Kit ID": "-",
+                        "Kit Type (Recipe)": "-",
+                        "Condition Status": "-",
+                        "Total Items": 0,
+                        "Checklist Details": "-"
+                    });
                 } else {
-                    await logAdminAction('BULK_DELETE', `Deleted ${selected.length} assets from Asset Allocation.`);
-                    alert(`Successfully deleted ${selected.length} assets.`);
-                    document.getElementById('kit-master-checkbox').checked = false;
-                    fetchKits(true);
+                    activeKits.forEach(k => {
+                        const recipe = globalKitTypes.find(t => t.type_name === k.kit_type);
+                        const itemCount = recipe && recipe.checklist_items ? recipe.checklist_items.split(',').length : 0;
+                        const itemsDetail = recipe && recipe.checklist_items ? recipe.checklist_items : "-";
+
+                        exportData.push({
+                            "Merchant Name": biz.business_name,
+                            "Area": biz.area_name,
+                            "Kit ID": k.kit_id,
+                            "Kit Type (Recipe)": k.kit_type,
+                            "Condition Status": k.current_status || 'Good',
+                            "Total Items": itemCount,
+                            "Checklist Details": itemsDetail
+                        });
+                    });
                 }
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            
+            ws['!cols'] = [
+                { wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
+                { wch: 15 }, { wch: 12 }, { wch: 60 } 
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Aset Merchant");
+            
+            const dateStr = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `RunnerTrack_Merchant_Assets_${dateStr}.xlsx`);
+            
+            if (typeof logAdminAction === "function") {
+                logAdminAction('EXPORT_EXCEL', `Exported merchant assets data to Excel.`);
             }
         }
     </script>
