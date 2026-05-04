@@ -1614,6 +1614,10 @@
             let allLogs = dailyData || [];
             let dailyState = {};
             let systemClears = [];
+            let radarList = [];
+            let mismatchList = [];
+            let perfectMatchList = [];
+            let historyList = [];
 
             allLogs.forEach(log => {
                 const biz = log.business_name;
@@ -1621,40 +1625,58 @@
 
                 if (log.phase === 'SYSTEM CLEAR') {
                     systemClears.push(log);
+                    // Jika admin melakukan manual clear, kita reset siklusnya menjadi 0
+                    if (dailyState[biz]) {
+                        dailyState[biz] = { p2Qty: 0, p3Qty: 0, p2Runner: null, p3Runner: null, lastP2Time: null, lastP3Time: null };
+                    }
                     return;
                 }
 
                 if (!dailyState[biz]) {
-                    dailyState[biz] = { 
-                        p2Qty: 0, p3Qty: 0, 
-                        p2Runner: null, p3Runner: null, 
-                        lastP2Time: null, lastP3Time: null 
-                    };
+                    dailyState[biz] = { p2Qty: 0, p3Qty: 0, p2Runner: null, p3Runner: null, lastP2Time: null, lastP3Time: null };
                 }
 
                 let qty = parseInt(log.sd_qty) || 0;
                 if (log.phase === 'Phase 2') {
                     dailyState[biz].p2Qty += qty;
-                    dailyState[biz].p2Runner = log.runner_name;
-                    dailyState[biz].lastP2Time = log.created_at;
+                    // Hanya set p2Runner jika ini adalah awal siklus baru agar nama pelari pertama tidak tertimpa
+                    if (dailyState[biz].p2Qty === qty) {
+                        dailyState[biz].p2Runner = log.runner_name;
+                        dailyState[biz].lastP2Time = log.created_at;
+                    }
                 } else if (log.phase === 'Phase 3') {
                     dailyState[biz].p3Qty += qty;
                     dailyState[biz].p3Runner = log.runner_name;
                     dailyState[biz].lastP3Time = log.created_at;
+
+                    // LOGIKA SIKLUS: Cek Perfect Match setiap ada transaksi Phase 3 baru
+                    if (dailyState[biz].p2Qty > 0 && dailyState[biz].p2Qty === dailyState[biz].p3Qty) {
+                        // 1. Catat ke History
+                        const diffMs = new Date(dailyState[biz].lastP3Time) - new Date(dailyState[biz].lastP2Time);
+                        const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+                        historyList.push({
+                            merchant: biz, p2Time: dailyState[biz].lastP2Time, p2Runner: dailyState[biz].p2Runner,
+                            p3Time: dailyState[biz].lastP3Time, p3Runner: dailyState[biz].p3Runner, qty: dailyState[biz].p3Qty,
+                            duration: `${diffHrs} Hours`
+                        });
+
+                        // 2. Catat ke Perfect Matches
+                        perfectMatchList.push({
+                            date: dailyState[biz].lastP3Time, merchant: biz, runner: dailyState[biz].p3Runner, qty: dailyState[biz].p3Qty
+                        });
+
+                        // 3. RESET SIKLUS KE AWAL!
+                        dailyState[biz] = { p2Qty: 0, p3Qty: 0, p2Runner: null, p3Runner: null, lastP2Time: null, lastP3Time: null };
+                    }
                 }
             });
 
-            let radarList = [];
-            let mismatchList = [];
-            let perfectMatchList = [];
-            let historyList = []; 
-
+            // Setelah semua log ditarik dan diverifikasi per-siklus,
+            // sisa yang belum perfect match akan ditangkap di sini sebagai Pending / Anomaly
             Object.entries(dailyState).forEach(([biz, state]) => {
-                const diff = state.p2Qty - state.p3Qty; 
-                const isCleared = systemClears.some(c => c.business_name === biz);
+                const diff = state.p2Qty - state.p3Qty;
 
-                if (isCleared) return; 
-
+                // Jika ada riwayat parsial / belum beres tapi ada pertukaran
                 if (state.p2Qty > 0 && state.p3Qty > 0) {
                     const diffMs = new Date(state.lastP3Time) - new Date(state.lastP2Time);
                     const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
@@ -1666,21 +1688,19 @@
                 }
 
                 if (diff > 0) {
+                    // Masih ada yang tertinggal (SHORTAGE)
                     radarList.push({ merchant: biz, runner: state.p2Runner || state.p3Runner, qty: diff, time: state.lastP2Time || state.lastP3Time });
                     if (state.p3Qty > 0) {
                         mismatchList.push({
-                            date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SHORTAGE', variance: diff,
+                            date: state.lastP3Time || state.lastP2Time, merchant: biz, runner: state.p3Runner || state.p2Runner, type: 'SHORTAGE', variance: diff,
                             desc: `Target drop ${state.p2Qty} SD, but Phase 3 only picked up ${state.p3Qty} SD. Missing ${diff} SD.`
                         });
                     }
                 } else if (diff < 0) {
+                    // Ada pengambilan lebih dari jumlah yang di drop (SURPLUS)
                     mismatchList.push({
                         date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SURPLUS', variance: Math.abs(diff),
                         desc: `Phase 3 picked up ${state.p3Qty} SD, but today's drop record is only ${state.p2Qty} SD.`
-                    });
-                } else if (diff === 0 && state.p2Qty > 0) {
-                    perfectMatchList.push({
-                        date: state.lastP3Time, merchant: biz, runner: state.p3Runner, qty: state.p3Qty
                     });
                 }
             });
