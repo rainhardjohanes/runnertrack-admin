@@ -1373,7 +1373,7 @@
             return globalKitLocations[kitId] || { loc: 'Warehouse', isOffice: true };
         }
 
-        async function fetchAndRenderFOTracker() {
+async function fetchAndRenderFOTracker() {
             const tableSummary = document.getElementById('table-fo-tracker');
             const tableLogs = document.getElementById('table-fo-logs');
             
@@ -1397,10 +1397,19 @@
 
                 if (targetFO) query = query.eq('runner_name', targetFO);
 
-                const { data, error } = await query;
+                const { data: rawData, error } = await query;
                 if (error) throw error;
 
-                window.currentFOData = data || [];
+                // [TAMBAHAN] Filter data berdasarkan Field Officer di area admin tersebut
+                let data = rawData || [];
+                const adminArea = getAdminArea();
+                if (adminArea !== 'All') {
+                    // Hanya izinkan nama runner yang tercatat di wilayahnya
+                    const validFOs = globalRunners.map(r => r.runner_name);
+                    data = data.filter(v => validFOs.includes(v.runner_name));
+                }
+
+                window.currentFOData = data;
 
                 const foSelect = document.getElementById('filter-fo-name');
                 if (foSelect.options.length <= 1 && data && data.length > 0) {
@@ -1493,10 +1502,11 @@
             }
         }
 
+        
         // ----------------------------------------------------------------------
         // 6. RENDER FUNCTIONS
         // ----------------------------------------------------------------------
-        async function renderDashboard() {
+async function renderDashboard() {
             const dateInput = document.getElementById('dash-date-filter');
             if(!dateInput.value) {
                 const today = new Date();
@@ -1515,7 +1525,11 @@
                 .gte('created_at', `${filterDate}T00:00:00+08:00`)
                 .lte('created_at', `${filterDate}T23:59:59+08:00`);
 
-            if (filterArea && filterArea !== 'All') {
+            // [TAMBAHAN] Paksa filter berdasarkan Admin Area
+            const adminArea = getAdminArea();
+            if (adminArea !== 'All') {
+                q = q.eq('area', adminArea);
+            } else if (filterArea && filterArea !== 'All') {
                 q = q.eq('area', filterArea);
             }
 
@@ -1595,8 +1609,9 @@
                 `;
             }).join('');
         }
-
-        async function renderSDTracker() {
+        
+        
+async function renderSDTracker() {
             const radarDateInput = document.getElementById('filter-radar-date');
             if (!radarDateInput.value) {
                 const today = new Date();
@@ -1604,12 +1619,21 @@
             }
             const targetDateStr = radarDateInput.value;
 
-            const { data: dailyData } = await db.from('transactions')
+            // [TAMBAHAN] Dapatkan area admin login
+            const adminArea = getAdminArea();
+
+            let qDaily = db.from('transactions')
                 .select('*')
                 .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
                 .gte('created_at', `${targetDateStr}T00:00:00+08:00`)
                 .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
                 .order('created_at', { ascending: true });
+
+            // [TAMBAHAN] Filter transaksi berdasarkan area
+            if (adminArea !== 'All') {
+                qDaily = qDaily.eq('area', adminArea);
+            }
+            const { data: dailyData } = await qDaily;
 
             let allLogs = dailyData || [];
             let dailyState = {};
@@ -1625,7 +1649,6 @@
 
                 if (log.phase === 'SYSTEM CLEAR') {
                     systemClears.push(log);
-                    // Jika admin melakukan manual clear, kita reset siklusnya menjadi 0
                     if (dailyState[biz]) {
                         dailyState[biz] = { p2Qty: 0, p3Qty: 0, p2Runner: null, p3Runner: null, lastP2Time: null, lastP3Time: null };
                     }
@@ -1639,7 +1662,6 @@
                 let qty = parseInt(log.sd_qty) || 0;
                 if (log.phase === 'Phase 2') {
                     dailyState[biz].p2Qty += qty;
-                    // Hanya set p2Runner jika ini adalah awal siklus baru agar nama pelari pertama tidak tertimpa
                     if (dailyState[biz].p2Qty === qty) {
                         dailyState[biz].p2Runner = log.runner_name;
                         dailyState[biz].lastP2Time = log.created_at;
@@ -1649,9 +1671,7 @@
                     dailyState[biz].p3Runner = log.runner_name;
                     dailyState[biz].lastP3Time = log.created_at;
 
-                    // LOGIKA SIKLUS: Cek Perfect Match setiap ada transaksi Phase 3 baru
                     if (dailyState[biz].p2Qty > 0 && dailyState[biz].p2Qty === dailyState[biz].p3Qty) {
-                        // 1. Catat ke History
                         const diffMs = new Date(dailyState[biz].lastP3Time) - new Date(dailyState[biz].lastP2Time);
                         const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
                         historyList.push({
@@ -1660,23 +1680,18 @@
                             duration: `${diffHrs} Hours`
                         });
 
-                        // 2. Catat ke Perfect Matches
                         perfectMatchList.push({
                             date: dailyState[biz].lastP3Time, merchant: biz, runner: dailyState[biz].p3Runner, qty: dailyState[biz].p3Qty
                         });
 
-                        // 3. RESET SIKLUS KE AWAL!
                         dailyState[biz] = { p2Qty: 0, p3Qty: 0, p2Runner: null, p3Runner: null, lastP2Time: null, lastP3Time: null };
                     }
                 }
             });
 
-            // Setelah semua log ditarik dan diverifikasi per-siklus,
-            // sisa yang belum perfect match akan ditangkap di sini sebagai Pending / Anomaly
             Object.entries(dailyState).forEach(([biz, state]) => {
                 const diff = state.p2Qty - state.p3Qty;
 
-                // Jika ada riwayat parsial / belum beres tapi ada pertukaran
                 if (state.p2Qty > 0 && state.p3Qty > 0) {
                     const diffMs = new Date(state.lastP3Time) - new Date(state.lastP2Time);
                     const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
@@ -1688,7 +1703,6 @@
                 }
 
                 if (diff > 0) {
-                    // Masih ada yang tertinggal (SHORTAGE)
                     radarList.push({ merchant: biz, runner: state.p2Runner || state.p3Runner, qty: diff, time: state.lastP2Time || state.lastP3Time });
                     if (state.p3Qty > 0) {
                         mismatchList.push({
@@ -1697,7 +1711,6 @@
                         });
                     }
                 } else if (diff < 0) {
-                    // Ada pengambilan lebih dari jumlah yang di drop (SURPLUS)
                     mismatchList.push({
                         date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SURPLUS', variance: Math.abs(diff),
                         desc: `Phase 3 picked up ${state.p3Qty} SD, but today's drop record is only ${state.p2Qty} SD.`
@@ -1708,7 +1721,14 @@
             const { data: overdueData } = await db.from('view_sd_overdue').select('*');
             let overdues = overdueData || [];
 
-            // Render Radar
+            // [TAMBAHAN] Filter overdue berdasarkan merchant yang ada di area admin
+            if (adminArea !== 'All') {
+                overdues = overdues.filter(o => {
+                    const biz = globalBusinesses.find(b => b.business_name === o.merchant);
+                    return biz && biz.area_name === adminArea;
+                });
+            }
+
             const tbodyRadar = document.getElementById('table-live-radar');
             if (tbodyRadar) {
                 tbodyRadar.innerHTML = radarList.length === 0
@@ -1729,7 +1749,6 @@
             const badgeRadar = document.getElementById('badge-live-radar');
             if (badgeRadar) badgeRadar.innerText = radarList.length;
 
-            // Render Mismatch
             mismatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
             const tbodyMismatch = document.getElementById('table-sd-mismatch');
             if(tbodyMismatch) {
@@ -1760,7 +1779,6 @@
             }
             document.getElementById('badge-mismatch-count').innerText = mismatchList.length;
 
-            // Render Perfect Match
             perfectMatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
             const tbodyMatch = document.getElementById('table-sd-match');
             if(tbodyMatch) {
@@ -1778,7 +1796,6 @@
             }
             document.getElementById('badge-match-count').innerText = perfectMatchList.length;
 
-            // Render History
             document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ? 
                 `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` : 
                 historyList.map(h => `
@@ -1797,7 +1814,6 @@
                 </tr>
             `).join('');
 
-            // Render Overdue
             const overdueHTML = overdues.length === 0
                 ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">All clear! No SD Cards pending over 24 hours.</td></tr>`
                 : overdues.map(o => {
@@ -1823,6 +1839,7 @@
             document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
             document.getElementById('badge-overdue-count').innerText = overdues.length;
         }
+
 
         function renderLogs() {
             const s = document.getElementById('search-logs').value.toLowerCase();
