@@ -21,7 +21,6 @@
 </head>
 <body class="w-screen h-screen overflow-hidden bg-slate-50 text-slate-800 font-sans flex text-sm">
 
-    <!-- ==================== LOGIN SCREEN ==================== -->
     <div id="login-screen" class="fixed inset-0 z-[100] bg-slate-900 flex items-center justify-center p-6">
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
             <h1 class="text-3xl font-black text-blue-600 mb-2 italic">RunnerTrack</h1>
@@ -35,7 +34,6 @@
         </div>
     </div>
 
-    <!-- ==================== SIDEBAR ==================== -->
     <aside id="sidebar" class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col hidden-view shadow-2xl z-20">
         <div class="p-6 text-center border-b border-slate-800">
             <h1 class="text-xl font-black text-blue-400 italic">RunnerTrack</h1>
@@ -67,10 +65,8 @@
         </div>
     </aside>
 
-    <!-- ==================== MAIN CONTENT ==================== -->
     <main id="main-content" class="flex-1 flex flex-col hidden-view bg-white relative">
         
-        <!-- Dashboard View -->
         <div id="view-dashboard" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-5 border-b border-slate-200 bg-white flex flex-col 2xl:flex-row justify-between 2xl:items-center gap-4 shadow-sm z-10">
                 <h2 class="text-xl font-black text-slate-800 shrink-0">Operational Dashboard</h2>
@@ -133,7 +129,6 @@
             </div>
         </div>
         
-        <!-- SD Tracker View -->
         <div id="view-sd_tracker" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <div>
@@ -168,66 +163,9 @@
                     </table>
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden">
-                    <div class="p-4 bg-red-50 border-b border-red-100 flex justify-between items-center">
-                        <h3 class="font-black text-red-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Overdue SD Cards (> 24 Hours Not Returned)</h3>
-                        <span id="badge-overdue-count" class="bg-red-600 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
-                    </div>
-                    <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-white border-b border-red-100 text-[10px] uppercase text-red-400 font-black tracking-widest">
-                            <tr>
-                                <th class="p-4">Merchant</th>
-                                <th class="p-4">Phase 2 Time (Sent)</th>
-                                <th class="p-4">Phase 2 Runner</th>
-                                <th class="p-4 text-center">Pending Qty</th>
-                                <th class="p-4 text-right">Delay Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-sd-overdue" class="divide-y divide-red-50 text-xs"></tbody>
-                    </table>
-                </div>
-
-                <div class="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden mt-6">
-                    <div class="p-4 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
-                        <h3 class="font-black text-amber-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-scale-unbalanced mr-2"></i>Daily Mismatch Log (Qty Discrepancy)</h3>
-                        <span id="badge-mismatch-count" class="bg-amber-500 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
-                    </div>
-                    <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-white border-b border-amber-100 text-[10px] uppercase text-amber-500 font-black tracking-widest">
-                            <tr>
-                                <th class="p-4">Date & Time</th>
-                                <th class="p-4">Target Merchant</th>
-                                <th class="p-4">Runner (Personnel)</th>
-                                <th class="p-4 text-center">Anomaly Status</th>
-                                <th class="p-4">System Remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-sd-mismatch" class="divide-y divide-amber-50 text-xs"></tbody>
-                    </table>
-                </div>
-
-                <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 overflow-hidden mt-6">
-                    <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
-                        <h3 class="font-black text-emerald-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-check-double mr-2"></i>Perfect Matches (Phase 2 & 3 Reconciled)</h3>
-                        <span id="badge-match-count" class="bg-emerald-500 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
-                    </div>
-                    <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-white border-b border-emerald-100 text-[10px] uppercase text-emerald-500 font-black tracking-widest">
-                            <tr>
-                                <th class="p-4">Date & Time</th>
-                                <th class="p-4">Merchant</th>
-                                <th class="p-4">Phase 3 Runner</th>
-                                <th class="p-4 text-center">Matched Qty</th>
-                                <th class="p-4 text-right">System Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-sd-match" class="divide-y divide-emerald-50 text-xs"></tbody>
-                    </table>
-                </div>
-
                 <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden mt-6">
                     <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
-                        <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>SD Card Exchange History (P2 -> P3)</h3>
+                        <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>SD Card Exchange History & Anomalies (P2 -> P3)</h3>
                     </div>
                     <table class="w-full text-left whitespace-nowrap">
                         <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
@@ -235,18 +173,17 @@
                                 <th class="p-4">Merchant</th>
                                 <th class="p-4">Phase 2 (Drop)</th>
                                 <th class="p-4">Phase 3 (Pick Up)</th>
-                                <th class="p-4 text-center">Installed Duration</th>
-                                <th class="p-4 text-center">SD Qty</th>
+                                <th class="p-4 text-center">Duration</th>
+                                <th class="p-4 text-center">Qty (Drop/Pick)</th>
+                                <th class="p-4 text-right">System Status</th>
                             </tr>
                         </thead>
                         <tbody id="table-sd-history" class="divide-y divide-indigo-50 text-xs"></tbody>
                     </table>
                 </div>
-
             </div>
         </div>
 
-        <!-- FO Tracker View -->
         <div id="view-fo_tracker" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex flex-col md:flex-row justify-between md:items-center gap-4 shadow-sm z-10 flex-shrink-0">
                 <div>
@@ -272,7 +209,6 @@
             </div>
             
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
-                <!-- TABEL 1: RINGKASAN TRIP -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <table class="w-full text-left whitespace-nowrap">
                         <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
@@ -285,12 +221,10 @@
                             </tr>
                         </thead>
                         <tbody id="table-fo-tracker" class="divide-y divide-slate-100">
-                            <!-- Diisi oleh JS -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
 
-                <!-- TABEL 2: LOG AKTIVITAS DETAIL -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6">
                     <div class="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                         <h3 class="font-black text-slate-700 uppercase text-xs tracking-widest"><i class="fa-solid fa-list-ul mr-2 text-slate-400"></i>Detailed Visit Logs</h3>
@@ -318,7 +252,6 @@
             </div>
         </div>
         
-        <!-- Logs View -->
         <div id="view-logs" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex flex-wrap justify-between items-center shadow-sm z-10 flex-shrink-0 gap-4">
                 <h2 class="text-xl font-black text-slate-800">Activity Logs</h2>
@@ -370,7 +303,6 @@
             </div>
         </div>
 
-        <!-- Areas View -->
         <div id="view-areas" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Regional Areas</h2>
@@ -398,7 +330,6 @@
             </div>
         </div>
 
-        <!-- Runners View -->
         <div id="view-runners" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Field Personnel</h2>
@@ -427,7 +358,6 @@
             </div>
         </div>
 
-        <!-- SDRs View -->
         <div id="view-sdrs" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">SDR / Sales Team</h2>
@@ -457,7 +387,6 @@
             </div>
         </div>
 
-        <!-- Businesses View -->
         <div id="view-businesses" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Merchants</h2>
@@ -490,7 +419,6 @@
             </div>
         </div>
 
-        <!-- Kit Types View -->
         <div id="view-kit_types" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Kit Recipes</h2>
@@ -518,7 +446,6 @@
             </div>
         </div>
 
-        <!-- Kits View -->
         <div id="view-kits" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">Asset Allocation</h2>
@@ -584,7 +511,6 @@
             </div>
         </div>
 
-        <!-- Users View -->
         <div id="view-users" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-slate-800">User Accounts</h2>
@@ -614,7 +540,6 @@
             </div>
         </div>
 
-        <!-- Admin Logs View -->
         <div id="view-admin_logs" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
                 <h2 class="text-xl font-black text-amber-600"><i class="fa-solid fa-shield-halved mr-2"></i>Security Audit Trail</h2>
@@ -644,7 +569,6 @@
         </div>
     </main>
 
-    <!-- ==================== MODALS ==================== -->
     <div id="modal-manual-deploy" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative">
             <button onclick="closeModal('modal-manual-deploy')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -705,8 +629,16 @@
                         <input type="text" id="edit-log-kit" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs uppercase">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">SD Qty</label>
-                        <input type="number" id="edit-log-sd" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Drop Qty (Phase 2)</label>
+                        <input type="number" id="edit-log-sd-drop" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Pickup Qty (Phase 3)</label>
+                        <input type="number" id="edit-log-sd-pickup" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Upload Qty</label>
+                        <input type="number" id="edit-log-uploaded" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Condition</label>
@@ -970,7 +902,6 @@
         </div>
     </div>
     
-    <!-- ==================== JAVASCRIPT ==================== -->
     <script>
         // ----------------------------------------------------------------------
         // 1. SUPABASE INIT & GLOBALS
@@ -1000,6 +931,24 @@
         // ----------------------------------------------------------------------
         // 2. UTILITIES & HELPERS
         // ----------------------------------------------------------------------
+        function parseTanggal(dateString) {
+            if (!dateString || dateString === '-') return new Date("");
+            
+            // Coba pakai parser bawaan sistem dulu (untuk tanggal bawaan Supabase)
+            let d = new Date(dateString);
+            if (!isNaN(d)) return d;
+
+            // Jika gagal (Invalid Date), pecah format DD/MM/YYYY dari input manual
+            let parts = dateString.toString().trim().split(" ");
+            let dateParts = parts[0].split("/");
+            
+            if (dateParts.length === 3) {
+                let timePart = parts[1] ? "T" + parts[1] : "T00:00:00";
+                return new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}${timePart}`);
+            }
+            return new Date("");
+        }
+
         function escapeHTML(str) {
             if (!str) return '';
             return String(str)
@@ -1373,7 +1322,7 @@
             return globalKitLocations[kitId] || { loc: 'Warehouse', isOffice: true };
         }
 
-async function fetchAndRenderFOTracker() {
+        async function fetchAndRenderFOTracker() {
             const tableSummary = document.getElementById('table-fo-tracker');
             const tableLogs = document.getElementById('table-fo-logs');
             
@@ -1400,11 +1349,9 @@ async function fetchAndRenderFOTracker() {
                 const { data: rawData, error } = await query;
                 if (error) throw error;
 
-                // [TAMBAHAN] Filter data berdasarkan Field Officer di area admin tersebut
                 let data = rawData || [];
                 const adminArea = getAdminArea();
                 if (adminArea !== 'All') {
-                    // Hanya izinkan nama runner yang tercatat di wilayahnya
                     const validFOs = globalRunners.map(r => r.runner_name);
                     data = data.filter(v => validFOs.includes(v.runner_name));
                 }
@@ -1425,7 +1372,6 @@ async function fetchAndRenderFOTracker() {
                     return;
                 }
 
-                // Render Summary
                 const runnerStats = {};
                 data.forEach(visit => {
                     const runner = visit.runner_name;
@@ -1461,7 +1407,6 @@ async function fetchAndRenderFOTracker() {
                         </tr>`;
                 }).join('');
 
-                // Render Logs
                 const sortedLogs = [...data].reverse();
                 tableLogs.innerHTML = sortedLogs.map(log => {
                     const timeIn = new Date(log.check_in_time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
@@ -1506,7 +1451,7 @@ async function fetchAndRenderFOTracker() {
         // ----------------------------------------------------------------------
         // 6. RENDER FUNCTIONS
         // ----------------------------------------------------------------------
-async function renderDashboard() {
+        async function renderDashboard() {
             const dateInput = document.getElementById('dash-date-filter');
             if(!dateInput.value) {
                 const today = new Date();
@@ -1521,11 +1466,10 @@ async function renderDashboard() {
             const endTime = document.getElementById('dash-end-time').value;
 
             let q = db.from('transactions')
-                .select('phase, sd_uploaded, kit_type, created_at, area')
+                .select('phase, sd_uploaded, kit_type, created_at, area, sd_pickup_qty')
                 .gte('created_at', `${filterDate}T00:00:00+08:00`)
                 .lte('created_at', `${filterDate}T23:59:59+08:00`);
 
-            // [TAMBAHAN] Paksa filter berdasarkan Admin Area
             const adminArea = getAdminArea();
             if (adminArea !== 'All') {
                 q = q.eq('area', adminArea);
@@ -1559,7 +1503,10 @@ async function renderDashboard() {
                                            (!isNaN(parseInt(sdUp)) && parseInt(sdUp) > 0);
 
                         let uploadQty = parseInt(sdUp) || 0;
-                        if (isUploaded && uploadQty === 0) uploadQty = 1;
+                        if (isUploaded && uploadQty === 0) {
+                            // Coba ambil dari qty pickup jika tersedia, jika tidak maka default 1
+                            uploadQty = parseInt(log.sd_pickup_qty) || 1;
+                        }
 
                         if (log.phase === 'Phase 4' && isIphone && isUploaded) {
                             totalIphone += 1;
@@ -1610,235 +1557,147 @@ async function renderDashboard() {
             }).join('');
         }
         
-        
 async function renderSDTracker() {
-            const radarDateInput = document.getElementById('filter-radar-date');
-            if (!radarDateInput.value) {
-                const today = new Date();
-                radarDateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-            }
-            const targetDateStr = radarDateInput.value;
+    const radarDateInput = document.getElementById('filter-radar-date');
+    if (!radarDateInput.value) {
+        const today = new Date();
+        radarDateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    }
+    const targetDateStr = radarDateInput.value;
+    const adminArea = getAdminArea();
 
-            // [TAMBAHAN] Dapatkan area admin login
-            const adminArea = getAdminArea();
+    let qDaily = db.from('transactions')
+        .select('*')
+        .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
+        .gte('created_at', `${targetDateStr}T00:00:00+08:00`)
+        .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
+        .order('created_at', { ascending: true });
 
-            let qDaily = db.from('transactions')
-                .select('*')
-                .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-                .gte('created_at', `${targetDateStr}T00:00:00+08:00`)
-                .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
-                .order('created_at', { ascending: true });
+    if (adminArea !== 'All') {
+        qDaily = qDaily.eq('area', adminArea);
+    }
+    const { data: dailyData } = await qDaily;
 
-            // [TAMBAHAN] Filter transaksi berdasarkan area
-            if (adminArea !== 'All') {
-                qDaily = qDaily.eq('area', adminArea);
-            }
-            const { data: dailyData } = await qDaily;
+    let allLogs = dailyData || [];
+    let radarList = [];
+    let historyList = [];
 
-            let allLogs = dailyData || [];
-            let dailyState = {};
-            let systemClears = [];
-            let radarList = [];
-            let mismatchList = [];
-            let perfectMatchList = [];
-            let historyList = [];
+    allLogs.forEach(log => {
+        const biz = log.business_name;
+        if (!biz || log.phase === 'SYSTEM CLEAR') return;
 
-            allLogs.forEach(log => {
-                const biz = log.business_name;
-                if (!biz) return;
+        let p2Qty = parseInt(log.sd_drop_qty) || 0;
+        let p3Qty = parseInt(log.sd_pickup_qty) || 0;
+        
+        let p2Time = log.drop_off_time || (log.phase === 'Phase 2' ? log.created_at : '-');
+        let p3Time = log.pickup_time || (log.phase === 'Phase 3' ? log.created_at : null);
+        
+        let p2Runner = log.phase === 'Phase 2' ? log.runner_name : '-';
+        let p3Runner = log.phase === 'Phase 3' ? log.runner_name : '-';
 
-                if (log.phase === 'SYSTEM CLEAR') {
-                    systemClears.push(log);
-                    if (dailyState[biz]) {
-                        dailyState[biz] = { p2Qty: 0, p3Qty: 0, p2Runner: null, p3Runner: null, lastP2Time: null, lastP3Time: null };
+        let selisihBelumDiambil = p2Qty - p3Qty;
+
+        // MASUK RADAR
+        if (selisihBelumDiambil > 0 && !p3Time) {
+            radarList.push({ merchant: biz, time: p2Time, runner: p2Runner, qty: p2Qty });
+        }
+
+        // MASUK HISTORY
+                if (p3Time) {
+                    let durationStr = '-';
+                    if (p2Time !== '-' && p3Time) {
+                        const safeDropDate = parseTanggal(p2Time);
+                        const safePickupDate = parseTanggal(p3Time);
+
+                        // Cek apakah kedua tanggal valid sebelum dihitung
+                        if (!isNaN(safeDropDate) && !isNaN(safePickupDate)) {
+                            const diffMs = safePickupDate - safeDropDate;
+                            const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+                            durationStr = `${diffHrs} Hours`;
+                        } else {
+                            // Jika data di database memang rusak/kosong
+                            durationStr = 'Data Error'; 
+                        }
                     }
-                    return;
-                }
 
-                if (!dailyState[biz]) {
-                    dailyState[biz] = { p2Qty: 0, p3Qty: 0, p2Runner: null, p3Runner: null, lastP2Time: null, lastP3Time: null };
-                }
-
-                let qty = parseInt(log.sd_qty) || 0;
-                if (log.phase === 'Phase 2') {
-                    dailyState[biz].p2Qty += qty;
-                    if (dailyState[biz].p2Qty === qty) {
-                        dailyState[biz].p2Runner = log.runner_name;
-                        dailyState[biz].lastP2Time = log.created_at;
-                    }
-                } else if (log.phase === 'Phase 3') {
-                    dailyState[biz].p3Qty += qty;
-                    dailyState[biz].p3Runner = log.runner_name;
-                    dailyState[biz].lastP3Time = log.created_at;
-
-                    if (dailyState[biz].p2Qty > 0 && dailyState[biz].p2Qty === dailyState[biz].p3Qty) {
-                        const diffMs = new Date(dailyState[biz].lastP3Time) - new Date(dailyState[biz].lastP2Time);
-                        const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
-                        historyList.push({
-                            merchant: biz, p2Time: dailyState[biz].lastP2Time, p2Runner: dailyState[biz].p2Runner,
-                            p3Time: dailyState[biz].lastP3Time, p3Runner: dailyState[biz].p3Runner, qty: dailyState[biz].p3Qty,
-                            duration: `${diffHrs} Hours`
-                        });
-
-                        perfectMatchList.push({
-                            date: dailyState[biz].lastP3Time, merchant: biz, runner: dailyState[biz].p3Runner, qty: dailyState[biz].p3Qty
-                        });
-
-                        dailyState[biz] = { p2Qty: 0, p3Qty: 0, p2Runner: null, p3Runner: null, lastP2Time: null, lastP3Time: null };
-                    }
-                }
+            historyList.push({
+                merchant: biz,
+                p2Time: p2Time,
+                p2Runner: p2Runner !== '-' ? p2Runner : log.runner_name,
+                p3Time: p3Time,
+                p3Runner: p3Runner !== '-' ? p3Runner : log.runner_name,
+                p2Qty: p2Qty,
+                p3Qty: p3Qty,
+                duration: durationStr
             });
+        }
+    });
 
-            Object.entries(dailyState).forEach(([biz, state]) => {
-                const diff = state.p2Qty - state.p3Qty;
-
-                if (state.p2Qty > 0 && state.p3Qty > 0) {
-                    const diffMs = new Date(state.lastP3Time) - new Date(state.lastP2Time);
-                    const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
-                    historyList.push({
-                        merchant: biz, p2Time: state.lastP2Time, p2Runner: state.p2Runner,
-                        p3Time: state.lastP3Time, p3Runner: state.p3Runner, qty: state.p3Qty,
-                        duration: `${diffHrs} Hours`
-                    });
-                }
-
-                if (diff > 0) {
-                    radarList.push({ merchant: biz, runner: state.p2Runner || state.p3Runner, qty: diff, time: state.lastP2Time || state.lastP3Time });
-                    if (state.p3Qty > 0) {
-                        mismatchList.push({
-                            date: state.lastP3Time || state.lastP2Time, merchant: biz, runner: state.p3Runner || state.p2Runner, type: 'SHORTAGE', variance: diff,
-                            desc: `Target drop ${state.p2Qty} SD, but Phase 3 only picked up ${state.p3Qty} SD. Missing ${diff} SD.`
-                        });
-                    }
-                } else if (diff < 0) {
-                    mismatchList.push({
-                        date: state.lastP3Time, merchant: biz, runner: state.p3Runner, type: 'SURPLUS', variance: Math.abs(diff),
-                        desc: `Phase 3 picked up ${state.p3Qty} SD, but today's drop record is only ${state.p2Qty} SD.`
-                    });
-                }
-            });
-
-            const { data: overdueData } = await db.from('view_sd_overdue').select('*');
-            let overdues = overdueData || [];
-
-            // [TAMBAHAN] Filter overdue berdasarkan merchant yang ada di area admin
-            if (adminArea !== 'All') {
-                overdues = overdues.filter(o => {
-                    const biz = globalBusinesses.find(b => b.business_name === o.merchant);
-                    return biz && biz.area_name === adminArea;
-                });
-            }
-
-            const tbodyRadar = document.getElementById('table-live-radar');
-            if (tbodyRadar) {
-                tbodyRadar.innerHTML = radarList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>All clear! All targets today have been picked up.</td></tr>`
-                    : radarList.map(p => `
-                        <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
-                            <td class="p-4 font-black text-slate-800">${p.merchant}</td>
-                            <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
-                            <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
-                            <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
-                            <td class="p-4 text-right flex justify-end gap-2 items-center">
-                                <span class="font-black text-amber-500 animate-pulse mt-1 text-[10px] uppercase tracking-widest"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
-                                <button onclick="resolveLiveRadar('${p.merchant.replace(/'/g, "\\'")}', ${p.qty})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                            </td>
-                        </tr>
-                    `).join('');
-            }
-            const badgeRadar = document.getElementById('badge-live-radar');
-            if (badgeRadar) badgeRadar.innerText = radarList.length;
-
-            mismatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const tbodyMismatch = document.getElementById('table-sd-mismatch');
-            if(tbodyMismatch) {
-                tbodyMismatch.innerHTML = mismatchList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">Perfect daily cycle. No discrepancies between Phase 2 and Phase 3.</td></tr>`
-                    : mismatchList.map(m => {
-                        const timeStr = new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-                        const isShort = m.type === 'SHORTAGE';
-                        const badgeClass = isShort ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200';
-                        const icon = isShort ? 'fa-arrow-down' : 'fa-arrow-up';
-                        return `
-                        <tr class="hover:bg-amber-50/50 transition border-b border-slate-100">
-                            <td class="p-4">
-                                <div class="font-black text-slate-800">${targetDateStr}</div>
-                                <div class="text-[10px] font-bold text-slate-500">${timeStr}</div>
-                            </td>
-                            <td class="p-4 font-black text-slate-700">${m.merchant}</td>
-                            <td class="p-4"><span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide"><i class="fa-solid fa-user-tag mr-1 text-slate-400"></i> ${m.runner || 'Unknown'}</span></td>
-                            <td class="p-4 text-center"><span class="text-[11px] font-black px-2 py-1 rounded border shadow-sm ${badgeClass} whitespace-nowrap"><i class="fa-solid ${icon} mr-1"></i> ${m.type} ${m.variance}</span></td>
-                            <td class="p-4">
-                                <div class="flex items-center justify-between gap-4">
-                                    <span class="text-[10px] text-slate-500 italic max-w-xs whitespace-normal leading-relaxed">${m.desc}</span>
-                                    <button onclick="resolveSD('${m.merchant.replace(/'/g, "\\'")}', '${m.type}', ${m.variance})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                                </div>
-                            </td>
-                        </tr>`;
-                    }).join('');
-            }
-            document.getElementById('badge-mismatch-count').innerText = mismatchList.length;
-
-            perfectMatchList.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const tbodyMatch = document.getElementById('table-sd-match');
-            if(tbodyMatch) {
-                tbodyMatch.innerHTML = perfectMatchList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No 100% reconciled cycles yet today.</td></tr>`
-                    : perfectMatchList.map(m => `
-                        <tr class="hover:bg-emerald-50/30 transition border-b border-emerald-50">
-                            <td class="p-4 font-black text-slate-800">${targetDateStr} <span class="text-[10px] font-bold text-slate-500 block">${new Date(m.date).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</span></td>
-                            <td class="p-4 font-black text-slate-700">${m.merchant}</td>
-                            <td class="p-4 text-slate-500 uppercase tracking-widest text-[11px]">${m.runner || '-'}</td>
-                            <td class="p-4 text-center font-black text-emerald-600 bg-emerald-50/50">${m.qty} SD</td>
-                            <td class="p-4 text-right"><span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span></td>
-                        </tr>
-                    `).join('');
-            }
-            document.getElementById('badge-match-count').innerText = perfectMatchList.length;
-
-            document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ? 
-                `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` : 
-                historyList.map(h => `
-                <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
-                    <td class="p-4 font-black text-slate-800">${h.merchant}</td>
-                    <td class="p-4">
-                        <div class="font-bold text-slate-600">${new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-                        <div class="text-[10px] uppercase text-slate-400">${h.p2Runner}</div>
+    const tbodyRadar = document.getElementById('table-live-radar');
+    if (tbodyRadar) {
+        tbodyRadar.innerHTML = radarList.length === 0
+            ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>All clear! All targets today have been picked up.</td></tr>`
+            : radarList.map(p => `
+                <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
+                    <td class="p-4 font-black text-slate-800">${p.merchant}</td>
+                    <td class="p-4 font-bold text-slate-500">${p.time !== '-' ? new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-'}</td>
+                    <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
+                    <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
+                    <td class="p-4 text-right flex justify-end gap-2 items-center">
+                        <span class="font-black text-amber-500 animate-pulse mt-1 text-[10px] uppercase tracking-widest"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
+                        <button onclick="resolveLiveRadar('${p.merchant.replace(/'/g, "\\'")}', ${p.qty})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
                     </td>
-                    <td class="p-4">
-                        <div class="font-bold text-slate-600">${new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-                        <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
-                    </td>
-                    <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
-                    <td class="p-4 text-center font-black bg-indigo-50 text-indigo-600">${h.qty} SD</td>
                 </tr>
             `).join('');
+    }
+    const badgeRadar = document.getElementById('badge-live-radar');
+    if (badgeRadar) badgeRadar.innerText = radarList.length;
 
-            const overdueHTML = overdues.length === 0
-                ? `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic bg-slate-50">All clear! No SD Cards pending over 24 hours.</td></tr>`
-                : overdues.map(o => {
-                    const hoursOvd = parseFloat(o.hours_overdue);
-                    const days = Math.floor(hoursOvd / 24);
-                    const hrs = Math.floor(hoursOvd % 24);
-                    const timeStr = days > 0 ? `${days} Days ${hrs} Hrs` : `${hrs} Hrs`;
-                    const dateStr = new Date(o.date_sent).toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
-                    return `
-                    <tr class="hover:bg-red-50/50 transition border-b border-red-50">
-                        <td class="p-4 font-black text-slate-800">${o.merchant}</td>
-                        <td class="p-4 font-bold text-slate-500">${dateStr}</td>
-                        <td class="p-4 text-slate-500 uppercase tracking-widest">${o.runner || 'Unknown'}</td>
-                        <td class="p-4 text-center font-black text-red-600 bg-red-50/50">${o.qty} SD</td>
-                        <td class="p-4">
-                            <div class="flex items-center justify-end gap-3">
-                                <span class="font-black text-red-600">${timeStr}</span>
-                                <button onclick="resolveSD('${o.merchant.replace(/'/g, "\\'")}', 'OVERDUE', ${o.qty})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-sm transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                            </div>
-                        </td>
-                    </tr>`;
-                }).join('');
-            document.getElementById('table-sd-overdue').innerHTML = overdueHTML;
-            document.getElementById('badge-overdue-count').innerText = overdues.length;
-        }
+    historyList.sort((a, b) => new Date(b.p3Time || b.p2Time) - new Date(a.p3Time || a.p2Time));
+    document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ?
+        `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` :
+        historyList.map(h => {
+            let statusHtml = '';
+            const diff = h.p2Qty - h.p3Qty;
+            if (diff === 0) {
+                statusHtml = `<span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span>`;
+            } else if (diff > 0) {
+                statusHtml = `
+                    <div class="flex items-center justify-end gap-2">
+                        <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-red-100 text-red-700 border border-red-200 whitespace-nowrap"><i class="fa-solid fa-arrow-down mr-1"></i> SHORTAGE ${diff}</span>
+                        <button onclick="resolveSD('${h.merchant.replace(/'/g, "\\'")}', 'SHORTAGE', ${diff})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                    </div>`;
+            } else {
+                const surplus = Math.abs(diff);
+                statusHtml = `
+                    <div class="flex items-center justify-end gap-2">
+                        <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap"><i class="fa-solid fa-arrow-up mr-1"></i> SURPLUS ${surplus}</span>
+                        <button onclick="resolveSD('${h.merchant.replace(/'/g, "\\'")}', 'SURPLUS', ${surplus})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                    </div>`;
+            }
+
+            const p2TimeStr = (h.p2Time && h.p2Time !== '-') ? new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
+            const p3TimeStr = (h.p3Time && h.p3Time !== '-') ? new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
+
+            return `
+            <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
+                <td class="p-4 font-black text-slate-800">${h.merchant}</td>
+                <td class="p-4">
+                    <div class="font-bold text-slate-600">${p2TimeStr}</div>
+                    <div class="text-[10px] uppercase text-slate-400">${h.p2Runner || '-'}</div>
+                </td>
+                <td class="p-4">
+                    <div class="font-bold text-slate-600">${p3TimeStr}</div>
+                    <div class="text-[10px] uppercase text-slate-400">${h.p3Runner || '-'}</div>
+                </td>
+                <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
+                <td class="p-4 text-center font-black bg-indigo-50/50 text-indigo-700">${h.p2Qty} / ${h.p3Qty}</td>
+                <td class="p-4 text-right">${statusHtml}</td>
+            </tr>
+            `;
+        }).join('');
+}
+
 
 
         function renderLogs() {
@@ -1879,6 +1738,8 @@ async function renderSDTracker() {
                         ${i.sdr_name ? `<span><i class="fa-solid fa-user-tie"></i> ${i.sdr_name}</span>` : ''}
                     </div>`;
 
+                let qtyToShow = i.phase === 'Phase 2' ? (i.sd_drop_qty || 0) : (i.phase === 'Phase 3' ? (i.sd_pickup_qty || 0) : (i.sd_drop_qty || i.sd_pickup_qty || 0));
+
                 return `
                 <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
                     <td class="p-4 align-top">
@@ -1900,7 +1761,7 @@ async function renderSDTracker() {
                         <div class="flex items-center gap-2 mt-1.5">
                             <span class="text-[11px] font-bold text-slate-600">
                                 <i class="fa-solid ${(i.kit_id && i.phase !== 'Phase 2' && i.phase !== 'Phase 3') ? 'fa-box' : 'fa-sd-card'} mr-1 opacity-50"></i>
-                                ${(i.phase === 'Phase 2' || i.phase === 'Phase 3') ? ((i.sd_qty || 0) + ' SD Cards') : (i.kit_id || ((i.sd_qty || 0) + ' SD Cards'))}
+                                ${(i.phase === 'Phase 2' || i.phase === 'Phase 3') ? (qtyToShow + ' SD Cards') : (i.kit_id || (qtyToShow + ' SD Cards'))}
                             </span>
                             ${conditionBadge}
                             ${i.sd_uploaded > 0 ? `<span class="bg-blue-50 text-blue-600 border border-blue-100 text-[9px] px-2 py-0.5 rounded font-black uppercase">UP: ${i.sd_uploaded}</span>` : ''}
@@ -2214,36 +2075,37 @@ async function renderSDTracker() {
             document.getElementById('edit-log-id').value = log.id; 
             document.getElementById('edit-log-phase').value = log.phase; 
             document.getElementById('edit-log-kit').value = log.kit_id || ''; 
-            document.getElementById('edit-log-sd').value = log.sd_qty || ''; 
-            document.getElementById('edit-log-condition').value = log.device_condition || ''; 
+            
+            // BACA KOLOM BARU
+            document.getElementById('edit-log-sd-drop').value = log.sd_drop_qty || 0; 
+            document.getElementById('edit-log-sd-pickup').value = log.sd_pickup_qty || 0; 
+            
+            document.getElementById('edit-log-uploaded').value = log.sd_uploaded || ''; 
+            document.getElementById('edit-log-condition').value = log.device_condition || '';
             document.getElementById('edit-log-notes').value = log.missing_or_issue || ''; 
             
             await fetchBusinesses(true);
-            
-            let bizOptions = globalBusinesses
-                .filter(b => b.area_name === log.area)
-                .map(b => `<option value="${b.business_name}" ${b.business_name === log.business_name ? 'selected' : ''}>${b.business_name}</option>`)
-                .join('');
-            
-            if(!bizOptions.includes('selected') && log.business_name) {
-                bizOptions += `<option value="${log.business_name}" selected>${log.business_name} (Current)</option>`;
-            }
-            if(!bizOptions) {
-                bizOptions = `<option value="">-- No Merchant Found in ${log.area} --</option>`;
-            }
+            let bizOptions = globalBusinesses.filter(b => b.area_name === log.area).map(b => `<option value="${b.business_name}" ${b.business_name === log.business_name ? 'selected' : ''}>${b.business_name}</option>`).join('');
+            if(!bizOptions.includes('selected') && log.business_name) bizOptions += `<option value="${log.business_name}" selected>${log.business_name} (Current)</option>`;
+            if(!bizOptions) bizOptions = `<option value="">-- No Merchant Found in ${log.area} --</option>`;
             
             document.getElementById('edit-log-business').innerHTML = bizOptions;
             showModal('modal-log'); 
         }
-        
+
         document.getElementById('form-log').addEventListener('submit', async (e) => { 
             e.preventDefault(); 
             const p = {
                 phase: document.getElementById('edit-log-phase').value, 
                 business_name: document.getElementById('edit-log-business').value, 
                 kit_id: document.getElementById('edit-log-kit').value.toUpperCase() || null, 
-                sd_qty: parseInt(document.getElementById('edit-log-sd').value) || null, 
-                device_condition: document.getElementById('edit-log-condition').value || null, 
+                
+                // SIMPAN KE KOLOM BARU
+                sd_drop_qty: parseInt(document.getElementById('edit-log-sd-drop').value) || 0, 
+                sd_pickup_qty: parseInt(document.getElementById('edit-log-sd-pickup').value) || 0, 
+                
+                sd_uploaded: parseInt(document.getElementById('edit-log-uploaded').value) || 0,
+                device_condition: document.getElementById('edit-log-condition').value || null,
                 missing_or_issue: document.getElementById('edit-log-notes').value
             }; 
             await db.from('transactions').update(p).eq('id', document.getElementById('edit-log-id').value); 
@@ -2263,7 +2125,7 @@ async function renderSDTracker() {
                 phase: 'Phase 3', 
                 runner_name: adminName,
                 business_name: merchant,
-                sd_qty: pendingQty,
+                sd_pickup_qty: pendingQty, // <-- Updated from sd_qty
                 sd_uploaded: isUploaded ? pendingQty : 0, 
                 device_condition: 'Good',
                 missing_or_issue: 'Manual Clear Radar by Admin'
@@ -2293,7 +2155,7 @@ async function renderSDTracker() {
                     phase: 'SYSTEM CLEAR',
                     runner_name: adminName,
                     business_name: merchant,
-                    sd_qty: variance, 
+                    sd_pickup_qty: variance, // <-- Updated from sd_qty
                     device_condition: 'Good',
                     missing_or_issue: type 
                 };
