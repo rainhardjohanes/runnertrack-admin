@@ -931,20 +931,27 @@
         // ----------------------------------------------------------------------
         // 2. UTILITIES & HELPERS
         // ----------------------------------------------------------------------
-        function parseTanggal(dateString) {
+function parseTanggal(dateString) {
             if (!dateString || dateString === '-') return new Date("");
             
-            // Coba pakai parser bawaan sistem dulu (untuk tanggal bawaan Supabase)
             let d = new Date(dateString);
             if (!isNaN(d)) return d;
 
-            // Jika gagal (Invalid Date), pecah format DD/MM/YYYY dari input manual
-            let parts = dateString.toString().trim().split(" ");
-            let dateParts = parts[0].split("/");
+            let str = dateString.toString().trim();
             
-            if (dateParts.length === 3) {
-                let timePart = parts[1] ? "T" + parts[1] : "T00:00:00";
-                return new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}${timePart}`);
+            // Fix untuk Safari / iPhone: Ubah spasi menjadi huruf 'T' (Standar ISO)
+            if (str.includes('-') && str.includes(' ')) {
+                return new Date(str.replace(' ', 'T'));
+            }
+
+            // Fix untuk format spreadsheet DD/MM/YYYY
+            if (str.includes('/')) {
+                let parts = str.split(" ");
+                let dateParts = parts[0].split("/");
+                if (dateParts.length === 3) {
+                    let timePart = parts[1] ? "T" + parts[1] : "T00:00:00";
+                    return new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}${timePart}`);
+                }
             }
             return new Date("");
         }
@@ -1197,26 +1204,17 @@
             }
 
             if (data) {
-                globalLogs = data;
-                document.getElementById('log-page-display').innerText = logPage + 1;
-                
-                const isSearching = searchInput && searchInput.value.length > 0;
-                const paginationControls = document.getElementById('btn-log-prev').parentElement;
-                
-                if (isSearching) {
-                    paginationControls.style.opacity = '0.3';
-                    paginationControls.style.pointerEvents = 'none';
-                } else {
-                    paginationControls.style.opacity = '1';
-                    paginationControls.style.pointerEvents = 'auto';
-                    document.getElementById('btn-log-prev').disabled = (logPage === 0);
-                    document.getElementById('btn-log-next').disabled = (to >= (count || 0) - 1);
-                }
-
-                renderLogs();
-                if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
-                if(!document.getElementById('view-dashboard').classList.contains('hidden-view')) renderDashboard();
-            }
+    globalLogs = data;
+    document.getElementById('log-page-display').innerText = logPage + 1;
+    
+    // paginationControls dihapus
+    document.getElementById('btn-log-prev').disabled = (logPage === 0);
+    document.getElementById('btn-log-next').disabled = (to >= (count || 0) - 1);
+    
+    renderLogs();
+    if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
+    if(!document.getElementById('view-dashboard').classList.contains('hidden-view')) renderDashboard();
+}
         }
 
         async function fetchAreas(force = false) { 
@@ -1269,19 +1267,20 @@
 
         async function fetchKits(force = false) { 
             if (!force && globalKits.length > 0) return renderKits(); 
-            let q = db.from('master_kits').select('*'); 
+            let q = db.from('master_kits').select('*').limit(20000); // <-- Memastikan select(*) menarik kolom last_location
             const adminArea = getAdminArea(); 
             if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
             const { data } = await q.order('kit_id'); 
             
             if (data) { 
                 globalKits = data; 
-                await fetchKitLocations(); 
+                // await fetchKitLocations(); <-- BARIS INI TELAH DIHAPUS
                 await fetchLogs(true);     
                 renderKits(); 
                 if (globalBusinesses.length > 0) renderBusinesses(); 
             }
         }
+
 
         async function fetchUsers(force = false) { 
             if (!force && globalUsers.length > 0) return renderUsers(); 
@@ -1298,28 +1297,19 @@
             if (data) { globalAdminLogs = data; renderAdminLogs(); } 
         }
 
-        async function fetchKitLocations() {
-            const { data, error } = await db.from('transactions')
-                .select('kit_id, business_name, phase, created_at')
-                .in('phase', ['Phase 1', 'Phase 4'])
-                .order('created_at', { ascending: false });
+// Fungsi fetchKitLocations DIHAPUS agar website tidak berat meload puluhan ribu log
 
-            if (data) {
-                globalKitLocations = {};
-                data.forEach(log => {
-                    if (log.kit_id && !globalKitLocations[log.kit_id]) {
-                        if (log.phase === 'Phase 4') {
-                            globalKitLocations[log.kit_id] = { loc: 'Warehouse', isOffice: true };
-                        } else {
-                            globalKitLocations[log.kit_id] = { loc: log.business_name, isOffice: false };
-                        }
-                    }
-                });
-            }
-        }
-
+        // Ubah getKitLocation untuk langsung membaca dari kolom last_location di master_kits
         function getKitLocation(kitId) {
-            return globalKitLocations[kitId] || { loc: 'Warehouse', isOffice: true };
+            const kit = globalKits.find(k => k.kit_id === kitId);
+            
+            // Jika tidak ada data, atau last_location kosong/Warehouse, anggap di Warehouse
+            if (!kit || !kit.last_location || kit.last_location.toLowerCase() === 'warehouse') {
+                return { loc: 'Warehouse', isOffice: true };
+            }
+            
+            // Jika ada isinya selain Warehouse, berarti sedang di Merchant
+            return { loc: kit.last_location, isOffice: false };
         }
 
         async function fetchAndRenderFOTracker() {
@@ -1653,7 +1643,9 @@ async function renderSDTracker() {
     const badgeRadar = document.getElementById('badge-live-radar');
     if (badgeRadar) badgeRadar.innerText = radarList.length;
 
-    historyList.sort((a, b) => new Date(b.p3Time || b.p2Time) - new Date(a.p3Time || a.p2Time));
+// 1. Pastikan urutannya juga menggunakan parseTanggal
+    historyList.sort((a, b) => parseTanggal(b.p3Time || b.p2Time) - parseTanggal(a.p3Time || a.p2Time));
+    
     document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ?
         `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` :
         historyList.map(h => {
@@ -1676,8 +1668,12 @@ async function renderSDTracker() {
                     </div>`;
             }
 
-            const p2TimeStr = (h.p2Time && h.p2Time !== '-') ? new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
-            const p3TimeStr = (h.p3Time && h.p3Time !== '-') ? new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
+            // 2. Gunakan helper parseTanggal agar UI tidak menampilkan "Invalid Date"
+            const d2 = parseTanggal(h.p2Time);
+            const d3 = parseTanggal(h.p3Time);
+            
+            const p2TimeStr = (!isNaN(d2) && h.p2Time !== '-') ? d2.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
+            const p3TimeStr = (!isNaN(d3) && h.p3Time !== '-') ? d3.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
 
             return `
             <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
@@ -1697,7 +1693,6 @@ async function renderSDTracker() {
             `;
         }).join('');
 }
-
 
 
         function renderLogs() {
@@ -1957,14 +1952,19 @@ async function renderSDTracker() {
             renderKitMismatches();
         }
 
-        async function renderKitMismatches() {
+async function renderKitMismatches() {
             const adminArea = getAdminArea();
-            let q = db.from('transactions').select('*').in('phase', ['Phase 1', 'Phase 4']).order('created_at', { ascending: false });
+            let q = db.from('transactions')
+                .select('*')
+                .in('phase', ['Phase 1', 'Phase 4'])
+                .order('created_at', { ascending: false })
+                .limit(50000); // <-- TAMBAHKAN INI
+
             if (adminArea !== 'All') q = q.eq('area', adminArea);
             
             const { data: auditLogs } = await q;
             if (!auditLogs) return;
-
+            
             const phase4Logs = auditLogs.filter(l => l.phase === 'Phase 4' && l.kit_id);
             let auditList = [];
 
