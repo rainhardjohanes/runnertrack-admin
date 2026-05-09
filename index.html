@@ -191,14 +191,18 @@
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time FO Movement & Efficiency</p>
                 </div>
                 
-                <div class="flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Filter Date</label>
-                        <input type="date" id="filter-fo-date" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Officer Name</label>
-                        <select id="filter-fo-name" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none min-w-[150px]">
+<div class="flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+    <div class="flex flex-col gap-1">
+        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Area</label>
+        <select id="filter-fo-area" onchange="document.getElementById('filter-fo-name').value=''; fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none filter-area-dropdown min-w-[120px]"></select>
+    </div>
+    
+    <div class="flex flex-col gap-1">
+        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Filter Date</label>
+        <input type="date" id="filter-fo-date" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
+    </div>
+    <div class="flex flex-col gap-1">
+        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Officer Name</label>                        <select id="filter-fo-name" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none min-w-[150px]">
                             <option value="">All Officers</option>
                         </select>
                     </div>
@@ -1348,23 +1352,36 @@ async function refreshAllData() {
                 const { data: rawData, error } = await query;
                 if (error) throw error;
 
-                let data = rawData || [];
+let data = rawData || [];
                 const adminArea = getAdminArea();
-                if (adminArea !== 'All') {
-                    const validFOs = globalRunners.map(r => r.runner_name);
+                
+                // 1. Tarik globalRunners jika masih kosong
+                if (globalRunners.length === 0) {
+                    await fetchRunners();
+                }
+
+                // 2. Tentukan area mana yang akan difilter
+                const filterAreaDropdown = document.getElementById('filter-fo-area');
+                const targetArea = filterAreaDropdown ? filterAreaDropdown.value : '';
+                
+                // Jika Super Admin, gunakan value dari dropdown. Jika Admin biasa, paksa gunakan areanya sendiri.
+                let activeArea = adminArea !== 'All' ? adminArea : targetArea;
+
+                // 3. Eksekusi filter data berdasarkan area
+                if (activeArea && activeArea !== '') {
+                    // Cari semua FO yang berasal dari activeArea tersebut
+                    const validFOs = globalRunners.filter(r => r.area_name === activeArea).map(r => r.runner_name);
                     data = data.filter(v => validFOs.includes(v.runner_name));
                 }
 
                 window.currentFOData = data;
 
+                // 4. Update dropdown "Officer Name" agar list namanya otomatis menyesuaikan area yang dipilih
                 const foSelect = document.getElementById('filter-fo-name');
-                if (foSelect.options.length <= 1 && data && data.length > 0) {
-                    const uniqueFOs = [...new Set(data.map(item => item.runner_name))].sort();
-                    let opts = '<option value="">All Officers</option>';
-                    uniqueFOs.forEach(fo => { opts += `<option value="${fo}" ${targetFO === fo ? 'selected' : ''}>${fo}</option>`; });
-                    foSelect.innerHTML = opts;
-                }
-
+                const uniqueFOs = [...new Set(data.map(item => item.runner_name))].sort();
+                let opts = '<option value="">All Officers</option>';
+                uniqueFOs.forEach(fo => { opts += `<option value="${fo}" ${targetFO === fo ? 'selected' : ''}>${fo}</option>`; });
+                foSelect.innerHTML = opts;
                 if (!data || data.length === 0) {
                     tableSummary.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>No FO visits recorded.</td></tr>`;
                     tableLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400 italic">No detailed logs found.</td></tr>`;
@@ -2088,7 +2105,7 @@ async function renderKitMismatches() {
                     <td class="p-4 text-xs font-bold text-slate-500">${i.runner_name || '-'}</td>
                     <td class="p-4 text-right">
                         <button onclick="editUser(${i.id})" class="text-slate-400 hover:text-blue-600 p-2"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deleteRow('master_users', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="deleteSystemUser(${i.id}, '${i.email}')" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
             `).join(''); 
@@ -2703,6 +2720,35 @@ document.getElementById('form-log').addEventListener('submit', async (e) => { 
                 alert("✅ Data successfully deleted from database!");
             } 
         }
+
+
+        // --- Khusus Hapus System User beserta Auth-nya ---
+async function deleteSystemUser(id, email) { 
+    if(confirm(`DANGER: Anda yakin ingin menghapus akun ${email}? Ini akan menghapus profil dan akses login autentikasinya secara permanen.`)) {
+        
+        // 1. Hapus dari sistem Autentikasi Supabase via RPC
+        const { error: rpcError } = await db.rpc('admin_delete_user', {
+            target_email: email
+        });
+        
+        if (rpcError) {
+            alert("❌ Gagal menghapus data login/auth: " + rpcError.message);
+            return;
+        }
+
+        // 2. Hapus dari tabel profil master_users
+        const { error: dbError } = await db.from('master_users').delete().eq('id', id); 
+        
+        if (dbError) {
+            alert("❌ Gagal menghapus profil tabel: " + dbError.message);
+            return; 
+        }
+
+        await logAdminAction('DELETE_USER', `Deleted complete system account and auth for ${email}`);
+        alert("✅ Akun dan akses Autentikasi berhasil dihapus sepenuhnya!");
+        fetchUsers(true); 
+    } 
+}
 
         // --- Bulk Kit Delete ---
         function toggleSelectAllKits(master) {
