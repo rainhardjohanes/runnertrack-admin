@@ -1152,11 +1152,20 @@ function parseTanggal(dateString) {
                 filteredBiz.map(b => `<option value="${b.business_name}">${b.business_name}</option>`).join('');
         }
 
-        async function refreshAllData() {
+async function refreshAllData() {
+            // 1. Tambahkan animasi putar (spin) pada icon tombol refresh
+            const refreshBtn = document.querySelector('button[onclick="refreshAllData()"] i');
+            if(refreshBtn) refreshBtn.classList.add('fa-spin');
+            
+            // 2. Tarik semua data dari Supabase
             await Promise.all([fetchKits(true), fetchKitTypes(true), fetchBusinesses(true)]);
-            renderDashboard();
+            
+            // 3. Render ulang dan tunggu sampai selesai
+            await renderDashboard(); 
+            
+            // 4. Matikan animasi putar setelah data berhasil di-render
+            if(refreshBtn) refreshBtn.classList.remove('fa-spin');
         }
-
         function initFOTrackerFilters() {
             const dateInput = document.getElementById('filter-fo-date');
             if (!dateInput.value) {
@@ -1441,7 +1450,8 @@ function parseTanggal(dateString) {
         // ----------------------------------------------------------------------
         // 6. RENDER FUNCTIONS
         // ----------------------------------------------------------------------
-        async function renderDashboard() {
+
+async function renderDashboard() {
             const dateInput = document.getElementById('dash-date-filter');
             if(!dateInput.value) {
                 const today = new Date();
@@ -1454,6 +1464,14 @@ function parseTanggal(dateString) {
             const filterArea = document.getElementById('dash-area-filter').value;
             const startTime = document.getElementById('dash-start-time').value; 
             const endTime = document.getElementById('dash-end-time').value;
+
+            // --- VISUAL LOADING STATE ---
+            // Tampilkan icon loading di layar begitu region diganti agar user tahu sistem sedang bekerja
+            document.getElementById('stat-sd-today').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-slate-300 text-2xl"></i>';
+            document.getElementById('stat-iphone-today').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-slate-300 text-2xl"></i>';
+            const tbody = document.getElementById('table-dash-kits');
+            tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Menghitung ulang aset region...</td></tr>`;
+            // ----------------------------
 
             let q = db.from('transactions')
                 .select('phase, sd_uploaded, kit_type, created_at, area, sd_pickup_qty')
@@ -1478,7 +1496,6 @@ function parseTanggal(dateString) {
                     
                     if(logTimeStr >= startTime && logTimeStr <= endTime) {
                         let isIphone = false;
-
                         if (log.kit_type) {
                             const kt = log.kit_type.toUpperCase();
                             const recipe = globalKitTypes.find(t => t.type_name === log.kit_type);
@@ -1494,7 +1511,6 @@ function parseTanggal(dateString) {
 
                         let uploadQty = parseInt(sdUp) || 0;
                         if (isUploaded && uploadQty === 0) {
-                            // Coba ambil dari qty pickup jika tersedia, jika tidak maka default 1
                             uploadQty = parseInt(log.sd_pickup_qty) || 1;
                         }
 
@@ -1517,9 +1533,28 @@ function parseTanggal(dateString) {
             document.getElementById('stat-sd-today').innerText = totalSD;
             document.getElementById('stat-iphone-today').innerText = totalIphone;
 
-            const tbody = document.getElementById('table-dash-kits');
+            const targetArea = (filterArea || '').trim().toLowerCase();
+
             tbody.innerHTML = globalKitTypes.map(type => {
-                const kitsOfType = globalKits.filter(k => k.kit_type === type.type_name);
+                const kitsOfType = globalKits.filter(k => {
+                    const matchType = k.kit_type === type.type_name;
+                    
+                    // --- PERBAIKAN LOGIKA FILTER AREA ---
+                    // Cek lokasi kit saat ini untuk memastikan areanya (berguna jika kit pindah ke merchant di region lain)
+                    const locData = getKitLocation(k.kit_id);
+                    let actualArea = (k.area_name || k.area || '').trim().toLowerCase();
+                    
+                    if (!locData.isOffice) {
+                        const biz = globalBusinesses.find(b => b.business_name === locData.loc);
+                        if (biz && biz.area_name) {
+                            actualArea = biz.area_name.trim().toLowerCase();
+                        }
+                    }
+
+                    const matchArea = (!targetArea || targetArea === 'all') ? true : actualArea === targetArea;
+                    return matchType && matchArea;
+                });
+
                 let atBusiness = 0, inOffice = 0, damaged = 0;
 
                 kitsOfType.forEach(kit => {
@@ -1547,7 +1582,8 @@ function parseTanggal(dateString) {
             }).join('');
         }
         
-async function renderSDTracker() {
+        
+        async function renderSDTracker() {
     const radarDateInput = document.getElementById('filter-radar-date');
     if (!radarDateInput.value) {
         const today = new Date();
@@ -1895,18 +1931,26 @@ async function renderSDTracker() {
             renderKits();
         }
 
-        function renderKits() {
-            const s = document.getElementById('search-kits').value.toUpperCase();
-            const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
-            const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
-            
-            const f = globalKits.filter(i => {
-                const locData = getKitLocation(i.kit_id);
-                const matchArea = !filterArea || i.area_name === filterArea;
-                const matchType = !filterType || i.kit_type === filterType;
-                const matchSearch = (i.kit_id || '').toUpperCase().includes(s) || (locData.loc || '').toUpperCase().includes(s);
-                return matchArea && matchType && matchSearch;
-            });
+function renderKits() {
+    const s = document.getElementById('search-kits').value.toUpperCase();
+    const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
+    const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
+    
+    // Sanitasi filter area
+    const targetArea = (filterArea || '').trim().toLowerCase();
+
+    const f = globalKits.filter(i => {
+        const locData = getKitLocation(i.kit_id);
+        
+        // Sanitasi area pada database
+        const kitArea = (i.area_name || i.area || '').trim().toLowerCase();
+        
+        const matchArea = (!targetArea || targetArea === 'all') ? true : kitArea === targetArea;
+        const matchType = !filterType || i.kit_type === filterType;
+        const matchSearch = (i.kit_id || '').toUpperCase().includes(s) || (locData.loc || '').toUpperCase().includes(s);
+        
+        return matchArea && matchType && matchSearch;
+    });
 
             const totalPages = Math.ceil(f.length / kitPageSize);
             if (kitPage >= totalPages && totalPages > 0) kitPage = totalPages - 1; 
@@ -2093,26 +2137,46 @@ async function renderKitMismatches() {
             showModal('modal-log'); 
         }
 
-        document.getElementById('form-log').addEventListener('submit', async (e) => { 
-            e.preventDefault(); 
-            const p = {
-                phase: document.getElementById('edit-log-phase').value, 
-                business_name: document.getElementById('edit-log-business').value, 
-                kit_id: document.getElementById('edit-log-kit').value.toUpperCase() || null, 
+document.getElementById('form-log').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const p = {
+                phase: document.getElementById('edit-log-phase').value, 
+                business_name: document.getElementById('edit-log-business').value, 
+                kit_id: document.getElementById('edit-log-kit').value.toUpperCase() || null, 
+                
+                sd_drop_qty: parseInt(document.getElementById('edit-log-sd-drop').value) || 0, 
+                sd_pickup_qty: parseInt(document.getElementById('edit-log-sd-pickup').value) || 0, 
+                
+                sd_uploaded: parseInt(document.getElementById('edit-log-uploaded').value) || 0,
+                device_condition: document.getElementById('edit-log-condition').value || null,
+                missing_or_issue: document.getElementById('edit-log-notes').value
+            }; 
+
+            // 1. Update tabel transactions
+            await db.from('transactions').update(p).eq('id', document.getElementById('edit-log-id').value); 
+
+            // 2. UPDATE KE MASTER KITS AGAR LOKASI DAN KONDISI SINKRON
+            if (p.kit_id) {
+                // Tentukan lokasi: Jika log diedit menjadi Phase 4, berarti kembali ke Warehouse.
+                // Jika selain Phase 4, ikuti nama merchant pada formulir edit.
+                let targetLocation = p.phase === 'Phase 4' ? 'Warehouse' : p.business_name;
+
+                const { error: kitError } = await db.from('master_kits')
+                    .update({ 
+                        last_location: targetLocation,
+                        current_status: p.device_condition || 'Good'
+                    })
+                    .eq('kit_id', p.kit_id);
                 
-                // SIMPAN KE KOLOM BARU
-                sd_drop_qty: parseInt(document.getElementById('edit-log-sd-drop').value) || 0, 
-                sd_pickup_qty: parseInt(document.getElementById('edit-log-sd-pickup').value) || 0, 
-                
-                sd_uploaded: parseInt(document.getElementById('edit-log-uploaded').value) || 0,
-                device_condition: document.getElementById('edit-log-condition').value || null,
-                missing_or_issue: document.getElementById('edit-log-notes').value
-            }; 
-            await db.from('transactions').update(p).eq('id', document.getElementById('edit-log-id').value); 
-            await logAdminAction('UPDATE_LOG', `Modified log ID ${document.getElementById('edit-log-id').value}`); 
-            closeModal('modal-log'); 
-            fetchLogs(true); 
-        });
+                if (kitError) console.error("Gagal sinkronisasi master_kits saat edit log:", kitError);
+            }
+
+            await logAdminAction('UPDATE_LOG', `Modified log ID ${document.getElementById('edit-log-id').value}`); 
+            closeModal('modal-log'); 
+            fetchLogs(true);
+            fetchKits(true); // Memanggil ini agar tabel Asset Allocation langsung me-refresh data terbaru
+        });
+
 
         async function resolveLiveRadar(merchant, pendingQty) {
             const isUploaded = confirm(`Resolving Live Radar status for ${merchant} (${pendingQty} SD).\n\nWILL THIS SD CARD BE UPLOADED?\n\nPress [OK / Yes] = Yes, count towards Dashboard\nPress [Cancel / No] = No, count as 0 Upload`);
@@ -2471,11 +2535,21 @@ async function renderKitMismatches() {
                 missing_or_issue: 'Manual allocation/override by Admin'
             });
 
-            await db.from('transactions').insert(payload);
-            
-            await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
-            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
-            alert("Manual allocation successfully executed!");
+            // 1. Simpan log transaksi
+            await db.from('transactions').insert(payload);
+
+            // 2. UPDATE LOKASI KE MASTER KITS AGAR DASHBOARD SINKRON
+            const { error: updateError } = await db.from('master_kits')
+                .update({ last_location: biz })
+                .eq('kit_id', kitId);
+                
+            if (updateError) {
+                console.error("Gagal update last_location:", updateError);
+            }
+            
+            await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
+            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
+            alert("Manual allocation successfully executed!");
         });
 
         // --- Users ---
