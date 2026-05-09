@@ -174,7 +174,7 @@
                                 <th class="p-4">Phase 2 (Drop)</th>
                                 <th class="p-4">Phase 3 (Pick Up)</th>
                                 <th class="p-4 text-center">Duration</th>
-                                <th class="p-4 text-center">Qty (Drop/Pick)</th>
+                                <th class="p-4 text-center">Qty (Drop/Pick/Up)</th>
                                 <th class="p-4 text-right">System Status</th>
                             </tr>
                         </thead>
@@ -1609,13 +1609,17 @@ async function renderSDTracker() {
     const targetDateStr = radarDateInput.value;
     const adminArea = getAdminArea();
 
-    // 1. Tarik log P2, P3, dan SYSTEM CLEAR untuk hari tersebut
+    // 1. TARIK DATA LINTAS HARI (Ambil 1 hari ke belakang saja untuk cari Phase 2 yang menggantung dari kemarin)
+    const startDate = new Date(targetDateStr);
+    startDate.setDate(startDate.getDate() - 1); // Diubah menjadi 1 hari sebelumnya
+    const startDateStr = startDate.toISOString().split('T')[0];
+
     let qDaily = db.from('transactions')
         .select('*')
         .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-        .gte('created_at', `${targetDateStr}T00:00:00+08:00`)
+        .gte('created_at', `${startDateStr}T00:00:00+08:00`)
         .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
-        .order('created_at', { ascending: true }); // PASTIKAN URUT WAKTU UNTUK FIFO
+        .order('created_at', { ascending: true }); // Penting untuk FIFO
 
     if (adminArea !== 'All') {
         qDaily = qDaily.eq('area', adminArea);
@@ -1625,32 +1629,38 @@ async function renderSDTracker() {
     
     let radarList = [];
     let historyList = [];
-    let pendingQueue = {}; // Antrean Phase 2 per merchant
+    let pendingQueue = {}; 
 
-    // 2 & 3. PROSES DATA DENGAN LOGIKA FIFO
+    // 2. PROSES FIFO DENGAN LOGIKA PARSIAL
     allLogs.forEach(log => {
         const biz = log.business_name;
         if (!biz) return;
 
-        // Buat array antrean untuk merchant ini jika belum ada
-        if (!pendingQueue[biz]) {
-            pendingQueue[biz] = [];
-        }
+        if (!pendingQueue[biz]) pendingQueue[biz] = [];
 
         if (log.phase === 'Phase 2') {
-            // Masukkan Phase 2 ke ruang antrean paling belakang (Push)
             pendingQueue[biz].push(log);
         } 
         else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
-            // Tarik Phase 2 paling DEPAN/LAMA dari antrean (FIFO -> Shift)
             let matchedP2 = pendingQueue[biz].shift(); 
 
-            if (matchedP2) {
-                // Jika ADA pasangan Phase 2 yang menunggu
-                let p2Qty = parseInt(matchedP2.sd_drop_qty) || 0;
-                let p3Qty = parseInt(log.sd_pickup_qty) || 0;
+            let p3Qty = parseInt(log.sd_pickup_qty) || 0;
+            let p3Up = parseInt(log.sd_uploaded) || 0; // TANGKAP DATA UPLOAD
 
-                // Kalkulasi Durasi
+            if (matchedP2) {
+                let p2Qty = parseInt(matchedP2.sd_drop_qty) || 0;
+
+                // -- LOGIKA PARTIAL (MENCEGAH DOUBLE LOG SHORTAGE/SURPLUS JIKA INPUT DIPISAH) --
+                if (p2Qty > p3Qty && log.phase !== 'SYSTEM CLEAR') {
+                    // Pecah log Phase 2, sisanya masukkan kembali ke antrean terdepan
+                    let remainingP2 = { ...matchedP2 };
+                    remainingP2.sd_drop_qty = p2Qty - p3Qty; 
+                    pendingQueue[biz].unshift(remainingP2); 
+                    
+                    // Sesuaikan P2 terpakai untuk dirender agar balance (Reconciled)
+                    p2Qty = p3Qty; 
+                } 
+
                 let durationStr = '-';
                 if (log.phase === 'SYSTEM CLEAR') {
                     durationStr = 'Manual Clear';
@@ -1663,8 +1673,6 @@ async function renderSDTracker() {
                         const hrs = Math.floor(diffMins / 60);
                         const mins = diffMins % 60;
                         durationStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins} Mins`;
-                    } else {
-                        durationStr = 'Data Error';
                     }
                 }
 
@@ -1676,11 +1684,12 @@ async function renderSDTracker() {
                     p3Runner: log.runner_name,
                     p2Qty: p2Qty,
                     p3Qty: p3Qty,
+                    p3Up: p3Up,
                     duration: durationStr,
                     isCleared: log.phase === 'SYSTEM CLEAR'
                 });
             } else {
-                // Jika TIDAK ADA pasangan Phase 2 di antrean (Anomali)
+                // Anomali: Tiba-tiba ada Phase 3 tanpa Drop Phase 2
                 historyList.push({
                     merchant: biz,
                     p2Time: '-',
@@ -1688,7 +1697,8 @@ async function renderSDTracker() {
                     p3Time: log.created_at,
                     p3Runner: log.runner_name,
                     p2Qty: 0,
-                    p3Qty: parseInt(log.sd_pickup_qty) || 0,
+                    p3Qty: p3Qty,
+                    p3Up: p3Up,
                     duration: log.phase === 'SYSTEM CLEAR' ? 'Manual Clear' : 'No Phase 2',
                     isCleared: log.phase === 'SYSTEM CLEAR'
                 });
@@ -1696,20 +1706,24 @@ async function renderSDTracker() {
         }
     });
 
-    // MASUKKAN SISA ANTREAN KE LIVE RADAR
-    // Semua Phase 2 yang tidak mendapat pasangannya akan tertinggal di pendingQueue
+    // 3. AMBIL SISA ANTREAN UNTUK LIVE RADAR (Hanya Phase 2 yang dibuat <= tanggal target)
     for (const biz in pendingQueue) {
         pendingQueue[biz].forEach(p2 => {
-            radarList.push({
-                merchant: biz,
-                time: p2.created_at,
-                runner: p2.runner_name,
-                qty: parseInt(p2.sd_drop_qty) || 0
-            });
+            if (p2.created_at.split('T')[0] <= targetDateStr) {
+                radarList.push({
+                    merchant: biz,
+                    time: p2.created_at,
+                    runner: p2.runner_name,
+                    qty: parseInt(p2.sd_drop_qty) || 0
+                });
+            }
         });
     }
 
-    // --- 4. RENDER UI RADAR ---
+    // 4. FILTER HISTORY: HANYA TAMPILKAN KEJADIAN PHASE 3 PADA HARI YANG DIPILIH
+    historyList = historyList.filter(h => h.p3Time.split('T')[0] === targetDateStr);
+
+    // --- 5. RENDER UI RADAR ---
     const tbodyRadar = document.getElementById('table-live-radar');
     if (tbodyRadar) {
         tbodyRadar.innerHTML = radarList.length === 0
@@ -1731,7 +1745,7 @@ async function renderSDTracker() {
     const badgeRadar = document.getElementById('badge-live-radar');
     if (badgeRadar) badgeRadar.innerText = radarList.length;
 
-    // --- 5. RENDER UI HISTORY & ANOMALIES ---
+    // --- 6. RENDER UI HISTORY & ANOMALIES ---
     historyList.sort((a, b) => new Date(b.p3Time) - new Date(a.p3Time)); // Urut dari terbaru
     
     document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ?
@@ -1740,7 +1754,6 @@ async function renderSDTracker() {
             let statusHtml = '';
             const diff = h.p2Qty - h.p3Qty;
             
-            // Cek Selisih Anomali
             if (diff === 0 || h.isCleared) {
                 statusHtml = `<span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span>`;
             } else if (diff > 0) {
@@ -1761,6 +1774,7 @@ async function renderSDTracker() {
             const p2TimeStr = h.p2Time !== '-' ? new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
             const p3TimeStr = h.p3Time !== '-' ? new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
 
+            // VISUALISASI UPLOADED: Berwarna Hijau agar mudah dibaca mata (Drop / Pick / Up)
             return `
             <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
                 <td class="p-4 font-black text-slate-800">${h.merchant}</td>
@@ -1773,7 +1787,9 @@ async function renderSDTracker() {
                     <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
                 </td>
                 <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
-                <td class="p-4 text-center font-black bg-indigo-50/50 text-indigo-700">${h.p2Qty} / ${h.p3Qty}</td>
+                <td class="p-4 text-center font-black bg-indigo-50/50 text-indigo-700 whitespace-nowrap">
+                    ${h.p2Qty} / ${h.p3Qty} / <span class="text-emerald-600 ml-1" title="SD Card Uploaded">${h.p3Up}</span>
+                </td>
                 <td class="p-4 text-right">${statusHtml}</td>
             </tr>
             `;
