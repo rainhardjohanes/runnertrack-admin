@@ -1600,7 +1600,7 @@ async function renderDashboard() {
         }
         
         
-        async function renderSDTracker() {
+async function renderSDTracker() {
     const radarDateInput = document.getElementById('filter-radar-date');
     if (!radarDateInput.value) {
         const today = new Date();
@@ -1609,73 +1609,107 @@ async function renderDashboard() {
     const targetDateStr = radarDateInput.value;
     const adminArea = getAdminArea();
 
+    // 1. Tarik log P2, P3, dan SYSTEM CLEAR untuk hari tersebut
     let qDaily = db.from('transactions')
         .select('*')
         .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
         .gte('created_at', `${targetDateStr}T00:00:00+08:00`)
         .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true }); // PASTIKAN URUT WAKTU UNTUK FIFO
 
     if (adminArea !== 'All') {
         qDaily = qDaily.eq('area', adminArea);
     }
     const { data: dailyData } = await qDaily;
-
     let allLogs = dailyData || [];
+    
     let radarList = [];
     let historyList = [];
+    let pendingQueue = {}; // Antrean Phase 2 per merchant
 
+    // 2 & 3. PROSES DATA DENGAN LOGIKA FIFO
     allLogs.forEach(log => {
         const biz = log.business_name;
-        if (!biz || log.phase === 'SYSTEM CLEAR') return;
+        if (!biz) return;
 
-        let p2Qty = parseInt(log.sd_drop_qty) || 0;
-        let p3Qty = parseInt(log.sd_pickup_qty) || 0;
-        
-        let p2Time = log.drop_off_time || (log.phase === 'Phase 2' ? log.created_at : '-');
-        let p3Time = log.pickup_time || (log.phase === 'Phase 3' ? log.created_at : null);
-        
-        let p2Runner = log.phase === 'Phase 2' ? log.runner_name : '-';
-        let p3Runner = log.phase === 'Phase 3' ? log.runner_name : '-';
-
-        let selisihBelumDiambil = p2Qty - p3Qty;
-
-        // MASUK RADAR
-        if (selisihBelumDiambil > 0 && !p3Time) {
-            radarList.push({ merchant: biz, time: p2Time, runner: p2Runner, qty: p2Qty });
+        // Buat array antrean untuk merchant ini jika belum ada
+        if (!pendingQueue[biz]) {
+            pendingQueue[biz] = [];
         }
 
-        // MASUK HISTORY
-                if (p3Time) {
-                    let durationStr = '-';
-                    if (p2Time !== '-' && p3Time) {
-                        const safeDropDate = parseTanggal(p2Time);
-                        const safePickupDate = parseTanggal(p3Time);
+        if (log.phase === 'Phase 2') {
+            // Masukkan Phase 2 ke ruang antrean paling belakang (Push)
+            pendingQueue[biz].push(log);
+        } 
+        else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
+            // Tarik Phase 2 paling DEPAN/LAMA dari antrean (FIFO -> Shift)
+            let matchedP2 = pendingQueue[biz].shift(); 
 
-                        // Cek apakah kedua tanggal valid sebelum dihitung
-                        if (!isNaN(safeDropDate) && !isNaN(safePickupDate)) {
-                            const diffMs = safePickupDate - safeDropDate;
-                            const diffHrs = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
-                            durationStr = `${diffHrs} Hours`;
-                        } else {
-                            // Jika data di database memang rusak/kosong
-                            durationStr = 'Data Error'; 
-                        }
+            if (matchedP2) {
+                // Jika ADA pasangan Phase 2 yang menunggu
+                let p2Qty = parseInt(matchedP2.sd_drop_qty) || 0;
+                let p3Qty = parseInt(log.sd_pickup_qty) || 0;
+
+                // Kalkulasi Durasi
+                let durationStr = '-';
+                if (log.phase === 'SYSTEM CLEAR') {
+                    durationStr = 'Manual Clear';
+                } else {
+                    const dropDate = new Date(matchedP2.created_at);
+                    const pickDate = new Date(log.created_at);
+                    if (!isNaN(dropDate) && !isNaN(pickDate)) {
+                        const diffMs = pickDate - dropDate;
+                        const diffMins = Math.max(0, Math.floor(diffMs / (1000 * 60)));
+                        const hrs = Math.floor(diffMins / 60);
+                        const mins = diffMins % 60;
+                        durationStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins} Mins`;
+                    } else {
+                        durationStr = 'Data Error';
                     }
+                }
 
-            historyList.push({
-                merchant: biz,
-                p2Time: p2Time,
-                p2Runner: p2Runner !== '-' ? p2Runner : log.runner_name,
-                p3Time: p3Time,
-                p3Runner: p3Runner !== '-' ? p3Runner : log.runner_name,
-                p2Qty: p2Qty,
-                p3Qty: p3Qty,
-                duration: durationStr
-            });
+                historyList.push({
+                    merchant: biz,
+                    p2Time: matchedP2.created_at,
+                    p2Runner: matchedP2.runner_name,
+                    p3Time: log.created_at,
+                    p3Runner: log.runner_name,
+                    p2Qty: p2Qty,
+                    p3Qty: p3Qty,
+                    duration: durationStr,
+                    isCleared: log.phase === 'SYSTEM CLEAR'
+                });
+            } else {
+                // Jika TIDAK ADA pasangan Phase 2 di antrean (Anomali)
+                historyList.push({
+                    merchant: biz,
+                    p2Time: '-',
+                    p2Runner: '-',
+                    p3Time: log.created_at,
+                    p3Runner: log.runner_name,
+                    p2Qty: 0,
+                    p3Qty: parseInt(log.sd_pickup_qty) || 0,
+                    duration: log.phase === 'SYSTEM CLEAR' ? 'Manual Clear' : 'No Phase 2',
+                    isCleared: log.phase === 'SYSTEM CLEAR'
+                });
+            }
         }
     });
 
+    // MASUKKAN SISA ANTREAN KE LIVE RADAR
+    // Semua Phase 2 yang tidak mendapat pasangannya akan tertinggal di pendingQueue
+    for (const biz in pendingQueue) {
+        pendingQueue[biz].forEach(p2 => {
+            radarList.push({
+                merchant: biz,
+                time: p2.created_at,
+                runner: p2.runner_name,
+                qty: parseInt(p2.sd_drop_qty) || 0
+            });
+        });
+    }
+
+    // --- 4. RENDER UI RADAR ---
     const tbodyRadar = document.getElementById('table-live-radar');
     if (tbodyRadar) {
         tbodyRadar.innerHTML = radarList.length === 0
@@ -1683,7 +1717,7 @@ async function renderDashboard() {
             : radarList.map(p => `
                 <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
                     <td class="p-4 font-black text-slate-800">${p.merchant}</td>
-                    <td class="p-4 font-bold text-slate-500">${p.time !== '-' ? new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-'}</td>
+                    <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
                     <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
                     <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
                     <td class="p-4 text-right flex justify-end gap-2 items-center">
@@ -1693,18 +1727,21 @@ async function renderDashboard() {
                 </tr>
             `).join('');
     }
+    
     const badgeRadar = document.getElementById('badge-live-radar');
     if (badgeRadar) badgeRadar.innerText = radarList.length;
 
-// 1. Pastikan urutannya juga menggunakan parseTanggal
-    historyList.sort((a, b) => parseTanggal(b.p3Time || b.p2Time) - parseTanggal(a.p3Time || a.p2Time));
+    // --- 5. RENDER UI HISTORY & ANOMALIES ---
+    historyList.sort((a, b) => new Date(b.p3Time) - new Date(a.p3Time)); // Urut dari terbaru
     
     document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ?
         `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` :
         historyList.map(h => {
             let statusHtml = '';
             const diff = h.p2Qty - h.p3Qty;
-            if (diff === 0) {
+            
+            // Cek Selisih Anomali
+            if (diff === 0 || h.isCleared) {
                 statusHtml = `<span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span>`;
             } else if (diff > 0) {
                 statusHtml = `
@@ -1721,23 +1758,19 @@ async function renderDashboard() {
                     </div>`;
             }
 
-            // 2. Gunakan helper parseTanggal agar UI tidak menampilkan "Invalid Date"
-            const d2 = parseTanggal(h.p2Time);
-            const d3 = parseTanggal(h.p3Time);
-            
-            const p2TimeStr = (!isNaN(d2) && h.p2Time !== '-') ? d2.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
-            const p3TimeStr = (!isNaN(d3) && h.p3Time !== '-') ? d3.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
+            const p2TimeStr = h.p2Time !== '-' ? new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
+            const p3TimeStr = h.p3Time !== '-' ? new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
 
             return `
             <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
                 <td class="p-4 font-black text-slate-800">${h.merchant}</td>
                 <td class="p-4">
                     <div class="font-bold text-slate-600">${p2TimeStr}</div>
-                    <div class="text-[10px] uppercase text-slate-400">${h.p2Runner || '-'}</div>
+                    <div class="text-[10px] uppercase text-slate-400">${h.p2Runner}</div>
                 </td>
                 <td class="p-4">
                     <div class="font-bold text-slate-600">${p3TimeStr}</div>
-                    <div class="text-[10px] uppercase text-slate-400">${h.p3Runner || '-'}</div>
+                    <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
                 </td>
                 <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
                 <td class="p-4 text-center font-black bg-indigo-50/50 text-indigo-700">${h.p2Qty} / ${h.p3Qty}</td>
