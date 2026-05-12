@@ -1357,14 +1357,17 @@
             tableLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading detailed logs...</td></tr>`;
 
             try {
-                const startOfDay = `${targetDateStr}T00:00:00+08:00`;
-                const endOfDay = `${targetDateStr}T23:59:59+08:00`;
+                const start = new Date(targetDateStr);
+                start.setHours(0, 0, 0, 0);
 
-                let query = db.from('fo_visits') 
-                    .select('*')
-                    .gte('check_in_time', startOfDay)
-                    .lte('check_in_time', endOfDay)
-                    .order('check_in_time', { ascending: true });
+                const end = new Date(targetDateStr);
+                end.setHours(23, 59, 59, 999);
+
+                let query = db.from('fo_visits') 
+                    .select('*')
+                    .gte('check_in_time', start.toISOString())
+                    .lte('check_in_time', end.toISOString())
+                    .order('check_in_time', { ascending: true });
 
                 if (targetFO) query = query.eq('runner_name', targetFO);
 
@@ -1511,11 +1514,18 @@
             const tbody = document.getElementById('table-dash-kits');
             tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Menghitung ulang aset region...</td></tr>`;
             
-            let q = db.from('transactions')
-                .select('phase, sd_uploaded, kit_type, created_at, area, sd_pickup_qty, sd_qty')
-                .gte('created_at', `${filterDate}T00:00:00+08:00`)
-                .lte('created_at', `${filterDate}T23:59:59+08:00`);
+// 1. Tentukan batas waktu berdasarkan 'filterDate' (BUKAN targetDateStr) sebelum query
+            const start = new Date(filterDate);
+            start.setHours(0, 0, 0, 0);
 
+            const end = new Date(filterDate);
+            end.setHours(23, 59, 59, 999);
+
+            // 2. Lakukan query dengan sambungan metode (.method) yang tidak terputus
+            let q = db.from('transactions')
+                .select('phase, sd_uploaded, kit_type, created_at, area, sd_pickup_qty, sd_qty')
+                .gte('created_at', start.toISOString())
+                .lte('created_at', end.toISOString());
             const adminAreas = getAdminAreas();
             if (!adminAreas.includes('All')) {
                 if (filterArea && filterArea !== '') {
@@ -1631,16 +1641,20 @@
             const targetDateStr = radarDateInput.value;
             const adminAreas = getAdminAreas();
 
-            const startDate = new Date(targetDateStr);
-            startDate.setDate(startDate.getDate() - 1); 
-            const startDateStr = startDate.toISOString().split('T')[0];
+            // Menentukan rentang waktu (H-1 hingga Hari Ini) secara dinamis
+const startOfDay = new Date(targetDateStr);
+startOfDay.setDate(startOfDay.getDate() - 1); // Mundur 1 hari untuk radar anomali
+startOfDay.setHours(0, 0, 0, 0);
 
-            let qDaily = db.from('transactions')
+const endOfDay = new Date(targetDateStr);
+endOfDay.setHours(23, 59, 59, 999);
+
+let qDaily = db.from('transactions')
     .select('*')
     .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-    .gte('created_at', `${startDateStr}T00:00:00+08:00`)
-    .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
-    .order('created_at', { ascending: true }); 
+    .gte('created_at', startOfDay.toISOString()) // Otomatis menyesuaikan zona waktu lokal admin
+    .lte('created_at', endOfDay.toISOString())
+    .order('created_at', { ascending: true });
 
 // BACA NILAI DROPDOWN AREA
 const targetArea = document.getElementById('filter-sd-area') ? document.getElementById('filter-sd-area').value : '';
