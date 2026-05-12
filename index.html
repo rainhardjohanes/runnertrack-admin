@@ -854,15 +854,24 @@
                             <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">PIN Password</label>
                             <input type="text" id="input-user-pin" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
                         </div>
-                        <div>
+                        <div class="col-span-2">
                             <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Role *</label>
                             <select id="input-user-role" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs bg-slate-50" required></select>
                         </div>
-                        <div id="user-area-container">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Assigned Area *</label>
-                            <select id="input-user-area-admin" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs global-area-dropdown" required></select>
+                    </div>
+                    
+                    <div id="user-area-container">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Assigned Area(s) *</label>
+                        <div id="user-area-checkboxes" class="grid grid-cols-2 gap-2 p-2 border border-slate-300 bg-slate-50 rounded-lg max-h-32 overflow-y-auto">
+                            </div>
+                        <div class="mt-2">
+                            <label class="flex items-center space-x-2 text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-200 p-2 rounded-lg cursor-pointer shadow-sm">
+                                <input type="checkbox" id="user-area-all" onchange="document.querySelectorAll('.user-area-cb').forEach(cb => cb.checked = this.checked)" class="rounded border-blue-300">
+                                <span>GRANT FULL ACCESS (SUPER ADMIN / ALL)</span>
+                            </label>
                         </div>
                     </div>
+
                 </div>
                 <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">Save System Account</button>
             </form>
@@ -918,7 +927,7 @@
         // ----------------------------------------------------------------------
         // 2. UTILITIES & HELPERS
         // ----------------------------------------------------------------------
-function parseTanggal(dateString) {
+        function parseTanggal(dateString) {
             if (!dateString || dateString === '-') return new Date("");
             
             let d = new Date(dateString);
@@ -953,9 +962,11 @@ function parseTanggal(dateString) {
                 .replace(/'/g, '&#39;');
         }
 
-        function getAdminArea() {
+        function getAdminAreas() {
             const admin = JSON.parse(localStorage.getItem('admin_user'));
-            return admin ? (admin.assigned_area || 'All') : null;
+            if (!admin || !admin.assigned_area) return ['All'];
+            if (admin.assigned_area === 'All') return ['All'];
+            return admin.assigned_area.split(',').map(a => a.trim()).filter(a => a);
         }
 
         async function logAdminAction(actionType, description) {
@@ -1051,20 +1062,26 @@ function parseTanggal(dateString) {
                 return; 
             }
             
-            const safeArea = admin.assigned_area || 'All';
+            const safeAreas = getAdminAreas();
             document.getElementById('login-screen').classList.add('hidden-view'); 
             document.getElementById('sidebar').classList.remove('hidden-view');
             document.getElementById('main-content').classList.remove('hidden-view');
             document.getElementById('admin-info').innerText = admin.email;
-            document.getElementById('admin-badge').innerText = safeArea === 'All' ? 'SUPER ADMIN' : `ADMIN: ${safeArea.toUpperCase()}`;
+            document.getElementById('admin-badge').innerText = safeAreas.includes('All') ? 'SUPER ADMIN' : `ADMIN: ${safeAreas.join(', ').toUpperCase()}`;
 
             const btnAddUser = document.getElementById('btn-add-system-user');
             if(btnAddUser) btnAddUser.classList.remove('hidden-view');
-            if (safeArea !== 'All') {
-                document.querySelectorAll('.filter-area-dropdown').forEach(el => el.classList.add('hidden-view'));
-            } else {
+            
+            if (safeAreas.includes('All') || safeAreas.length > 1) {
                 document.querySelectorAll('.filter-area-dropdown').forEach(el => el.classList.remove('hidden-view'));
+            } else {
+                document.querySelectorAll('.filter-area-dropdown').forEach(el => el.classList.add('hidden-view'));
+            }
+            
+            if (safeAreas.includes('All')) {
                 document.getElementById('btn-admin_logs').classList.remove('hidden-view'); 
+            } else {
+                document.getElementById('btn-admin_logs').classList.add('hidden-view');
             }
             
             await fetchAreas(); 
@@ -1102,28 +1119,34 @@ function parseTanggal(dateString) {
         }
 
         function populateAreaDropdowns() {
-            const adminArea = getAdminArea();
-            let opts = '', filterOpts = '';
+            const adminAreas = getAdminAreas();
+            let filterOpts = '';
             
-            if (adminArea !== 'All') { 
-                opts = filterOpts = `<option value="${adminArea}">${adminArea}</option>`; 
-            } else {
-                opts = `<option value="">-- Select Area --</option>` + globalAreas.map(i => `<option value="${i.area_name}">${i.area_name}</option>`).join('');
+            if (adminAreas.includes('All')) {
                 filterOpts = `<option value="">All Regions</option>` + globalAreas.map(i => `<option value="${i.area_name}">${i.area_name}</option>`).join('');
+                document.querySelectorAll('.global-area-dropdown').forEach(el => { 
+                    el.innerHTML = `<option value="">-- Select Area --</option>` + globalAreas.map(i => `<option value="${i.area_name}">${i.area_name}</option>`).join(''); 
+                    el.disabled = false; 
+                });
+            } else {
+                filterOpts = adminAreas.length > 1 ? `<option value="">All My Regions</option>` : '';
+                filterOpts += adminAreas.map(a => `<option value="${a}">${a}</option>`).join('');
+                document.querySelectorAll('.global-area-dropdown').forEach(el => { 
+                    el.innerHTML = adminAreas.map(a => `<option value="${a}">${a}</option>`).join(''); 
+                    el.disabled = (adminAreas.length === 1); 
+                });
             }
-            
-            document.querySelectorAll('.global-area-dropdown').forEach(el => { el.innerHTML = opts; el.disabled = (adminArea !== 'All'); });
             document.querySelectorAll('.filter-area-dropdown').forEach(el => el.innerHTML = filterOpts);
             
-            const areaAdminUser = document.getElementById('input-user-area-admin');
-            if(areaAdminUser) {
-                if(adminArea !== 'All') {
-                    areaAdminUser.innerHTML = `<option value="${adminArea}">${adminArea}</option>`;
-                    areaAdminUser.disabled = true; 
-                } else {
-                    areaAdminUser.innerHTML = `<option value="All">All Regions (Super)</option>` + globalAreas.map(i => `<option value="${i.area_name}">${i.area_name}</option>`).join('');
-                    areaAdminUser.disabled = false;
-                }
+            // Injeksi checkbox ke modal Add User
+            const areaAdminContainer = document.getElementById('user-area-checkboxes');
+            if(areaAdminContainer) {
+                areaAdminContainer.innerHTML = globalAreas.map(a => `
+                    <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer">
+                        <input type="checkbox" class="user-area-cb rounded border-slate-300" value="${a.area_name}">
+                        <span>${a.area_name}</span>
+                    </label>
+                `).join('');
             }
         }
 
@@ -1139,7 +1162,7 @@ function parseTanggal(dateString) {
                 filteredBiz.map(b => `<option value="${b.business_name}">${b.business_name}</option>`).join('');
         }
 
-async function refreshAllData() {
+        async function refreshAllData() {
             // 1. Tambahkan animasi putar (spin) pada icon tombol refresh
             const refreshBtn = document.querySelector('button[onclick="refreshAllData()"] i');
             if(refreshBtn) refreshBtn.classList.add('fa-spin');
@@ -1153,6 +1176,7 @@ async function refreshAllData() {
             // 4. Matikan animasi putar setelah data berhasil di-render
             if(refreshBtn) refreshBtn.classList.remove('fa-spin');
         }
+        
         function initFOTrackerFilters() {
             const dateInput = document.getElementById('filter-fo-date');
             if (!dateInput.value) {
@@ -1182,8 +1206,8 @@ async function refreshAllData() {
                 q = q.or(`business_name.ilike.%${searchTerm}%,runner_name.ilike.%${searchTerm}%,kit_id.ilike.%${searchTerm}%`);
             }
             
-            const adminArea = getAdminArea();
-            if (adminArea !== 'All') q = q.eq('area', adminArea);
+            const adminAreas = getAdminAreas();
+            if (!adminAreas.includes('All')) q = q.in('area', adminAreas);
 
             const fPhase = document.getElementById('filter-logs-phase')?.value;
             const fBiz = document.getElementById('filter-logs-business')?.value;
@@ -1200,17 +1224,16 @@ async function refreshAllData() {
             }
 
             if (data) {
-    globalLogs = data;
-    document.getElementById('log-page-display').innerText = logPage + 1;
-    
-    // paginationControls dihapus
-    document.getElementById('btn-log-prev').disabled = (logPage === 0);
-    document.getElementById('btn-log-next').disabled = (to >= (count || 0) - 1);
-    
-    renderLogs();
-    if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
-    if(!document.getElementById('view-dashboard').classList.contains('hidden-view')) renderDashboard();
-}
+                globalLogs = data;
+                document.getElementById('log-page-display').innerText = logPage + 1;
+                
+                document.getElementById('btn-log-prev').disabled = (logPage === 0);
+                document.getElementById('btn-log-next').disabled = (to >= (count || 0) - 1);
+                
+                renderLogs();
+                if(!document.getElementById('view-sd_tracker').classList.contains('hidden-view')) renderSDTracker();
+                if(!document.getElementById('view-dashboard').classList.contains('hidden-view')) renderDashboard();
+            }
         }
 
         async function fetchAreas(force = false) { 
@@ -1222,8 +1245,8 @@ async function refreshAllData() {
         async function fetchRunners(force = false) { 
             if (!force && globalRunners.length > 0) return renderRunners(); 
             let q = db.from('master_runners').select('*'); 
-            const adminArea = getAdminArea(); 
-            if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
+            const adminAreas = getAdminAreas();
+            if (!adminAreas.includes('All')) q = q.in('area_name', adminAreas); 
             const { data } = await q.order('runner_name'); 
             if (data) { globalRunners = data; renderRunners(); } 
         }
@@ -1231,8 +1254,8 @@ async function refreshAllData() {
         async function fetchSDRs(force = false) { 
             if (!force && globalSDRs.length > 0) return renderSDRs(); 
             let q = db.from('master_sdrs').select('*'); 
-            const adminArea = getAdminArea(); 
-            if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
+            const adminAreas = getAdminAreas();
+            if (!adminAreas.includes('All')) q = q.in('area_name', adminAreas); 
             const { data } = await q.order('sdr_name'); 
             if (data) { globalSDRs = data; renderSDRs(); } 
         }
@@ -1240,8 +1263,8 @@ async function refreshAllData() {
         async function fetchBusinesses(force = false) { 
             if (!force && globalBusinesses.length > 0) return renderBusinesses(); 
             let q = db.from('master_businesses').select('*'); 
-            const adminArea = getAdminArea(); 
-            if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
+            const adminAreas = getAdminAreas();
+            if (!adminAreas.includes('All')) q = q.in('area_name', adminAreas); 
             const { data } = await q.order('business_name'); 
             if (data) { 
                 globalBusinesses = data; 
@@ -1263,28 +1286,45 @@ async function refreshAllData() {
 
         async function fetchKits(force = false) { 
             if (!force && globalKits.length > 0) return renderKits(); 
-            let q = db.from('master_kits').select('*').limit(20000); // <-- Memastikan select(*) menarik kolom last_location
-            const adminArea = getAdminArea(); 
-            if (adminArea !== 'All') q = q.eq('area_name', adminArea); 
+            let q = db.from('master_kits').select('*').limit(20000); 
+            const adminAreas = getAdminAreas();
+            if (!adminAreas.includes('All')) q = q.in('area_name', adminAreas); 
             const { data } = await q.order('kit_id'); 
             
             if (data) { 
                 globalKits = data; 
-                // await fetchKitLocations(); <-- BARIS INI TELAH DIHAPUS
                 await fetchLogs(true);     
                 renderKits(); 
                 if (globalBusinesses.length > 0) renderBusinesses(); 
             }
         }
 
-
         async function fetchUsers(force = false) { 
             if (!force && globalUsers.length > 0) return renderUsers(); 
             let q = db.from('master_users').select('*'); 
-            const adminArea = getAdminArea(); 
-            if (adminArea !== 'All') q = q.eq('assigned_area', adminArea); 
+            const adminAreas = getAdminAreas();
+            // Note: assigned_area could be "Bali,Jakarta", so if it's not 'All', we need to pull them.
+            // But since multi-area uses string match, pulling via `.in` might not be perfect for arrays in strings.
+            // Better to pull all users and filter in JS, or since 'assigned_area' is exactly matching.
+            // For safety and since users list is small, we'll pull all and filter if needed, 
+            // but we'll try to just pull normally. Super Admins see all anyway.
+            if (!adminAreas.includes('All')) {
+                // Actually, if an admin is restricted, they shouldn't even manage users. 
+                // But if they do, we'll filter them client-side.
+            }
+            
             const { data } = await q.order('id', { ascending: false }); 
-            if (data) { globalUsers = data; renderUsers(); } 
+            if (data) { 
+                if (adminAreas.includes('All')) {
+                    globalUsers = data; 
+                } else {
+                    globalUsers = data.filter(u => {
+                        const uAreas = u.assigned_area ? u.assigned_area.split(',').map(a => a.trim()) : [];
+                        return adminAreas.some(a => uAreas.includes(a));
+                    });
+                }
+                renderUsers(); 
+            } 
         }
 
         async function fetchAdminLogs(force = false) { 
@@ -1293,18 +1333,11 @@ async function refreshAllData() {
             if (data) { globalAdminLogs = data; renderAdminLogs(); } 
         }
 
-// Fungsi fetchKitLocations DIHAPUS agar website tidak berat meload puluhan ribu log
-
-        // Ubah getKitLocation untuk langsung membaca dari kolom last_location di master_kits
         function getKitLocation(kitId) {
             const kit = globalKits.find(k => k.kit_id === kitId);
-            
-            // Jika tidak ada data, atau last_location kosong/Warehouse, anggap di Warehouse
             if (!kit || !kit.last_location || kit.last_location.toLowerCase() === 'warehouse') {
                 return { loc: 'Warehouse', isOffice: true };
             }
-            
-            // Jika ada isinya selain Warehouse, berarti sedang di Merchant
             return { loc: kit.last_location, isOffice: false };
         }
 
@@ -1335,31 +1368,36 @@ async function refreshAllData() {
                 const { data: rawData, error } = await query;
                 if (error) throw error;
 
-let data = rawData || [];
-                const adminArea = getAdminArea();
+                let data = rawData || [];
+                const adminAreas = getAdminAreas();
                 
-                // 1. Tarik globalRunners jika masih kosong
                 if (globalRunners.length === 0) {
                     await fetchRunners();
                 }
 
-                // 2. Tentukan area mana yang akan difilter
                 const filterAreaDropdown = document.getElementById('filter-fo-area');
                 const targetArea = filterAreaDropdown ? filterAreaDropdown.value : '';
                 
-                // Jika Super Admin, gunakan value dari dropdown. Jika Admin biasa, paksa gunakan areanya sendiri.
-                let activeArea = adminArea !== 'All' ? adminArea : targetArea;
+                let activeAreas = [];
+                if (!adminAreas.includes('All')) {
+                    if (targetArea && targetArea !== '') {
+                        activeAreas = [targetArea];
+                    } else {
+                        activeAreas = adminAreas;
+                    }
+                } else {
+                    if (targetArea && targetArea !== '') {
+                        activeAreas = [targetArea];
+                    }
+                }
 
-                // 3. Eksekusi filter data berdasarkan area
-                if (activeArea && activeArea !== '') {
-                    // Cari semua FO yang berasal dari activeArea tersebut
-                    const validFOs = globalRunners.filter(r => r.area_name === activeArea).map(r => r.runner_name);
+                if (activeAreas.length > 0) {
+                    const validFOs = globalRunners.filter(r => activeAreas.includes(r.area_name)).map(r => r.runner_name);
                     data = data.filter(v => validFOs.includes(v.runner_name));
                 }
 
                 window.currentFOData = data;
 
-                // 4. Update dropdown "Officer Name" agar list namanya otomatis menyesuaikan area yang dipilih
                 const foSelect = document.getElementById('filter-fo-name');
                 const uniqueFOs = [...new Set(data.map(item => item.runner_name))].sort();
                 let opts = '<option value="">All Officers</option>';
@@ -1451,7 +1489,7 @@ let data = rawData || [];
         // 6. RENDER FUNCTIONS
         // ----------------------------------------------------------------------
 
-async function renderDashboard() {
+        async function renderDashboard() {
             const dateInput = document.getElementById('dash-date-filter');
             if(!dateInput.value) {
                 const today = new Date();
@@ -1465,23 +1503,23 @@ async function renderDashboard() {
             const startTime = document.getElementById('dash-start-time').value; 
             const endTime = document.getElementById('dash-end-time').value;
 
-            // --- VISUAL LOADING STATE ---
-            // Tampilkan icon loading di layar begitu region diganti agar user tahu sistem sedang bekerja
             document.getElementById('stat-sd-today').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-slate-300 text-2xl"></i>';
             document.getElementById('stat-iphone-today').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-slate-300 text-2xl"></i>';
             const tbody = document.getElementById('table-dash-kits');
             tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Menghitung ulang aset region...</td></tr>`;
-            // ----------------------------
-
-            // Tambahkan sd_qty ke dalam select agar data historis ikut terbaca
-let q = db.from('transactions')
-    .select('phase, sd_uploaded, kit_type, created_at, area, sd_pickup_qty, sd_qty')
+            
+            let q = db.from('transactions')
+                .select('phase, sd_uploaded, kit_type, created_at, area, sd_pickup_qty, sd_qty')
                 .gte('created_at', `${filterDate}T00:00:00+08:00`)
                 .lte('created_at', `${filterDate}T23:59:59+08:00`);
 
-            const adminArea = getAdminArea();
-            if (adminArea !== 'All') {
-                q = q.eq('area', adminArea);
+            const adminAreas = getAdminAreas();
+            if (!adminAreas.includes('All')) {
+                if (filterArea && filterArea !== '') {
+                    q = q.eq('area', filterArea);
+                } else {
+                    q = q.in('area', adminAreas);
+                }
             } else if (filterArea && filterArea !== 'All') {
                 q = q.eq('area', filterArea);
             }
@@ -1511,10 +1549,9 @@ let q = db.from('transactions')
                                            (!isNaN(parseInt(sdUp)) && parseInt(sdUp) > 0);
 
                         let uploadQty = parseInt(sdUp) || 0;
-if (isUploaded && uploadQty === 0) {
-    // Tambahkan fallback ke sd_qty
-    uploadQty = parseInt(log.sd_pickup_qty) || parseInt(log.sd_qty) || 1; 
-}
+                        if (isUploaded && uploadQty === 0) {
+                            uploadQty = parseInt(log.sd_pickup_qty) || parseInt(log.sd_qty) || 1; 
+                        }
 
                         if (log.phase === 'Phase 4' && isIphone && isUploaded) {
                             totalIphone += 1;
@@ -1541,8 +1578,6 @@ if (isUploaded && uploadQty === 0) {
                 const kitsOfType = globalKits.filter(k => {
                     const matchType = k.kit_type === type.type_name;
                     
-                    // --- PERBAIKAN LOGIKA FILTER AREA ---
-                    // Cek lokasi kit saat ini untuk memastikan areanya (berguna jika kit pindah ke merchant di region lain)
                     const locData = getKitLocation(k.kit_id);
                     let actualArea = (k.area_name || k.area || '').trim().toLowerCase();
                     
@@ -1584,278 +1619,271 @@ if (isUploaded && uploadQty === 0) {
             }).join('');
         }
         
-        
-async function renderSDTracker() {
-    const radarDateInput = document.getElementById('filter-radar-date');
-    if (!radarDateInput.value) {
-        const today = new Date();
-        radarDateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    }
-    const targetDateStr = radarDateInput.value;
-    const adminArea = getAdminArea();
+        async function renderSDTracker() {
+            const radarDateInput = document.getElementById('filter-radar-date');
+            if (!radarDateInput.value) {
+                const today = new Date();
+                radarDateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+            }
+            const targetDateStr = radarDateInput.value;
+            const adminAreas = getAdminAreas();
 
-    const startDate = new Date(targetDateStr);
-    startDate.setDate(startDate.getDate() - 1); 
-    const startDateStr = startDate.toISOString().split('T')[0];
+            const startDate = new Date(targetDateStr);
+            startDate.setDate(startDate.getDate() - 1); 
+            const startDateStr = startDate.toISOString().split('T')[0];
 
-    let qDaily = db.from('transactions')
-        .select('*')
-        .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-        .gte('created_at', `${startDateStr}T00:00:00+08:00`)
-        .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
-        .order('created_at', { ascending: true }); 
+            let qDaily = db.from('transactions')
+                .select('*')
+                .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
+                .gte('created_at', `${startDateStr}T00:00:00+08:00`)
+                .lte('created_at', `${targetDateStr}T23:59:59+08:00`)
+                .order('created_at', { ascending: true }); 
 
-    if (adminArea !== 'All') {
-        qDaily = qDaily.eq('area', adminArea);
-    }
-    const { data: dailyData } = await qDaily;
-    let allLogs = dailyData || [];
-    
-    let radarList = [];
-    let historyList = [];
-    let pendingQueue = {}; 
+            if (!adminAreas.includes('All')) {
+                qDaily = qDaily.in('area', adminAreas);
+            }
+            const { data: dailyData } = await qDaily;
+            let allLogs = dailyData || [];
+            
+            let radarList = [];
+            let historyList = [];
+            let pendingQueue = {}; 
 
-    allLogs.forEach(log => {
-        const biz = log.business_name;
-        if (!biz) return;
+            allLogs.forEach(log => {
+                const biz = log.business_name;
+                if (!biz) return;
 
-        if (!pendingQueue[biz]) pendingQueue[biz] = [];
+                if (!pendingQueue[biz]) pendingQueue[biz] = [];
 
-        if (log.phase === 'Phase 2') {
-            pendingQueue[biz].push(log);
-        } 
-        else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
-            let matchedP2 = pendingQueue[biz].shift(); 
-
-            // Tambahkan fallback sd_qty untuk data lama Phase 3
-                let p3Qty = parseInt(log.sd_pickup_qty) || parseInt(log.sd_qty) || 0;
-                let p3Up = parseInt(log.sd_uploaded) || 0; 
-
-                if (matchedP2) {
-                    // Tambahkan fallback sd_qty untuk data lama Phase 2
-                    let p2Qty = parseInt(matchedP2.sd_card_qty) || parseInt(matchedP2.sd_drop_qty) || parseInt(matchedP2.sd_qty) || 0;
-
-                if (p2Qty > p3Qty && log.phase !== 'SYSTEM CLEAR') {
-                    let remainingP2 = { ...matchedP2 };
-                    remainingP2.sd_card_qty = p2Qty - p3Qty; // 🟢 Sesuaikan propertinya
-                    pendingQueue[biz].unshift(remainingP2); 
-                    
-                    p2Qty = p3Qty; 
+                if (log.phase === 'Phase 2') {
+                    pendingQueue[biz].push(log);
                 } 
+                else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
+                    let matchedP2 = pendingQueue[biz].shift(); 
 
-                let durationStr = '-';
-                if (log.phase === 'SYSTEM CLEAR') {
-                    durationStr = 'Manual Clear';
-                } else {
-                    const dropDate = new Date(matchedP2.created_at);
-                    const pickDate = new Date(log.created_at);
-                    if (!isNaN(dropDate) && !isNaN(pickDate)) {
-                        const diffMs = pickDate - dropDate;
-                        const diffMins = Math.max(0, Math.floor(diffMs / (1000 * 60)));
-                        const hrs = Math.floor(diffMins / 60);
-                        const mins = diffMins % 60;
-                        durationStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins} Mins`;
+                    let p3Qty = parseInt(log.sd_pickup_qty) || parseInt(log.sd_qty) || 0;
+                    let p3Up = parseInt(log.sd_uploaded) || 0; 
+
+                    if (matchedP2) {
+                        let p2Qty = parseInt(matchedP2.sd_card_qty) || parseInt(matchedP2.sd_drop_qty) || parseInt(matchedP2.sd_qty) || 0;
+
+                        if (p2Qty > p3Qty && log.phase !== 'SYSTEM CLEAR') {
+                            let remainingP2 = { ...matchedP2 };
+                            remainingP2.sd_card_qty = p2Qty - p3Qty; 
+                            pendingQueue[biz].unshift(remainingP2); 
+                            
+                            p2Qty = p3Qty; 
+                        } 
+
+                        let durationStr = '-';
+                        if (log.phase === 'SYSTEM CLEAR') {
+                            durationStr = 'Manual Clear';
+                        } else {
+                            const dropDate = new Date(matchedP2.created_at);
+                            const pickDate = new Date(log.created_at);
+                            if (!isNaN(dropDate) && !isNaN(pickDate)) {
+                                const diffMs = pickDate - dropDate;
+                                const diffMins = Math.max(0, Math.floor(diffMs / (1000 * 60)));
+                                const hrs = Math.floor(diffMins / 60);
+                                const mins = diffMins % 60;
+                                durationStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins} Mins`;
+                            }
+                        }
+
+                        historyList.push({
+                            merchant: biz,
+                            p2Time: matchedP2.created_at,
+                            p2Runner: matchedP2.runner_name,
+                            p3Time: log.created_at,
+                            p3Runner: log.runner_name,
+                            p2Qty: p2Qty,
+                            p3Qty: p3Qty,
+                            p3Up: p3Up,
+                            duration: durationStr,
+                            isCleared: log.phase === 'SYSTEM CLEAR'
+                        });
+                    } else {
+                        historyList.push({
+                            merchant: biz,
+                            p2Time: '-',
+                            p2Runner: '-',
+                            p3Time: log.created_at,
+                            p3Runner: log.runner_name,
+                            p2Qty: 0,
+                            p3Qty: p3Qty,
+                            p3Up: p3Up,
+                            duration: log.phase === 'SYSTEM CLEAR' ? 'Manual Clear' : 'No Phase 2',
+                            isCleared: log.phase === 'SYSTEM CLEAR'
+                        });
                     }
                 }
-
-                historyList.push({
-                    merchant: biz,
-                    p2Time: matchedP2.created_at,
-                    p2Runner: matchedP2.runner_name,
-                    p3Time: log.created_at,
-                    p3Runner: log.runner_name,
-                    p2Qty: p2Qty,
-                    p3Qty: p3Qty,
-                    p3Up: p3Up,
-                    duration: durationStr,
-                    isCleared: log.phase === 'SYSTEM CLEAR'
-                });
-            } else {
-                historyList.push({
-                    merchant: biz,
-                    p2Time: '-',
-                    p2Runner: '-',
-                    p3Time: log.created_at,
-                    p3Runner: log.runner_name,
-                    p2Qty: 0,
-                    p3Qty: p3Qty,
-                    p3Up: p3Up,
-                    duration: log.phase === 'SYSTEM CLEAR' ? 'Manual Clear' : 'No Phase 2',
-                    isCleared: log.phase === 'SYSTEM CLEAR'
-                });
-            }
-        }
-    });
-
-    for (const biz in pendingQueue) {
-            pendingQueue[biz].forEach(p2 => {
-                if (p2.created_at.split('T')[0] <= targetDateStr) {
-                    radarList.push({
-                        merchant: biz,
-                        time: p2.created_at,
-                        runner: p2.runner_name,
-                        // Tambahkan fallback sd_qty di sini juga
-                        qty: parseInt(p2.sd_card_qty) || parseInt(p2.sd_drop_qty) || parseInt(p2.sd_qty) || 0 
-                    });
-                }
             });
-        }
 
-    historyList = historyList.filter(h => h.p3Time.split('T')[0] === targetDateStr);
-
-    const tbodyRadar = document.getElementById('table-live-radar');
-    if (tbodyRadar) {
-        tbodyRadar.innerHTML = radarList.length === 0
-            ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>All clear! All targets today have been picked up.</td></tr>`
-            : radarList.map(p => `
-                <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
-                    <td class="p-4 font-black text-slate-800">${p.merchant}</td>
-                    <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
-                    <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
-                    <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
-                    <td class="p-4 text-right flex justify-end gap-2 items-center">
-                        <span class="font-black text-amber-500 animate-pulse mt-1 text-[10px] uppercase tracking-widest"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
-                        <button onclick="resolveLiveRadar('${p.merchant.replace(/'/g, "\\'")}', ${p.qty})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                    </td>
-                </tr>
-            `).join('');
-    }
-    
-    const badgeRadar = document.getElementById('badge-live-radar');
-    if (badgeRadar) badgeRadar.innerText = radarList.length;
-
-    historyList.sort((a, b) => new Date(b.p3Time) - new Date(a.p3Time)); 
-    
-    document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ?
-        `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` :
-        historyList.map(h => {
-            let statusHtml = '';
-            const diff = h.p2Qty - h.p3Qty;
-            
-            if (diff === 0 || h.isCleared) {
-                statusHtml = `<span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span>`;
-            } else if (diff > 0) {
-                statusHtml = `
-                    <div class="flex items-center justify-end gap-2">
-                        <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-red-100 text-red-700 border border-red-200 whitespace-nowrap"><i class="fa-solid fa-arrow-down mr-1"></i> SHORTAGE ${diff}</span>
-                        <button onclick="resolveSD('${h.merchant.replace(/'/g, "\\'")}', 'SHORTAGE', ${diff})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                    </div>`;
-            } else {
-                const surplus = Math.abs(diff);
-                statusHtml = `
-                    <div class="flex items-center justify-end gap-2">
-                        <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap"><i class="fa-solid fa-arrow-up mr-1"></i> SURPLUS ${surplus}</span>
-                        <button onclick="resolveSD('${h.merchant.replace(/'/g, "\\'")}', 'SURPLUS', ${surplus})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                    </div>`;
+            for (const biz in pendingQueue) {
+                pendingQueue[biz].forEach(p2 => {
+                    if (p2.created_at.split('T')[0] <= targetDateStr) {
+                        radarList.push({
+                            merchant: biz,
+                            time: p2.created_at,
+                            runner: p2.runner_name,
+                            qty: parseInt(p2.sd_card_qty) || parseInt(p2.sd_drop_qty) || parseInt(p2.sd_qty) || 0 
+                        });
+                    }
+                });
             }
 
-            const p2TimeStr = h.p2Time !== '-' ? new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
-            const p3TimeStr = h.p3Time !== '-' ? new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
+            historyList = historyList.filter(h => h.p3Time.split('T')[0] === targetDateStr);
 
-            return `
-            <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
-                <td class="p-4 font-black text-slate-800">${h.merchant}</td>
-                <td class="p-4">
-                    <div class="font-bold text-slate-600">${p2TimeStr}</div>
-                    <div class="text-[10px] uppercase text-slate-400">${h.p2Runner}</div>
-                </td>
-                <td class="p-4">
-                    <div class="font-bold text-slate-600">${p3TimeStr}</div>
-                    <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
-                </td>
-                <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
-                <td class="p-4 text-center font-black bg-indigo-50/50 text-indigo-700 whitespace-nowrap">
-                    ${h.p2Qty} / ${h.p3Qty} / <span class="text-emerald-600 ml-1" title="SD Card Uploaded">${h.p3Up}</span>
-                </td>
-                <td class="p-4 text-right">${statusHtml}</td>
-            </tr>
-            `;
-        }).join('');
-}
+            const tbodyRadar = document.getElementById('table-live-radar');
+            if (tbodyRadar) {
+                tbodyRadar.innerHTML = radarList.length === 0
+                    ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>All clear! All targets today have been picked up.</td></tr>`
+                    : radarList.map(p => `
+                        <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
+                            <td class="p-4 font-black text-slate-800">${p.merchant}</td>
+                            <td class="p-4 font-bold text-slate-500">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</td>
+                            <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
+                            <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
+                            <td class="p-4 text-right flex justify-end gap-2 items-center">
+                                <span class="font-black text-amber-500 animate-pulse mt-1 text-[10px] uppercase tracking-widest"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
+                                <button onclick="resolveLiveRadar('${p.merchant.replace(/'/g, "\\'")}', ${p.qty})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                            </td>
+                        </tr>
+                    `).join('');
+            }
+            
+            const badgeRadar = document.getElementById('badge-live-radar');
+            if (badgeRadar) badgeRadar.innerText = radarList.length;
 
+            historyList.sort((a, b) => new Date(b.p3Time) - new Date(a.p3Time)); 
+            
+            document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ?
+                `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` :
+                historyList.map(h => {
+                    let statusHtml = '';
+                    const diff = h.p2Qty - h.p3Qty;
+                    
+                    if (diff === 0 || h.isCleared) {
+                        statusHtml = `<span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span>`;
+                    } else if (diff > 0) {
+                        statusHtml = `
+                            <div class="flex items-center justify-end gap-2">
+                                <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-red-100 text-red-700 border border-red-200 whitespace-nowrap"><i class="fa-solid fa-arrow-down mr-1"></i> SHORTAGE ${diff}</span>
+                                <button onclick="resolveSD('${h.merchant.replace(/'/g, "\\'")}', 'SHORTAGE', ${diff})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                            </div>`;
+                    } else {
+                        const surplus = Math.abs(diff);
+                        statusHtml = `
+                            <div class="flex items-center justify-end gap-2">
+                                <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap"><i class="fa-solid fa-arrow-up mr-1"></i> SURPLUS ${surplus}</span>
+                                <button onclick="resolveSD('${h.merchant.replace(/'/g, "\\'")}', 'SURPLUS', ${surplus})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                            </div>`;
+                    }
 
-function renderLogs() {
-    const s = document.getElementById('search-logs').value.toLowerCase();
-    const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
-    const fPhase = document.getElementById('filter-logs-phase') ? document.getElementById('filter-logs-phase').value : '';
-    const fBiz = document.getElementById('filter-logs-business') ? document.getElementById('filter-logs-business').value : '';
+                    const p2TimeStr = h.p2Time !== '-' ? new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
+                    const p3TimeStr = h.p3Time !== '-' ? new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '-';
 
-    const f = globalLogs.filter(i => {
-        const matchArea = !fA || i.area === fA;
-        const matchPhase = !fPhase || i.phase === fPhase;
-        const matchBiz = !fBiz || i.business_name === fBiz;
-        const matchSearch = (i.business_name || '').toLowerCase().includes(s) || (i.runner_name || '').toLowerCase().includes(s) || (i.kit_id || '').toLowerCase().includes(s);
-        return matchArea && matchPhase && matchBiz && matchSearch;
-    });
+                    return `
+                    <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
+                        <td class="p-4 font-black text-slate-800">${h.merchant}</td>
+                        <td class="p-4">
+                            <div class="font-bold text-slate-600">${p2TimeStr}</div>
+                            <div class="text-[10px] uppercase text-slate-400">${h.p2Runner}</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="font-bold text-slate-600">${p3TimeStr}</div>
+                            <div class="text-[10px] uppercase text-slate-400">${h.p3Runner}</div>
+                        </td>
+                        <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
+                        <td class="p-4 text-center font-black bg-indigo-50/50 text-indigo-700 whitespace-nowrap">
+                            ${h.p2Qty} / ${h.p3Qty} / <span class="text-emerald-600 ml-1" title="SD Card Uploaded">${h.p3Up}</span>
+                        </td>
+                        <td class="p-4 text-right">${statusHtml}</td>
+                    </tr>
+                    `;
+                }).join('');
+        }
 
-    document.getElementById('table-logs').innerHTML = f.map(i => {
-        const isDamaged = i.device_condition === 'Damaged';
-        const conditionBadge = i.device_condition ? `
-            <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase border ${isDamaged ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}">
-                ${i.device_condition}
-            </span>` : '';
+        function renderLogs() {
+            const s = document.getElementById('search-logs').value.toLowerCase();
+            const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
+            const fPhase = document.getElementById('filter-logs-phase') ? document.getElementById('filter-logs-phase').value : '';
+            const fBiz = document.getElementById('filter-logs-business') ? document.getElementById('filter-logs-business').value : '';
 
-        const photoBtn = i.proof_photo ? `
-            <a href="${i.proof_photo}" target="_blank" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg border border-blue-100 transition" title="View Photo">
-                <i class="fa-solid fa-image"></i>
-            </a>` : '<span class="text-slate-300 p-2"><i class="fa-solid fa-image-slash"></i></span>';
+            const f = globalLogs.filter(i => {
+                const matchArea = !fA || i.area === fA;
+                const matchPhase = !fPhase || i.phase === fPhase;
+                const matchBiz = !fBiz || i.business_name === fBiz;
+                const matchSearch = (i.business_name || '').toLowerCase().includes(s) || (i.runner_name || '').toLowerCase().includes(s) || (i.kit_id || '').toLowerCase().includes(s);
+                return matchArea && matchPhase && matchBiz && matchSearch;
+            });
 
-        const notes = (i.missing_or_issue || i.other_item) ? `
-            <div class="mt-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-800 leading-relaxed italic">
-                <i class="fa-solid fa-comment-dots mr-1"></i> ${escapeHTML([i.missing_or_issue, i.other_item].filter(Boolean).join(' | '))}
-            </div>` : '';
+            document.getElementById('table-logs').innerHTML = f.map(i => {
+                const isDamaged = i.device_condition === 'Damaged';
+                const conditionBadge = i.device_condition ? `
+                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase border ${isDamaged ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}">
+                        ${i.device_condition}
+                    </span>` : '';
 
-        const timeInfo = `
-            <div class="text-[9px] text-slate-400 font-bold mt-1 uppercase flex gap-2">
-                ${i.pickup_time ? `<span><i class="fa-solid fa-arrow-up"></i> ${i.pickup_time}</span>` : ''}
-                ${i.drop_off_time ? `<span><i class="fa-solid fa-arrow-down"></i> ${i.drop_off_time}</span>` : ''}
-                ${i.sdr_name ? `<span><i class="fa-solid fa-user-tie"></i> ${i.sdr_name}</span>` : ''}
-            </div>`;
+                const photoBtn = i.proof_photo ? `
+                    <a href="${i.proof_photo}" target="_blank" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg border border-blue-100 transition" title="View Photo">
+                        <i class="fa-solid fa-image"></i>
+                    </a>` : '<span class="text-slate-300 p-2"><i class="fa-solid fa-image-slash"></i></span>';
 
-        // 🟢 PERBAIKAN FINAL: Tambahkan fallback ke sd_drop_qty dan sd_qty untuk membaca data lama
-let dropQty = parseInt(i.sd_card_qty) || parseInt(i.sd_drop_qty) || parseInt(i.sd_qty) || 0;
-let pickupQty = parseInt(i.sd_pickup_qty) || parseInt(i.sd_qty) || 0;
+                const notes = (i.missing_or_issue || i.other_item) ? `
+                    <div class="mt-2 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-800 leading-relaxed italic">
+                        <i class="fa-solid fa-comment-dots mr-1"></i> ${escapeHTML([i.missing_or_issue, i.other_item].filter(Boolean).join(' | '))}
+                    </div>` : '';
 
-let qtyToShow = i.phase === 'Phase 2' ? dropQty : (i.phase === 'Phase 3' ? pickupQty : (dropQty || pickupQty || 0));
+                const timeInfo = `
+                    <div class="text-[9px] text-slate-400 font-bold mt-1 uppercase flex gap-2">
+                        ${i.pickup_time ? `<span><i class="fa-solid fa-arrow-up"></i> ${i.pickup_time}</span>` : ''}
+                        ${i.drop_off_time ? `<span><i class="fa-solid fa-arrow-down"></i> ${i.drop_off_time}</span>` : ''}
+                        ${i.sdr_name ? `<span><i class="fa-solid fa-user-tie"></i> ${i.sdr_name}</span>` : ''}
+                    </div>`;
 
-        return `
-        <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
-            <td class="p-4 align-top">
-                <div class="text-[11px] font-black text-slate-800 whitespace-nowrap">${new Date(i.created_at).toLocaleDateString('en-GB')}</div>
-                <div class="text-[10px] text-slate-400 font-bold">${new Date(i.created_at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-            </td>
-            <td class="p-4 align-top">
-                <div class="font-black text-slate-800 text-xs">${i.runner_name}</div>
-                <div class="text-[9px] text-slate-400 font-black uppercase tracking-widest">${i.area}</div>
-            </td>
-            <td class="p-4 align-top">
-                <span class="bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-600 shadow-sm inline-block mb-1">
-                    ${i.phase}
-                </span>
-                ${timeInfo}
-            </td>
-            <td class="p-4 align-top">
-                <div class="font-black text-blue-700 text-xs">${i.business_name}</div>
-                <div class="flex items-center gap-2 mt-1.5">
-                    <span class="text-[11px] font-bold text-slate-600">
-                        <i class="fa-solid ${(i.kit_id && i.phase !== 'Phase 2' && i.phase !== 'Phase 3') ? 'fa-box' : 'fa-sd-card'} mr-1 opacity-50"></i>
-                        ${(i.phase === 'Phase 2' || i.phase === 'Phase 3') ? (qtyToShow + ' SD Cards') : (i.kit_id || (qtyToShow + ' SD Cards'))}
-                    </span>
-                    ${conditionBadge}
-                    ${i.sd_uploaded > 0 ? `<span class="bg-blue-50 text-blue-600 border border-blue-100 text-[9px] px-2 py-0.5 rounded font-black uppercase">UP: ${i.sd_uploaded}</span>` : ''}
-                </div>
-                ${notes}
-            </td>
-            <td class="p-4 align-top text-right">
-                <div class="flex justify-end items-center gap-1">
-                    ${photoBtn}
-                    <button onclick="editLog(${i.id})" class="text-slate-400 hover:text-blue-600 p-2 transition"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="deleteRow('transactions', ${i.id})" class="text-slate-400 hover:text-red-500 p-2 transition"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </td>
-        </tr>`;
-    }).join('');
-}
+                let dropQty = parseInt(i.sd_card_qty) || parseInt(i.sd_drop_qty) || parseInt(i.sd_qty) || 0;
+                let pickupQty = parseInt(i.sd_pickup_qty) || parseInt(i.sd_qty) || 0;
+                let qtyToShow = i.phase === 'Phase 2' ? dropQty : (i.phase === 'Phase 3' ? pickupQty : (dropQty || pickupQty || 0));
+
+                return `
+                <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
+                    <td class="p-4 align-top">
+                        <div class="text-[11px] font-black text-slate-800 whitespace-nowrap">${new Date(i.created_at).toLocaleDateString('en-GB')}</div>
+                        <div class="text-[10px] text-slate-400 font-bold">${new Date(i.created_at).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
+                    </td>
+                    <td class="p-4 align-top">
+                        <div class="font-black text-slate-800 text-xs">${i.runner_name}</div>
+                        <div class="text-[9px] text-slate-400 font-black uppercase tracking-widest">${i.area}</div>
+                    </td>
+                    <td class="p-4 align-top">
+                        <span class="bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-600 shadow-sm inline-block mb-1">
+                            ${i.phase}
+                        </span>
+                        ${timeInfo}
+                    </td>
+                    <td class="p-4 align-top">
+                        <div class="font-black text-blue-700 text-xs">${i.business_name}</div>
+                        <div class="flex items-center gap-2 mt-1.5">
+                            <span class="text-[11px] font-bold text-slate-600">
+                                <i class="fa-solid ${(i.kit_id && i.phase !== 'Phase 2' && i.phase !== 'Phase 3') ? 'fa-box' : 'fa-sd-card'} mr-1 opacity-50"></i>
+                                ${(i.phase === 'Phase 2' || i.phase === 'Phase 3') ? (qtyToShow + ' SD Cards') : (i.kit_id || (qtyToShow + ' SD Cards'))}
+                            </span>
+                            ${conditionBadge}
+                            ${i.sd_uploaded > 0 ? `<span class="bg-blue-50 text-blue-600 border border-blue-100 text-[9px] px-2 py-0.5 rounded font-black uppercase">UP: ${i.sd_uploaded}</span>` : ''}
+                        </div>
+                        ${notes}
+                    </td>
+                    <td class="p-4 align-top text-right">
+                        <div class="flex justify-end items-center gap-1">
+                            ${photoBtn}
+                            <button onclick="editLog(${i.id})" class="text-slate-400 hover:text-blue-600 p-2 transition"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteRow('transactions', ${i.id})" class="text-slate-400 hover:text-red-500 p-2 transition"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
 
         function renderAreas() { 
             const s = document.getElementById('search-areas').value.toLowerCase(); 
@@ -1978,26 +2006,24 @@ let qtyToShow = i.phase === 'Phase 2' ? dropQty : (i.phase === 'Phase 3' ? picku
             renderKits();
         }
 
-function renderKits() {
-    const s = document.getElementById('search-kits').value.toUpperCase();
-    const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
-    const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
-    
-    // Sanitasi filter area
-    const targetArea = (filterArea || '').trim().toLowerCase();
+        function renderKits() {
+            const s = document.getElementById('search-kits').value.toUpperCase();
+            const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
+            const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
+            
+            const targetArea = (filterArea || '').trim().toLowerCase();
 
-    const f = globalKits.filter(i => {
-        const locData = getKitLocation(i.kit_id);
-        
-        // Sanitasi area pada database
-        const kitArea = (i.area_name || i.area || '').trim().toLowerCase();
-        
-        const matchArea = (!targetArea || targetArea === 'all') ? true : kitArea === targetArea;
-        const matchType = !filterType || i.kit_type === filterType;
-        const matchSearch = (i.kit_id || '').toUpperCase().includes(s) || (locData.loc || '').toUpperCase().includes(s);
-        
-        return matchArea && matchType && matchSearch;
-    });
+            const f = globalKits.filter(i => {
+                const locData = getKitLocation(i.kit_id);
+                
+                const kitArea = (i.area_name || i.area || '').trim().toLowerCase();
+                
+                const matchArea = (!targetArea || targetArea === 'all') ? true : kitArea === targetArea;
+                const matchType = !filterType || i.kit_type === filterType;
+                const matchSearch = (i.kit_id || '').toUpperCase().includes(s) || (locData.loc || '').toUpperCase().includes(s);
+                
+                return matchArea && matchType && matchSearch;
+            });
 
             const totalPages = Math.ceil(f.length / kitPageSize);
             if (kitPage >= totalPages && totalPages > 0) kitPage = totalPages - 1; 
@@ -2041,6 +2067,7 @@ function renderKits() {
             }).join('');
             
         }
+        
         function renderUsers() { 
             const s = document.getElementById('search-users').value.toLowerCase(); 
             const f = globalUsers.filter(i => i.email.toLowerCase().includes(s)); 
@@ -2082,68 +2109,64 @@ function renderKits() {
         // ----------------------------------------------------------------------
 
         // --- Logs ---
-async function editLog(id) { 
-    const log = globalLogs.find(x => x.id === id); 
-    
-    document.getElementById('edit-log-id').value = log.id; 
-    document.getElementById('edit-log-phase').value = log.phase; 
-    document.getElementById('edit-log-kit').value = log.kit_id || ''; 
-    
-    // 🟢 PERBAIKAN: Baca sd_card_qty
-    document.getElementById('edit-log-sd-drop').value = log.sd_card_qty || log.sd_drop_qty || 0; 
-    document.getElementById('edit-log-sd-pickup').value = log.sd_pickup_qty || 0; 
-    
-    document.getElementById('edit-log-uploaded').value = log.sd_uploaded || ''; 
-    document.getElementById('edit-log-condition').value = log.device_condition || '';
-    document.getElementById('edit-log-notes').value = log.missing_or_issue || ''; 
-    
-    await fetchBusinesses(true);
-    let bizOptions = globalBusinesses.filter(b => b.area_name === log.area).map(b => `<option value="${b.business_name}" ${b.business_name === log.business_name ? 'selected' : ''}>${b.business_name}</option>`).join('');
-    if(!bizOptions.includes('selected') && log.business_name) bizOptions += `<option value="${log.business_name}" selected>${log.business_name} (Current)</option>`;
-    if(!bizOptions) bizOptions = `<option value="">-- No Merchant Found in ${log.area} --</option>`;
-    
-    document.getElementById('edit-log-business').innerHTML = bizOptions;
-    showModal('modal-log'); 
-}
+        async function editLog(id) { 
+            const log = globalLogs.find(x => x.id === id); 
+            
+            document.getElementById('edit-log-id').value = log.id; 
+            document.getElementById('edit-log-phase').value = log.phase; 
+            document.getElementById('edit-log-kit').value = log.kit_id || ''; 
+            
+            document.getElementById('edit-log-sd-drop').value = log.sd_card_qty || log.sd_drop_qty || log.sd_qty || 0; 
+            document.getElementById('edit-log-sd-pickup').value = log.sd_pickup_qty || log.sd_qty || 0; 
+            
+            document.getElementById('edit-log-uploaded').value = log.sd_uploaded || ''; 
+            document.getElementById('edit-log-condition').value = log.device_condition || '';
+            document.getElementById('edit-log-notes').value = log.missing_or_issue || ''; 
+            
+            await fetchBusinesses(true);
+            let bizOptions = globalBusinesses.filter(b => b.area_name === log.area).map(b => `<option value="${b.business_name}" ${b.business_name === log.business_name ? 'selected' : ''}>${b.business_name}</option>`).join('');
+            if(!bizOptions.includes('selected') && log.business_name) bizOptions += `<option value="${log.business_name}" selected>${log.business_name} (Current)</option>`;
+            if(!bizOptions) bizOptions = `<option value="">-- No Merchant Found in ${log.area} --</option>`;
+            
+            document.getElementById('edit-log-business').innerHTML = bizOptions;
+            showModal('modal-log'); 
+        }
 
-document.getElementById('form-log').addEventListener('submit', async (e) => { 
-    e.preventDefault(); 
-    const p = {
-        phase: document.getElementById('edit-log-phase').value, 
-        business_name: document.getElementById('edit-log-business').value, 
-        kit_id: document.getElementById('edit-log-kit').value.toUpperCase() || null, 
-        
-        // 🟢 PERBAIKAN: Gunakan key sd_card_qty agar nyambung ke Supabase
-        sd_card_qty: parseInt(document.getElementById('edit-log-sd-drop').value) || 0, 
-        sd_pickup_qty: parseInt(document.getElementById('edit-log-sd-pickup').value) || 0, 
-        
-        sd_uploaded: parseInt(document.getElementById('edit-log-uploaded').value) || 0,
-        device_condition: document.getElementById('edit-log-condition').value || null,
-        missing_or_issue: document.getElementById('edit-log-notes').value
-    }; 
+        document.getElementById('form-log').addEventListener('submit', async (e) => { 
+            e.preventDefault(); 
+            const p = {
+                phase: document.getElementById('edit-log-phase').value, 
+                business_name: document.getElementById('edit-log-business').value, 
+                kit_id: document.getElementById('edit-log-kit').value.toUpperCase() || null, 
+                
+                sd_card_qty: parseInt(document.getElementById('edit-log-sd-drop').value) || 0, 
+                sd_pickup_qty: parseInt(document.getElementById('edit-log-sd-pickup').value) || 0, 
+                
+                sd_uploaded: parseInt(document.getElementById('edit-log-uploaded').value) || 0,
+                device_condition: document.getElementById('edit-log-condition').value || null,
+                missing_or_issue: document.getElementById('edit-log-notes').value
+            }; 
 
-    // 1. Update tabel transactions
-    await db.from('transactions').update(p).eq('id', document.getElementById('edit-log-id').value); 
+            await db.from('transactions').update(p).eq('id', document.getElementById('edit-log-id').value); 
 
-    // 2. UPDATE KE MASTER KITS AGAR LOKASI DAN KONDISI SINKRON
-    if (p.kit_id) {
-        let targetLocation = p.phase === 'Phase 4' ? 'Warehouse' : p.business_name;
+            if (p.kit_id) {
+                let targetLocation = p.phase === 'Phase 4' ? 'Warehouse' : p.business_name;
 
-        const { error: kitError } = await db.from('master_kits')
-            .update({ 
-                last_location: targetLocation,
-                current_status: p.device_condition || 'Good'
-            })
-            .eq('kit_id', p.kit_id);
-        
-        if (kitError) console.error("Gagal sinkronisasi master_kits saat edit log:", kitError);
-    }
+                const { error: kitError } = await db.from('master_kits')
+                    .update({ 
+                        last_location: targetLocation,
+                        current_status: p.device_condition || 'Good'
+                    })
+                    .eq('kit_id', p.kit_id);
+                
+                if (kitError) console.error("Gagal sinkronisasi master_kits saat edit log:", kitError);
+            }
 
-    await logAdminAction('UPDATE_LOG', `Modified log ID ${document.getElementById('edit-log-id').value}`); 
-    closeModal('modal-log'); 
-    fetchLogs(true);
-    fetchKits(true); 
-});
+            await logAdminAction('UPDATE_LOG', `Modified log ID ${document.getElementById('edit-log-id').value}`); 
+            closeModal('modal-log'); 
+            fetchLogs(true);
+            fetchKits(true); 
+        });
 
 
         async function resolveLiveRadar(merchant, pendingQty) {
@@ -2157,7 +2180,7 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
                 phase: 'Phase 3', 
                 runner_name: adminName,
                 business_name: merchant,
-                sd_pickup_qty: pendingQty, // <-- Updated from sd_qty
+                sd_pickup_qty: pendingQty,
                 sd_uploaded: isUploaded ? pendingQty : 0, 
                 device_condition: 'Good',
                 missing_or_issue: 'Manual Clear Radar by Admin'
@@ -2187,7 +2210,7 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
                     phase: 'SYSTEM CLEAR',
                     runner_name: adminName,
                     business_name: merchant,
-                    sd_pickup_qty: variance, // <-- Updated from sd_qty
+                    sd_pickup_qty: variance, 
                     device_condition: 'Good',
                     missing_or_issue: type 
                 };
@@ -2503,10 +2526,8 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
                 missing_or_issue: 'Manual allocation/override by Admin'
             });
 
-            // 1. Simpan log transaksi
-            await db.from('transactions').insert(payload);
+            await db.from('transactions').insert(payload);
 
-            // 2. UPDATE LOKASI KE MASTER KITS AGAR DASHBOARD SINKRON
             const { error: updateError } = await db.from('master_kits')
                 .update({ last_location: biz })
                 .eq('kit_id', kitId);
@@ -2514,10 +2535,10 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
             if (updateError) {
                 console.error("Gagal update last_location:", updateError);
             }
-            
-            await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
-            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
-            alert("Manual allocation successfully executed!");
+            
+            await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
+            fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
+            alert("Manual allocation successfully executed!");
         });
 
         // --- Users ---
@@ -2526,6 +2547,9 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
             document.getElementById('input-user-id').value = ''; 
             document.getElementById('user-modal-title').innerText = 'Add System User'; 
             document.getElementById('input-user-pin').required = true; 
+
+            document.getElementById('user-area-all').checked = false;
+            document.querySelectorAll('.user-area-cb').forEach(cb => cb.checked = false);
 
             const admin = JSON.parse(localStorage.getItem('admin_user'));
             const roleSelect = document.getElementById('input-user-role');
@@ -2554,7 +2578,12 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
             }
             roleSelect.value = u.role;
             
-            document.getElementById('input-user-area-admin').value = u.assigned_area || ''; 
+            document.getElementById('user-area-all').checked = (u.assigned_area === 'All');
+            const uAreas = u.assigned_area ? u.assigned_area.split(',').map(a => a.trim()) : [];
+            document.querySelectorAll('.user-area-cb').forEach(cb => {
+                cb.checked = (u.assigned_area === 'All') || uAreas.includes(cb.value);
+            });
+
             document.getElementById('user-modal-title').innerText = 'Edit User'; 
             showModal('modal-user'); 
         }
@@ -2567,12 +2596,23 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
             const emailInput = document.getElementById('input-user-email').value.trim();
             const pinInput = document.getElementById('input-user-pin').value;
             const fullName = document.getElementById('input-user-fullname').value.trim();
-            const area = document.getElementById('input-user-area-admin').value;
+
+            let areaValue = '';
+            if (document.getElementById('user-area-all').checked) {
+                areaValue = 'All';
+            } else {
+                const selectedCBs = Array.from(document.querySelectorAll('.user-area-cb:checked')).map(cb => cb.value);
+                if (selectedCBs.length === 0) {
+                    alert('Silakan pilih minimal 1 area untuk user ini!');
+                    return;
+                }
+                areaValue = selectedCBs.join(',');
+            }
 
             const payload = {
                 email: emailInput.toLowerCase(),
                 role: role,
-                assigned_area: role === 'Admin' && area === 'All' ? 'All' : area,
+                assigned_area: role === 'Admin' && areaValue === 'All' ? 'All' : areaValue,
                 runner_name: fullName
             };
             if (pinInput) payload.pin = pinInput;
@@ -2596,10 +2636,12 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
                 if (dbError) { alert("Failed to save user profile: " + dbError.message); return; }
 
                 if (role === 'Staff') {
-                    await db.from('master_runners').insert([{
+                    const assignedAreasArray = payload.assigned_area.split(',');
+                    const runnerPayloads = assignedAreasArray.map(a => ({
                         runner_name: fullName,
-                        area_name: area
-                    }]);
+                        area_name: a.trim()
+                    }));
+                    await db.from('master_runners').insert(runnerPayloads);
                     fetchRunners(true); 
                 }
 
@@ -2674,32 +2716,32 @@ document.getElementById('form-log').addEventListener('submit', async (e) => {
 
 
         // --- Khusus Hapus System User beserta Auth-nya ---
-async function deleteSystemUser(id, email) { 
-    if(confirm(`DANGER: Anda yakin ingin menghapus akun ${email}? Ini akan menghapus profil dan akses login autentikasinya secara permanen.`)) {
-        
-        // 1. Hapus dari sistem Autentikasi Supabase via RPC
-        const { error: rpcError } = await db.rpc('admin_delete_user', {
-            target_email: email
-        });
-        
-        if (rpcError) {
-            alert("❌ Gagal menghapus data login/auth: " + rpcError.message);
-            return;
-        }
+        async function deleteSystemUser(id, email) { 
+            if(confirm(`DANGER: Anda yakin ingin menghapus akun ${email}? Ini akan menghapus profil dan akses login autentikasinya secara permanen.`)) {
+                
+                // 1. Hapus dari sistem Autentikasi Supabase via RPC
+                const { error: rpcError } = await db.rpc('admin_delete_user', {
+                    target_email: email
+                });
+                
+                if (rpcError) {
+                    alert("❌ Gagal menghapus data login/auth: " + rpcError.message);
+                    return;
+                }
 
-        // 2. Hapus dari tabel profil master_users
-        const { error: dbError } = await db.from('master_users').delete().eq('id', id); 
-        
-        if (dbError) {
-            alert("❌ Gagal menghapus profil tabel: " + dbError.message);
-            return; 
-        }
+                // 2. Hapus dari tabel profil master_users
+                const { error: dbError } = await db.from('master_users').delete().eq('id', id); 
+                
+                if (dbError) {
+                    alert("❌ Gagal menghapus profil tabel: " + dbError.message);
+                    return; 
+                }
 
-        await logAdminAction('DELETE_USER', `Deleted complete system account and auth for ${email}`);
-        alert("✅ Akun dan akses Autentikasi berhasil dihapus sepenuhnya!");
-        fetchUsers(true); 
-    } 
-}
+                await logAdminAction('DELETE_USER', `Deleted complete system account and auth for ${email}`);
+                alert("✅ Akun dan akses Autentikasi berhasil dihapus sepenuhnya!");
+                fetchUsers(true); 
+            } 
+        }
 
         // --- Bulk Kit Delete ---
         function toggleSelectAllKits(master) {
@@ -2807,7 +2849,7 @@ async function deleteSystemUser(id, email) {
                     
                     if(json.length <= 1) { lg.innerHTML = 'Empty file.'; btn.disabled = false; return; }
                     
-                    let errs = [], pl = [], seen = new Set(), aA = getAdminArea();
+                    let errs = [], pl = [], seen = new Set(), aA = getAdminAreas();
                     
                     for(let i = 1; i < json.length; i++) {
                         const rowData = json[i]; if(!rowData || rowData.length === 0) continue;
@@ -2816,7 +2858,7 @@ async function deleteSystemUser(id, email) {
                         const aN = (rowData[2] || '').toString().trim();
                         
                         if(!kI || !tN || !aN) { errs.push(`Row ${i + 1}: Missing cols.`); continue; }
-                        if(aA !== 'All' && aN !== aA) { errs.push(`Row ${i + 1}: Area restriction.`); continue; }
+                        if(!aA.includes('All') && !aA.includes(aN)) { errs.push(`Row ${i + 1}: Area restriction.`); continue; }
                         if(!globalAreas.find(a => a.area_name === aN)) { errs.push(`Row ${i + 1}: Area missing.`); continue; }
                         if(seen.has(kI)) { errs.push(`Row ${i + 1}: Duplicate in file.`); continue; } seen.add(kI);
                         if(globalKits.find(k => k.kit_id === kI)) { errs.push(`Row ${i + 1}: Exists in DB.`); continue; }
