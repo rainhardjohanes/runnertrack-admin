@@ -135,13 +135,11 @@
                     <h2 class="text-xl font-black text-slate-800"><i class="fa-solid fa-microchip text-blue-600 mr-2"></i>SD Card Tracker</h2>
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Daily Discrepancy & Delay Audit</p>
                 </div>
-<div class="flex flex-wrap items-center gap-2">
-    <select id="filter-sd-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderSDTracker()"></select>
-    
-    <button onclick="renderSDTracker()" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition shadow-sm" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
-</div>
-
-</div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="filter-sd-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderSDTracker()"></select>
+                    <button onclick="renderSDTracker()" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition shadow-sm" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </div>
             
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
                 <div class="bg-white rounded-2xl shadow-sm border border-blue-200 overflow-hidden">
@@ -194,18 +192,19 @@
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time FO Movement & Efficiency</p>
                 </div>
                 
-<div class="flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-    <div class="flex flex-col gap-1">
-        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Area</label>
-        <select id="filter-fo-area" onchange="document.getElementById('filter-fo-name').value=''; fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none filter-area-dropdown min-w-[120px]"></select>
-    </div>
-    
-    <div class="flex flex-col gap-1">
-        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Filter Date</label>
-        <input type="date" id="filter-fo-date" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
-    </div>
-    <div class="flex flex-col gap-1">
-        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Officer Name</label>                        <select id="filter-fo-name" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none min-w-[150px]">
+                <div class="flex flex-wrap items-end gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Area</label>
+                        <select id="filter-fo-area" onchange="document.getElementById('filter-fo-name').value=''; fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none filter-area-dropdown min-w-[120px]"></select>
+                    </div>
+                    
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Filter Date</label>
+                        <input type="date" id="filter-fo-date" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Officer Name</label>                        
+                        <select id="filter-fo-name" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none min-w-[150px]">
                             <option value="">All Officers</option>
                         </select>
                     </div>
@@ -228,7 +227,7 @@
                             </tr>
                         </thead>
                         <tbody id="table-fo-tracker" class="divide-y divide-slate-100">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
 
@@ -459,10 +458,10 @@
                 <div class="flex gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-kits" onkeyup="kitPage=0; renderKits()" placeholder="Search Kit ID..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                        <input type="text" id="search-kits" onkeyup="if(event.key === 'Enter') { kitPage=0; fetchKits(true); }" placeholder="Search Kit ID (Press Enter)..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
                     </div>
-                    <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="kitPage=0; renderKits()"></select>
-                    <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="kitPage=0; renderKits()">
+                    <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="kitPage=0; fetchKits(true)"></select>
+                    <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="kitPage=0; fetchKits(true)">
                         <option value="">All Recipes</option>
                     </select>
                     <button onclick="fetchKits(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
@@ -496,8 +495,6 @@
                         <tbody id="table-kits" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
-
-
             </div>
         </div>
 
@@ -866,7 +863,7 @@
                     <div id="user-area-container">
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Assigned Area(s) *</label>
                         <div id="user-area-checkboxes" class="grid grid-cols-2 gap-2 p-2 border border-slate-300 bg-slate-50 rounded-lg max-h-32 overflow-y-auto">
-                            </div>
+                        </div>
                         <div class="mt-2">
                             <label class="flex items-center space-x-2 text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-200 p-2 rounded-lg cursor-pointer shadow-sm">
                                 <input type="checkbox" id="user-area-all" onchange="document.querySelectorAll('.user-area-cb').forEach(cb => cb.checked = this.checked)" class="rounded border-blue-300">
@@ -920,7 +917,6 @@
         let globalKits = [];
         let globalUsers = [];
         let globalAdminLogs = [];
-        let globalKitLocations = {}; 
         
         let logPage = 0;
         const logPageSize = 20;
@@ -930,6 +926,14 @@
         // ----------------------------------------------------------------------
         // 2. UTILITIES & HELPERS
         // ----------------------------------------------------------------------
+
+        // Helper untuk mencegah bug zona waktu saat validasi per-tanggal (Misal: UTC 23:00 vs WITA 07:00 pagi keesokan harinya)
+        function getLocalDateStr(isoString) {
+            if (!isoString || isoString === '-') return '-';
+            const d = new Date(isoString);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
         function parseTanggal(dateString) {
             if (!dateString || dateString === '-') return new Date("");
             
@@ -938,12 +942,10 @@
 
             let str = dateString.toString().trim();
             
-            // Fix untuk Safari / iPhone: Ubah spasi menjadi huruf 'T' (Standar ISO)
             if (str.includes('-') && str.includes(' ')) {
                 return new Date(str.replace(' ', 'T'));
             }
 
-            // Fix untuk format spreadsheet DD/MM/YYYY
             if (str.includes('/')) {
                 let parts = str.split(" ");
                 let dateParts = parts[0].split("/");
@@ -1141,7 +1143,6 @@
             }
             document.querySelectorAll('.filter-area-dropdown').forEach(el => el.innerHTML = filterOpts);
             
-            // Injeksi checkbox ke modal Add User
             const areaAdminContainer = document.getElementById('user-area-checkboxes');
             if(areaAdminContainer) {
                 areaAdminContainer.innerHTML = globalAreas.map(a => `
@@ -1166,17 +1167,12 @@
         }
 
         async function refreshAllData() {
-            // 1. Tambahkan animasi putar (spin) pada icon tombol refresh
             const refreshBtn = document.querySelector('button[onclick="refreshAllData()"] i');
             if(refreshBtn) refreshBtn.classList.add('fa-spin');
             
-            // 2. Tarik semua data dari Supabase
             await Promise.all([fetchKits(true), fetchKitTypes(true), fetchBusinesses(true)]);
-            
-            // 3. Render ulang dan tunggu sampai selesai
             await renderDashboard(); 
             
-            // 4. Matikan animasi putar setelah data berhasil di-render
             if(refreshBtn) refreshBtn.classList.remove('fa-spin');
         }
         
@@ -1288,15 +1284,37 @@
         }
 
         async function fetchKits(force = false) { 
-            if (!force && globalKits.length > 0) return renderKits(); 
-            let q = db.from('master_kits').select('*').limit(20000); 
+            const searchInput = document.getElementById('search-kits');
+            const searchTerm = searchInput ? searchInput.value.trim().toUpperCase() : '';
+            const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
+            const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
+
+            if (!force && globalKits.length > 0 && !searchTerm) return renderKits(); 
+
+            const from = kitPage * kitPageSize;
+            const to = from + kitPageSize - 1;
+
+            let q = db.from('master_kits').select('*', { count: 'exact' }); 
+            
+            if (searchTerm) q = q.ilike('kit_id', `%${searchTerm}%`);
+            if (filterType) q = q.eq('kit_type', filterType);
+
             const adminAreas = getAdminAreas();
-            if (!adminAreas.includes('All')) q = q.in('area_name', adminAreas); 
-            const { data } = await q.order('kit_id'); 
+            if (!adminAreas.includes('All')) {
+                if (filterArea) q = q.eq('area_name', filterArea);
+                else q = q.in('area_name', adminAreas);
+            } else if (filterArea && filterArea !== 'All') {
+                q = q.eq('area_name', filterArea);
+            }
+
+            const { data, count, error } = await q.order('kit_id').range(from, to); 
             
             if (data) { 
                 globalKits = data; 
-                await fetchLogs(true);     
+                document.getElementById('kit-page-display').innerText = data.length > 0 ? (kitPage + 1) : 0;
+                document.getElementById('btn-kit-prev').disabled = (kitPage === 0);
+                document.getElementById('btn-kit-next').disabled = (to >= (count || 0) - 1);
+
                 renderKits(); 
                 if (globalBusinesses.length > 0) renderBusinesses(); 
             }
@@ -1306,15 +1324,6 @@
             if (!force && globalUsers.length > 0) return renderUsers(); 
             let q = db.from('master_users').select('*'); 
             const adminAreas = getAdminAreas();
-            // Note: assigned_area could be "Bali,Jakarta", so if it's not 'All', we need to pull them.
-            // But since multi-area uses string match, pulling via `.in` might not be perfect for arrays in strings.
-            // Better to pull all users and filter in JS, or since 'assigned_area' is exactly matching.
-            // For safety and since users list is small, we'll pull all and filter if needed, 
-            // but we'll try to just pull normally. Super Admins see all anyway.
-            if (!adminAreas.includes('All')) {
-                // Actually, if an admin is restricted, they shouldn't even manage users. 
-                // But if they do, we'll filter them client-side.
-            }
             
             const { data } = await q.order('id', { ascending: false }); 
             if (data) { 
@@ -1357,17 +1366,18 @@
             tableLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading detailed logs...</td></tr>`;
 
             try {
-                const start = new Date(targetDateStr);
-                start.setHours(0, 0, 0, 0);
+                const [yFO, mFO, dFO] = targetDateStr.split('-');
+                const start = new Date(yFO, mFO - 1, dFO);
+                start.setHours(0, 0, 0, 0);
 
-                const end = new Date(targetDateStr);
-                end.setHours(23, 59, 59, 999);
+                const end = new Date(yFO, mFO - 1, dFO);
+                end.setHours(23, 59, 59, 999);
 
-                let query = db.from('fo_visits') 
-                    .select('*')
-                    .gte('check_in_time', start.toISOString())
-                    .lte('check_in_time', end.toISOString())
-                    .order('check_in_time', { ascending: true });
+                let query = db.from('fo_visits') 
+                    .select('*')
+                    .gte('check_in_time', start.toISOString())
+                    .lte('check_in_time', end.toISOString())
+                    .order('check_in_time', { ascending: true });
 
                 if (targetFO) query = query.eq('runner_name', targetFO);
 
@@ -1409,6 +1419,7 @@
                 let opts = '<option value="">All Officers</option>';
                 uniqueFOs.forEach(fo => { opts += `<option value="${fo}" ${targetFO === fo ? 'selected' : ''}>${fo}</option>`; });
                 foSelect.innerHTML = opts;
+                
                 if (!data || data.length === 0) {
                     tableSummary.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>No FO visits recorded.</td></tr>`;
                     tableLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400 italic">No detailed logs found.</td></tr>`;
@@ -1490,7 +1501,6 @@
             }
         }
 
-        
         // ----------------------------------------------------------------------
         // 6. RENDER FUNCTIONS
         // ----------------------------------------------------------------------
@@ -1514,18 +1524,18 @@
             const tbody = document.getElementById('table-dash-kits');
             tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 italic"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Menghitung ulang aset region...</td></tr>`;
             
-// 1. Tentukan batas waktu berdasarkan 'filterDate' (BUKAN targetDateStr) sebelum query
-            const start = new Date(filterDate);
-            start.setHours(0, 0, 0, 0);
+            const [yD, mD, dD] = filterDate.split('-');
+            const start = new Date(yD, mD - 1, dD);
+            start.setHours(0, 0, 0, 0);
 
-            const end = new Date(filterDate);
-            end.setHours(23, 59, 59, 999);
+            const end = new Date(yD, mD - 1, dD);
+            end.setHours(23, 59, 59, 999);
 
-            // 2. Lakukan query dengan sambungan metode (.method) yang tidak terputus
-            let q = db.from('transactions')
-                .select('phase, sd_uploaded, kit_type, created_at, area, sd_pickup_qty, sd_qty')
-                .gte('created_at', start.toISOString())
-                .lte('created_at', end.toISOString());
+            let q = db.from('transactions')
+                .select('phase, sd_uploaded, kit_type, created_at, area, sd_pickup_qty, sd_qty')
+                .gte('created_at', start.toISOString())
+                .lte('created_at', end.toISOString());
+            
             const adminAreas = getAdminAreas();
             if (!adminAreas.includes('All')) {
                 if (filterArea && filterArea !== '') {
@@ -1587,18 +1597,22 @@
 
             const targetArea = (filterArea || '').trim().toLowerCase();
 
+            let qKits = db.from('master_kits').select('kit_id, kit_type, area_name, last_location, current_status');
+            if (!adminAreas.includes('All')) qKits = qKits.in('area_name', adminAreas);
+            const { data: dashKits } = await qKits;
+            const validKits = dashKits || [];
+
             tbody.innerHTML = globalKitTypes.map(type => {
-                const kitsOfType = globalKits.filter(k => {
+                const kitsOfType = validKits.filter(k => {
                     const matchType = k.kit_type === type.type_name;
                     
-                    const locData = getKitLocation(k.kit_id);
-                    let actualArea = (k.area_name || k.area || '').trim().toLowerCase();
+                    const isOffice = (!k.last_location || k.last_location.toLowerCase() === 'warehouse');
+                    const locName = isOffice ? 'Warehouse' : k.last_location;
+                    let actualArea = (k.area_name || '').trim().toLowerCase();
                     
-                    if (!locData.isOffice) {
-                        const biz = globalBusinesses.find(b => b.business_name === locData.loc);
-                        if (biz && biz.area_name) {
-                            actualArea = biz.area_name.trim().toLowerCase();
-                        }
+                    if (!isOffice) {
+                        const biz = globalBusinesses.find(b => b.business_name === locName);
+                        if (biz && biz.area_name) actualArea = biz.area_name.trim().toLowerCase();
                     }
 
                     const matchArea = (!targetArea || targetArea === 'all') ? true : actualArea === targetArea;
@@ -1611,12 +1625,9 @@
                     if(kit.current_status === 'Damaged') {
                         damaged++; 
                     } else {
-                        const locData = getKitLocation(kit.kit_id);
-                        if(locData.isOffice) {
-                            inOffice++;
-                        } else {
-                            atBusiness++;
-                        }
+                        const isOffice = (!kit.last_location || kit.last_location.toLowerCase() === 'warehouse');
+                        if(isOffice) inOffice++;
+                        else atBusiness++;
                     }
                 });
 
@@ -1641,39 +1652,34 @@
             const targetDateStr = radarDateInput.value;
             const adminAreas = getAdminAreas();
 
-            // Menentukan rentang waktu (H-1 hingga Hari Ini) secara dinamis
-const startOfDay = new Date(targetDateStr);
-startOfDay.setDate(startOfDay.getDate() - 1); // Mundur 1 hari untuk radar anomali
-startOfDay.setHours(0, 0, 0, 0);
+            const [ySD, mSD, dSD] = targetDateStr.split('-');
+            const startOfDay = new Date(ySD, mSD - 1, dSD);
+            startOfDay.setDate(startOfDay.getDate() - 1); 
+            startOfDay.setHours(0, 0, 0, 0);
 
-const endOfDay = new Date(targetDateStr);
-endOfDay.setHours(23, 59, 59, 999);
+            const endOfDay = new Date(ySD, mSD - 1, dSD);
+            endOfDay.setHours(23, 59, 59, 999);
 
-let qDaily = db.from('transactions')
-    .select('*')
-    .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-    .gte('created_at', startOfDay.toISOString()) // Otomatis menyesuaikan zona waktu lokal admin
-    .lte('created_at', endOfDay.toISOString())
-    .order('created_at', { ascending: true });
+            let qDaily = db.from('transactions')
+                .select('*')
+                .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
+                .gte('created_at', startOfDay.toISOString()) 
+                .lte('created_at', endOfDay.toISOString())
+                .order('created_at', { ascending: true });
 
-// BACA NILAI DROPDOWN AREA
-const targetArea = document.getElementById('filter-sd-area') ? document.getElementById('filter-sd-area').value : '';
+            const targetArea = document.getElementById('filter-sd-area') ? document.getElementById('filter-sd-area').value : '';
 
-// LOGIKA FILTER AREA DENGAN OTORISASI
-if (!adminAreas.includes('All')) {
-    // Jika Admin Terbatas
-    if (targetArea && targetArea !== '') {
-        qDaily = qDaily.eq('area', targetArea); // Filter area spesifik yang dipilih
-    } else {
-        qDaily = qDaily.in('area', adminAreas); // Default: tarik semua area miliknya
-    }
-} else {
-    // Jika Super Admin ('All')
-    if (targetArea && targetArea !== '') {
-        qDaily = qDaily.eq('area', targetArea); // Super Admin mau lihat 1 area spesifik
-    }
-    // Jika Super Admin tidak memilih area (targetArea == ''), biarkan query menarik seluruh area
-}
+            if (!adminAreas.includes('All')) {
+                if (targetArea && targetArea !== '') {
+                    qDaily = qDaily.eq('area', targetArea); 
+                } else {
+                    qDaily = qDaily.in('area', adminAreas); 
+                }
+            } else {
+                if (targetArea && targetArea !== '') {
+                    qDaily = qDaily.eq('area', targetArea); 
+                }
+            }
             const { data: dailyData } = await qDaily;
             let allLogs = dailyData || [];
             
@@ -1723,6 +1729,7 @@ if (!adminAreas.includes('All')) {
                         }
 
                         historyList.push({
+                            p3Id: log.id, 
                             merchant: biz,
                             p2Time: matchedP2.created_at,
                             p2Runner: matchedP2.runner_name,
@@ -1732,10 +1739,12 @@ if (!adminAreas.includes('All')) {
                             p3Qty: p3Qty,
                             p3Up: p3Up,
                             duration: durationStr,
-                            isCleared: log.phase === 'SYSTEM CLEAR'
+                            isCleared: log.phase === 'SYSTEM CLEAR' || (log.missing_or_issue && log.missing_or_issue.includes('[CLEARED]'))
                         });
                     } else {
+                        // [MODIFIKASI] Simpan p3Id dan cek tanda [CLEARED]
                         historyList.push({
+                            p3Id: log.id,
                             merchant: biz,
                             p2Time: '-',
                             p2Runner: '-',
@@ -1745,7 +1754,7 @@ if (!adminAreas.includes('All')) {
                             p3Qty: p3Qty,
                             p3Up: p3Up,
                             duration: log.phase === 'SYSTEM CLEAR' ? 'Manual Clear' : 'No Phase 2',
-                            isCleared: log.phase === 'SYSTEM CLEAR'
+                            isCleared: log.phase === 'SYSTEM CLEAR' || (log.missing_or_issue && log.missing_or_issue.includes('[CLEARED]'))
                         });
                     }
                 }
@@ -1753,7 +1762,7 @@ if (!adminAreas.includes('All')) {
 
             for (const biz in pendingQueue) {
                 pendingQueue[biz].forEach(p2 => {
-                    if (p2.created_at.split('T')[0] <= targetDateStr) {
+                    if (getLocalDateStr(p2.created_at) <= targetDateStr) { 
                         radarList.push({
                             merchant: biz,
                             time: p2.created_at,
@@ -1764,7 +1773,7 @@ if (!adminAreas.includes('All')) {
                 });
             }
 
-            historyList = historyList.filter(h => h.p3Time.split('T')[0] === targetDateStr);
+            historyList = historyList.filter(h => getLocalDateStr(h.p3Time) === targetDateStr); 
 
             const tbodyRadar = document.getElementById('table-live-radar');
             if (tbodyRadar) {
@@ -1804,14 +1813,14 @@ if (!adminAreas.includes('All')) {
                         statusHtml = `
                             <div class="flex items-center justify-end gap-2">
                                 <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-red-100 text-red-700 border border-red-200 whitespace-nowrap"><i class="fa-solid fa-arrow-down mr-1"></i> SHORTAGE ${diff}</span>
-                                <button onclick="resolveSD('${h.merchant.replace(/'/g, "\\'")}', 'SHORTAGE', ${diff})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                                <button onclick="resolveSD(${h.p3Id}, 'SHORTAGE', ${diff})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
                             </div>`;
                     } else {
                         const surplus = Math.abs(diff);
                         statusHtml = `
                             <div class="flex items-center justify-end gap-2">
                                 <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap"><i class="fa-solid fa-arrow-up mr-1"></i> SURPLUS ${surplus}</span>
-                                <button onclick="resolveSD('${h.merchant.replace(/'/g, "\\'")}', 'SURPLUS', ${surplus})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
+                                <button onclick="resolveSD(${h.p3Id}, 'SURPLUS', ${surplus})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
                             </div>`;
                     }
 
@@ -1835,7 +1844,7 @@ const p3TimeStr = h.p3Time !== '-' ? `
 <td class="p-4">
     ${p3TimeStr}
     <div class="text-[10px] uppercase text-slate-400 mt-0.5">${h.p3Runner}</div>
-</td>                        <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
+</td>                       <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
                         <td class="p-4 text-center font-black bg-indigo-50/50 text-indigo-700 whitespace-nowrap">
                             ${h.p2Qty} / ${h.p3Qty} / <span class="text-emerald-600 ml-1" title="SD Card Uploaded">${h.p3Up}</span>
                         </td>
@@ -1969,13 +1978,19 @@ const p3TimeStr = h.p3Time !== '-' ? `
             `).join(''); 
         }
 
-        function renderBusinesses() { 
+        async function renderBusinesses() { 
             const s = document.getElementById('search-businesses').value.toLowerCase(); 
             const fA = document.getElementById('filter-businesses-area') ? document.getElementById('filter-businesses-area').value : ''; 
             const f = globalBusinesses.filter(i => (!fA || i.area_name === fA) && i.business_name.toLowerCase().includes(s)); 
             
+            const adminAreas = getAdminAreas();
+            let qDep = db.from('master_kits').select('kit_id, kit_type, last_location').neq('last_location', 'Warehouse').not('last_location', 'is', null);
+            if (!adminAreas.includes('All')) qDep = qDep.in('area_name', adminAreas);
+            const { data: deployedKits } = await qDep;
+            const activeDb = deployedKits || [];
+
             document.getElementById('table-businesses').innerHTML = f.map(i => {
-                const activeKits = globalKits.filter(k => getKitLocation(k.kit_id).loc === i.business_name);
+                const activeKits = activeDb.filter(k => k.last_location === i.business_name);
                 
                 let totalItems = 0;
                 let kitBadges = activeKits.length === 0 ? '<span class="text-slate-400 italic text-[10px]">No active kits</span>' : activeKits.map(k => {
@@ -2048,40 +2063,11 @@ const p3TimeStr = h.p3Time !== '-' ? `
         }
 
         function renderKits() {
-            const s = document.getElementById('search-kits').value.toUpperCase();
-            const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
-            const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
-            
-            const targetArea = (filterArea || '').trim().toLowerCase();
-
-            const f = globalKits.filter(i => {
-                const locData = getKitLocation(i.kit_id);
-                
-                const kitArea = (i.area_name || i.area || '').trim().toLowerCase();
-                
-                const matchArea = (!targetArea || targetArea === 'all') ? true : kitArea === targetArea;
-                const matchType = !filterType || i.kit_type === filterType;
-                const matchSearch = (i.kit_id || '').toUpperCase().includes(s) || (locData.loc || '').toUpperCase().includes(s);
-                
-                return matchArea && matchType && matchSearch;
-            });
-
-            const totalPages = Math.ceil(f.length / kitPageSize);
-            if (kitPage >= totalPages && totalPages > 0) kitPage = totalPages - 1; 
-
-            const paginatedKits = f.slice(kitPage * kitPageSize, (kitPage + 1) * kitPageSize);
-
-            document.getElementById('kit-page-display').innerText = f.length > 0 ? (kitPage + 1) : 0;
-            const btnPrev = document.getElementById('btn-kit-prev');
-            const btnNext = document.getElementById('btn-kit-next');
-            if (btnPrev) btnPrev.disabled = (kitPage === 0);
-            if (btnNext) btnNext.disabled = (kitPage >= totalPages - 1);
-
             const masterCheckbox = document.getElementById('kit-master-checkbox');
             if(masterCheckbox) masterCheckbox.checked = false;
             updateKitSelection();
 
-            document.getElementById('table-kits').innerHTML = paginatedKits.map(i => {
+            document.getElementById('table-kits').innerHTML = globalKits.map(i => {
                 const locData = getKitLocation(i.kit_id);
                 return `
                 <tr class="hover:bg-slate-50 border-b border-slate-100 ${i.current_status === 'Damaged' ? 'bg-red-50/30' : ''}">
@@ -2239,33 +2225,34 @@ const p3TimeStr = h.p3Time !== '-' ? `
             renderDashboard(); 
         }
 
-        async function resolveSD(merchant, type, variance) {
-            const confirmAction = confirm(`Are you sure you want to clear this anomaly from the system?\n\nMerchant: ${merchant}\nType: ${type}\nQuantity: ${variance} SD`);
+async function resolveSD(logId, type, variance) {
+            const confirmAction = confirm(`Are you sure you want to clear this anomaly from the system?\n\nType: ${type}\nVariance: ${variance} SD`);
             
             if (confirmAction) {
-                const admin = JSON.parse(localStorage.getItem('admin_user'));
-                const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
+                // 1. Ambil data log transaksi (Phase 3) yang asli
+                const { data: logData, error: fetchErr } = await db.from('transactions').select('missing_or_issue').eq('id', logId).single();
 
-                const payload = {
-                    area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
-                    phase: 'SYSTEM CLEAR',
-                    runner_name: adminName,
-                    business_name: merchant,
-                    sd_pickup_qty: variance, 
-                    device_condition: 'Good',
-                    missing_or_issue: type 
-                };
+                if (fetchErr) {
+                    alert("Error fetching log data: " + fetchErr.message);
+                    return;
+                }
 
-                const { error } = await db.from('transactions').insert([payload]);
+                // 2. Tambahkan tanda khusus [CLEARED] tanpa menimpa catatan lama FO
+                let newNote = logData.missing_or_issue ? logData.missing_or_issue + ' [CLEARED]' : '[CLEARED]';
 
-                if (error) {
-                    console.error("Gagal menyimpan ke Supabase:", error);
-                    alert("Error database: " + error.message);
+                // 3. Update log transaksi tersebut di Supabase
+                const { error: updateErr } = await db.from('transactions')
+                    .update({ missing_or_issue: newNote })
+                    .eq('id', logId);
+
+                if (updateErr) {
+                    console.error("Gagal menyimpan ke Supabase:", updateErr);
+                    alert("Error database: " + updateErr.message);
                     return;
                 }
 
                 if (typeof logAdminAction === "function") {
-                    await logAdminAction('CLEAR_ANOMALY', `Admin resolved ${type} for ${merchant} (${variance} SD)`);
+                    await logAdminAction('CLEAR_ANOMALY', `Admin resolved ${type} (variance: ${variance}) on log ID ${logId}`);
                 }
 
                 await fetchLogs(true);
@@ -2470,7 +2457,6 @@ const p3TimeStr = h.p3Time !== '-' ? `
             const area = document.getElementById('input-kit-area').value;
             const type = document.getElementById('input-kit-type-dropdown').value;
 
-            // Tambahkan penangkap { error }
             const { error } = await db.from('master_kits').insert([{
                 area_name: area,
                 kit_id: id,
@@ -2478,13 +2464,11 @@ const p3TimeStr = h.p3Time !== '-' ? `
                 current_status: 'Good'
             }]); 
 
-            // Jika database menolak, munculkan notifikasi dan hentikan proses
             if (error) {
                 alert("❌ GAGAL MENAMBAHKAN ASET!\n\nPesan Server: " + error.message + "\n\n(Cek kembali, kemungkinan besar Barcode/Kit ID ini sudah terdaftar di sistem)");
                 return; 
             }
 
-            // Jika sukses, baru catat log, refresh tabel, dan tutup modal
             await logAdminAction('REGISTER_KIT', `Registered single kit: ${id}`); 
             fetchKits(true); 
             e.target.reset(); 
@@ -2508,7 +2492,7 @@ const p3TimeStr = h.p3Time !== '-' ? `
             showModal('modal-manual-deploy');
         }
 
-        document.getElementById('deploy-area').addEventListener('change', () => {
+        document.getElementById('deploy-area').addEventListener('change', async () => {
             const area = document.getElementById('deploy-area').value;
             const kitInput = document.getElementById('deploy-kit-id');
             const kitList = document.getElementById('deploy-kit-list');
@@ -2522,7 +2506,8 @@ const p3TimeStr = h.p3Time !== '-' ? `
                 return;
             }
 
-            const kits = globalKits.filter(k => k.area_name === area && k.current_status === 'Good');
+            const { data: areaKits } = await db.from('master_kits').select('kit_id').eq('area_name', area).eq('current_status', 'Good');
+            const kits = areaKits || [];
             kitList.innerHTML = kits.map(k => `<option value="${k.kit_id}">${k.kit_id}</option>`).join('');
 
             const biz = globalBusinesses.filter(b => b.area_name === area);
@@ -2550,10 +2535,11 @@ const p3TimeStr = h.p3Time !== '-' ? `
             const biz = phase === 'Phase 1' ? document.getElementById('deploy-business').value : 'Warehouse';
             const kitId = document.getElementById('deploy-kit-id').value.toUpperCase(); 
             
-            const kitMaster = globalKits.find(k => k.kit_id === kitId);
-            if(!kitMaster) { alert("Error: Kit ID tidak ditemukan atau ejaan salah!"); return; }
+            const { data: kitMasterData } = await db.from('master_kits').select('*').eq('kit_id', kitId).single();
+            if(!kitMasterData) { alert("Error: Kit ID tidak ditemukan di server atau ejaan salah!"); return; }
+            const kitMaster = kitMasterData;
 
-            const currentLoc = getKitLocation(kitId);
+            const currentLoc = (!kitMaster.last_location || kitMaster.last_location.toLowerCase() === 'warehouse') ? { loc: 'Warehouse', isOffice: true } : { loc: kitMaster.last_location, isOffice: false };
             let payload = [];
 
             if (phase === 'Phase 1' && !currentLoc.isOffice && currentLoc.loc !== biz) {
@@ -2768,12 +2754,10 @@ const p3TimeStr = h.p3Time !== '-' ? `
             } 
         }
 
-
         // --- Khusus Hapus System User beserta Auth-nya ---
         async function deleteSystemUser(id, email) { 
             if(confirm(`DANGER: Anda yakin ingin menghapus akun ${email}? Ini akan menghapus profil dan akses login autentikasinya secara permanen.`)) {
                 
-                // 1. Hapus dari sistem Autentikasi Supabase via RPC
                 const { error: rpcError } = await db.rpc('admin_delete_user', {
                     target_email: email
                 });
@@ -2783,7 +2767,6 @@ const p3TimeStr = h.p3Time !== '-' ? `
                     return;
                 }
 
-                // 2. Hapus dari tabel profil master_users
                 const { error: dbError } = await db.from('master_users').delete().eq('id', id); 
                 
                 if (dbError) {
@@ -2992,54 +2975,63 @@ const p3TimeStr = h.p3Time !== '-' ? `
                 return;
             }
 
-            businessesToExport.forEach(biz => {
-                const activeKits = globalKits.filter(k => getKitLocation(k.kit_id).loc === biz.business_name);
+            const adminAreas = getAdminAreas();
+            db.from('master_kits').select('kit_id, kit_type, last_location, current_status')
+              .neq('last_location', 'Warehouse')
+              .not('last_location', 'is', null)
+              .then(({ data: activeDb }) => {
                 
-                if (activeKits.length === 0) {
-                    exportData.push({
-                        "Merchant Name": biz.business_name,
-                        "Area": biz.area_name,
-                        "Kit ID": "-",
-                        "Kit Type (Recipe)": "-",
-                        "Condition Status": "-",
-                        "Total Items": 0,
-                        "Checklist Details": "-"
-                    });
-                } else {
-                    activeKits.forEach(k => {
-                        const recipe = globalKitTypes.find(t => t.type_name === k.kit_type);
-                        const itemCount = recipe && recipe.checklist_items ? recipe.checklist_items.split(',').length : 0;
-                        const itemsDetail = recipe && recipe.checklist_items ? recipe.checklist_items : "-";
+                const dbKits = activeDb || [];
 
+                businessesToExport.forEach(biz => {
+                    const activeKits = dbKits.filter(k => k.last_location === biz.business_name);
+                    
+                    if (activeKits.length === 0) {
                         exportData.push({
                             "Merchant Name": biz.business_name,
                             "Area": biz.area_name,
-                            "Kit ID": k.kit_id,
-                            "Kit Type (Recipe)": k.kit_type,
-                            "Condition Status": k.current_status || 'Good',
-                            "Total Items": itemCount,
-                            "Checklist Details": itemsDetail
+                            "Kit ID": "-",
+                            "Kit Type (Recipe)": "-",
+                            "Condition Status": "-",
+                            "Total Items": 0,
+                            "Checklist Details": "-"
                         });
-                    });
+                    } else {
+                        activeKits.forEach(k => {
+                            const recipe = globalKitTypes.find(t => t.type_name === k.kit_type);
+                            const itemCount = recipe && recipe.checklist_items ? recipe.checklist_items.split(',').length : 0;
+                            const itemsDetail = recipe && recipe.checklist_items ? recipe.checklist_items : "-";
+
+                            exportData.push({
+                                "Merchant Name": biz.business_name,
+                                "Area": biz.area_name,
+                                "Kit ID": k.kit_id,
+                                "Kit Type (Recipe)": k.kit_type,
+                                "Condition Status": k.current_status || 'Good',
+                                "Total Items": itemCount,
+                                "Checklist Details": itemsDetail
+                            });
+                        });
+                    }
+                });
+
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                
+                ws['!cols'] = [
+                    { wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
+                    { wch: 15 }, { wch: 12 }, { wch: 60 } 
+                ];
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Aset Merchant");
+                
+                const dateStr = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(wb, `RunnerTrack_Merchant_Assets_${dateStr}.xlsx`);
+                
+                if (typeof logAdminAction === "function") {
+                    logAdminAction('EXPORT_EXCEL', `Exported merchant assets data to Excel.`);
                 }
             });
-
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            
-            ws['!cols'] = [
-                { wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
-                { wch: 15 }, { wch: 12 }, { wch: 60 } 
-            ];
-
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Aset Merchant");
-            
-            const dateStr = new Date().toISOString().slice(0, 10);
-            XLSX.writeFile(wb, `RunnerTrack_Merchant_Assets_${dateStr}.xlsx`);
-            
-            if (typeof logAdminAction === "function") {
-                logAdminAction('EXPORT_EXCEL', `Exported merchant assets data to Excel.`);
-            }
         }
     </script>
 </body>
