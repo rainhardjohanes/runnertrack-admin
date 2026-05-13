@@ -1284,41 +1284,49 @@
         }
 
         async function fetchKits(force = false) { 
-            const searchInput = document.getElementById('search-kits');
-            const searchTerm = searchInput ? searchInput.value.trim().toUpperCase() : '';
-            const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
-            const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
+    const searchInput = document.getElementById('search-kits');
+    // Hapus toUpperCase() di sini agar tidak merusak pencarian nama merchant yang huruf kecil/besar
+    const searchTerm = searchInput ? searchInput.value.trim() : ''; 
+    const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
+    const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
 
-            if (!force && globalKits.length > 0 && !searchTerm) return renderKits(); 
+    if (!force && globalKits.length > 0 && !searchTerm) return renderKits(); 
 
-            const from = kitPage * kitPageSize;
-            const to = from + kitPageSize - 1;
+    const from = kitPage * kitPageSize;
+    const to = from + kitPageSize - 1;
 
-            let q = db.from('master_kits').select('*', { count: 'exact' }); 
-            
-            if (searchTerm) q = q.ilike('kit_id', `%${searchTerm}%`);
-            if (filterType) q = q.eq('kit_type', filterType);
+    let q = db.from('master_kits').select('*', { count: 'exact' }); 
+    
+    // PERBAIKAN: Cari di kit_id ATAU last_location. ilike mengabaikan huruf besar/kecil.
+    if (searchTerm) {
+        q = q.or(`kit_id.ilike.%${searchTerm}%,last_location.ilike.%${searchTerm}%`);
+    }
 
-            const adminAreas = getAdminAreas();
-            if (!adminAreas.includes('All')) {
-                if (filterArea) q = q.eq('area_name', filterArea);
-                else q = q.in('area_name', adminAreas);
-            } else if (filterArea && filterArea !== 'All') {
-                q = q.eq('area_name', filterArea);
-            }
+    if (filterType) q = q.eq('kit_type', filterType);
 
-            const { data, count, error } = await q.order('kit_id').range(from, to); 
-            
-            if (data) { 
-                globalKits = data; 
-                document.getElementById('kit-page-display').innerText = data.length > 0 ? (kitPage + 1) : 0;
-                document.getElementById('btn-kit-prev').disabled = (kitPage === 0);
-                document.getElementById('btn-kit-next').disabled = (to >= (count || 0) - 1);
+    const adminAreas = getAdminAreas();
+    if (!adminAreas.includes('All')) {
+        if (filterArea) q = q.eq('area_name', filterArea);
+        else q = q.in('area_name', adminAreas);
+    } else if (filterArea && filterArea !== 'All') {
+        q = q.eq('area_name', filterArea);
+    }
 
-                renderKits(); 
-                if (globalBusinesses.length > 0) renderBusinesses(); 
-            }
-        }
+    const { data, count, error } = await q.order('kit_id').range(from, to); 
+    
+    if (data) { 
+        globalKits = data; 
+        document.getElementById('kit-page-display').innerText = data.length > 0 ? (kitPage + 1) : 0;
+        document.getElementById('btn-kit-prev').disabled = (kitPage === 0);
+        document.getElementById('btn-kit-next').disabled = (to >= (count || 0) - 1);
+
+        renderKits(); 
+        
+        // PERBAIKAN: Hapus renderBusinesses() dari sini. 
+        // Rendering tabel merchant biarkan di-handle oleh fetchBusinesses() saja
+        // agar loading Asset Allocation kembali ngebut.
+    }
+}
 
         async function fetchUsers(force = false) { 
             if (!force && globalUsers.length > 0) return renderUsers(); 
@@ -2057,10 +2065,11 @@ const p3TimeStr = h.p3Time !== '-' ? `
         }
 
         function filterKitsByMerchant(merchantName) {
-            switchTab('kits');
-            document.getElementById('search-kits').value = merchantName;
-            renderKits();
-        }
+    switchTab('kits');
+    document.getElementById('search-kits').value = merchantName;
+    kitPage = 0; // Reset paginasi ke halaman 1
+    fetchKits(true); // Paksa fetch ke Supabase
+}
 
         function renderKits() {
             const masterCheckbox = document.getElementById('kit-master-checkbox');
