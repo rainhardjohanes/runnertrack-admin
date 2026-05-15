@@ -275,6 +275,8 @@
                         <input type="text" id="search-logs" onkeyup="logPage=0; fetchLogs(true)" placeholder="Search logs..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-48">
                     </div>
                     
+                    <input type="date" id="filter-logs-date" onchange="logPage=0; fetchLogs(true)" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 font-bold text-slate-600 cursor-pointer">
+
                     <select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); logPage=0; fetchLogs(true);"></select>
                     
                     <select id="filter-logs-phase" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="logPage=0; fetchLogs(true)">
@@ -1236,8 +1238,21 @@
 
             const fPhase = document.getElementById('filter-logs-phase')?.value;
             const fBiz = document.getElementById('filter-logs-business')?.value;
+            const fDate = document.getElementById('filter-logs-date')?.value;
+
             if(fPhase) q = q.eq('phase', fPhase);
             if(fBiz) q = q.eq('business_name', fBiz);
+
+            if (fDate) {
+                const [yD, mD, dD] = fDate.split('-');
+                const start = new Date(yD, mD - 1, dD);
+                start.setHours(0, 0, 0, 0);
+                const end = new Date(yD, mD - 1, dD);
+                end.setHours(23, 59, 59, 999);
+
+                q = q.gte('created_at', start.toISOString())
+                     .lte('created_at', end.toISOString());
+            }
 
             const { data, count, error } = await q
                 .order('created_at', { ascending: false })
@@ -1886,13 +1901,21 @@ const p3TimeStr = h.p3Time !== '-' ? `
             const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
             const fPhase = document.getElementById('filter-logs-phase') ? document.getElementById('filter-logs-phase').value : '';
             const fBiz = document.getElementById('filter-logs-business') ? document.getElementById('filter-logs-business').value : '';
+            const fDate = document.getElementById('filter-logs-date') ? document.getElementById('filter-logs-date').value : '';
 
             const f = globalLogs.filter(i => {
                 const matchArea = !fA || i.area === fA;
                 const matchPhase = !fPhase || i.phase === fPhase;
                 const matchBiz = !fBiz || i.business_name === fBiz;
                 const matchSearch = (i.business_name || '').toLowerCase().includes(s) || (i.runner_name || '').toLowerCase().includes(s) || (i.kit_id || '').toLowerCase().includes(s);
-                return matchArea && matchPhase && matchBiz && matchSearch;
+                
+                let matchDate = true;
+                if (fDate) {
+                    const logDateStr = getLocalDateStr(i.created_at);
+                    matchDate = (logDateStr === fDate);
+                }
+
+                return matchArea && matchPhase && matchBiz && matchSearch && matchDate;
             });
 
             document.getElementById('table-logs').innerHTML = f.map(i => {
