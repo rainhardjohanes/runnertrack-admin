@@ -840,6 +840,25 @@
         </div>
     </div>
 
+    <div id="modal-edit-kit" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="closeModal('modal-edit-kit')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 class="font-black text-xl mb-6 border-b pb-3">Edit Asset Allocation</h3>
+            <form id="form-edit-kit" class="space-y-4">
+                <input type="hidden" id="edit-kit-uid">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Kit ID Barcode *</label>
+                    <input type="text" id="edit-kit-id" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold uppercase" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Recipe Type *</label>
+                    <select id="edit-kit-type-dropdown" class="w-full p-3 border border-slate-300 rounded-lg outline-none text-sm font-bold text-blue-700" required></select>
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
     <div id="modal-kit" class="fixed inset-0 z-50 bg-slate-900/60 hidden-view flex-col justify-center items-center backdrop-blur-sm p-4">
         <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative">
             <button onclick="closeModal('modal-kit')" class="absolute top-4 right-4 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -1320,9 +1339,44 @@
                 globalKitTypes = data; 
                 renderKitTypes(); 
                 document.getElementById('input-kit-type-dropdown').innerHTML = `<option value="">-- Choose Recipe --</option>` + data.map(i => `<option value="${i.type_name}">${i.type_name}</option>`).join('');
+                document.getElementById('edit-kit-type-dropdown').innerHTML = `<option value="">-- Choose Recipe --</option>` + data.map(i => `<option value="${i.type_name}">${i.type_name}</option>`).join('');
                 document.getElementById('filter-kits-type').innerHTML = `<option value="">All Recipes</option>` + data.map(i => `<option value="${i.type_name}">${i.type_name}</option>`).join('');
             } 
         }
+
+        function editKit(id) {
+            const k = globalKits.find(x => x.id === id);
+            if (!k) return;
+            document.getElementById('edit-kit-uid').value = k.id;
+            document.getElementById('edit-kit-id').value = k.kit_id;
+            document.getElementById('edit-kit-type-dropdown').value = k.kit_type;
+            showModal('modal-edit-kit');
+        }
+
+        document.getElementById('form-edit-kit').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-kit-uid').value;
+            const newKitId = document.getElementById('edit-kit-id').value.toUpperCase().trim();
+            const newKitType = document.getElementById('edit-kit-type-dropdown').value;
+
+            const oldData = globalKits.find(x => x.id == id);
+            
+            const { error } = await db.from('master_kits')
+                .update({ kit_id: newKitId, kit_type: newKitType })
+                .eq('id', id);
+
+            if (error) {
+                alert("❌ GAGAL MENGUBAH DATA!\n\nPesan Server: " + error.message);
+                return;
+            }
+
+            // Catat perubahan di Activity Log Admin
+            await logAdminAction('UPDATE_KIT', `Changed Kit Data. ID: [${oldData.kit_id} -> ${newKitId}], Recipe: [${oldData.kit_type} -> ${newKitType}]`);
+            
+            fetchKits(true);
+            e.target.reset();
+            closeModal('modal-edit-kit');
+        });
 
         async function fetchKits(force = false) { 
             const searchInput = document.getElementById('search-kits');
@@ -1686,7 +1740,7 @@
             }).join('');
         }
         
-        async function renderSDTracker() {
+async function renderSDTracker() {
             const radarDateInput = document.getElementById('filter-radar-date');
             if (!radarDateInput.value) {
                 const today = new Date();
@@ -1697,8 +1751,17 @@
 
             const [ySD, mSD, dSD] = targetDateStr.split('-');
             const startOfDay = new Date(ySD, mSD - 1, dSD);
-            startOfDay.setDate(startOfDay.getDate() - 1); 
-            startOfDay.setHours(0, 0, 0, 0);
+            
+            // BUG FIX: Tarik 30 hari ke belakang agar P2 yang lama (terlewat) tetap bisa dipasangkan dengan P3 hari ini
+            startOfDay.setDate(startOfDay.getDate() - 30); 
+
+            // --- TAMBAHAN BARU: HARD LIMIT 16 MEI 2026 ---
+            // Memastikan data sampah sebelum 16 Mei tidak ikut tertarik ke radar/history
+            const hardLimitDate = new Date(2026, 4, 16); // Bulan 4 = Mei (0-indexed)
+            if (startOfDay < hardLimitDate) {
+                startOfDay.setTime(hardLimitDate.getTime());
+            }
+            // ---------------------------------------------
 
             const endOfDay = new Date(ySD, mSD - 1, dSD);
             endOfDay.setHours(23, 59, 59, 999);
@@ -1730,31 +1793,31 @@
             let historyList = [];
             let pendingQueue = {}; 
 
+            // Helper untuk parsing angka aman, agar angka 0 tidak dianggap falsy dan ditimpa fallback
+            const parseQty = (v) => isNaN(parseInt(v)) ? null : parseInt(v);
+
             allLogs.forEach(log => {
-                const biz = log.business_name;
+                const biz = log.business_name ? log.business_name.trim() : null; 
                 if (!biz) return;
 
                 if (!pendingQueue[biz]) pendingQueue[biz] = [];
 
                 if (log.phase === 'Phase 2') {
                     pendingQueue[biz].push(log);
-                } 
+                }
                 else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
-                    let matchedP2 = pendingQueue[biz].shift(); 
+                    let matchedP2 = pendingQueue[biz].shift();
 
-                    let p3Qty = parseInt(log.sd_pickup_qty) || parseInt(log.sd_qty) || 0;
-                    let p3Up = parseInt(log.sd_uploaded) || 0; 
+                    // BUG FIX: Gunakan Nullish Coalescing (??) agar saat tim lapangan menginput '0', sistem tidak menimpanya
+                    let p3Qty = parseQty(log.sd_pickup_qty) ?? parseQty(log.sd_qty) ?? parseQty(log.sd_uploaded) ?? 0;
+                    let p3Up = parseQty(log.sd_uploaded) ?? 0;
 
                     if (matchedP2) {
-                        let p2Qty = parseInt(matchedP2.sd_card_qty) || parseInt(matchedP2.sd_drop_qty) || parseInt(matchedP2.sd_qty) || 0;
-
-                        if (p2Qty > p3Qty && log.phase !== 'SYSTEM CLEAR') {
-                            let remainingP2 = { ...matchedP2 };
-                            remainingP2.sd_card_qty = p2Qty - p3Qty; 
-                            pendingQueue[biz].unshift(remainingP2); 
-                            
-                            p2Qty = p3Qty; 
-                        } 
+                        let p2Qty = parseQty(matchedP2.sd_card_qty) ?? parseQty(matchedP2.sd_drop_qty) ?? parseQty(matchedP2.sd_qty) ?? 0;
+                        // BUG FIX LOGIKA: Blok pemotongan otomatis (unshift) DIHAPUS. 
+                        // Phase 3 selalu mengakhiri antrean Phase 2 untuk merchant tersebut. 
+                        // Sisa selisih (contoh Drop 3, terbaca Pickup 2) tidak lagi dilempar ke Radar, 
+                        // melainkan langsung terekam sebagai SHORTAGE 1 di tabel History.
 
                         let durationStr = '-';
                         if (log.phase === 'SYSTEM CLEAR') {
@@ -1814,6 +1877,8 @@
                     }
                 });
             }
+
+            radarList.sort((a, b) => new Date(b.time) - new Date(a.time));
 
             historyList = historyList.filter(h => getLocalDateStr(h.p3Time) === targetDateStr); 
 
@@ -2138,7 +2203,8 @@ const p3TimeStr = h.p3Time !== '-' ? `
                         </span>
                     </td>
                     <td class="p-4 text-right flex justify-end gap-1 items-center h-full">
-                        ${i.current_status === 'Damaged' ? `<button onclick="repairKit(${i.id})" class="text-[10px] bg-amber-400 text-amber-900 font-black px-3 py-1.5 rounded hover:bg-amber-500 transition"><i class="fa-solid fa-wrench mr-1"></i> Repair</button>` : ''}
+                        ${i.current_status === 'Damaged' ? `<button onclick="repairKit(${i.id})" class="text-[10px] bg-amber-400 text-amber-900 font-black px-3 py-1.5 rounded hover:bg-amber-500 transition shadow-sm"><i class="fa-solid fa-wrench mr-1"></i> Repair</button>` : ''}
+                        <button onclick="editKit(${i.id})" class="text-slate-400 hover:text-blue-600 p-2 transition"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="deleteRow('master_kits', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>`;
@@ -2247,7 +2313,7 @@ const p3TimeStr = h.p3Time !== '-' ? `
         });
 
 
-        async function resolveLiveRadar(merchant, pendingQty) {
+async function resolveLiveRadar(merchant, pendingQty) {
             const isUploaded = confirm(`Resolving Live Radar status for ${merchant} (${pendingQty} SD).\n\nWILL THIS SD CARD BE UPLOADED?\n\nPress [OK / Yes] = Yes, count towards Dashboard\nPress [Cancel / No] = No, count as 0 Upload`);
             
             const admin = JSON.parse(localStorage.getItem('admin_user'));
@@ -2255,13 +2321,13 @@ const p3TimeStr = h.p3Time !== '-' ? `
 
             const payload = {
                 area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
-                phase: 'Phase 3', 
+                phase: 'SYSTEM CLEAR', // <--- UBAH DARI 'Phase 3' MENJADI 'SYSTEM CLEAR'
                 runner_name: adminName,
                 business_name: merchant,
                 sd_pickup_qty: pendingQty,
                 sd_uploaded: isUploaded ? pendingQty : 0, 
                 device_condition: 'Good',
-                missing_or_issue: 'Manual Clear Radar by Admin'
+                missing_or_issue: '[CLEARED] Manual Clear Radar by Admin' // <--- TAMBAHKAN [CLEARED] DI AWAL
             };
 
             const { error } = await db.from('transactions').insert([payload]);
@@ -2275,7 +2341,7 @@ const p3TimeStr = h.p3Time !== '-' ? `
             await fetchLogs(true); 
             renderDashboard(); 
         }
-
+        
 async function resolveSD(logId, type, variance) {
             const confirmAction = confirm(`Are you sure you want to clear this anomaly from the system?\n\nType: ${type}\nVariance: ${variance} SD`);
             
