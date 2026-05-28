@@ -2015,225 +2015,338 @@ function populateAreaDropdowns() {
         }
         
 async function renderSDTracker() {
-            const radarDateInput = document.getElementById('filter-radar-date');
-            if (!radarDateInput.value) {
-                const today = new Date();
-                radarDateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-            }
-            const targetDateStr = radarDateInput.value;
-            const adminAreas = getAdminAreas();
+const radarTable =
+    document.getElementById('table-live-radar');
 
-            const [ySD, mSD, dSD] = targetDateStr.split('-');
-            const startOfDay = new Date(ySD, mSD - 1, dSD);
-            
-            // BUG FIX: Tarik 30 hari ke belakang agar P2 yang lama (terlewat) tetap bisa dipasangkan dengan P3 hari ini
-            startOfDay.setDate(startOfDay.getDate() - 30); 
+const historyTable =
+    document.getElementById('table-sd-history');
 
-            // --- TAMBAHAN BARU: HARD LIMIT 16 MEI 2026 ---
-            // Memastikan data sampah sebelum 16 Mei tidak ikut tertarik ke radar/history
-            const hardLimitDate = new Date(2026, 4, 16); // Bulan 4 = Mei (0-indexed)
-            if (startOfDay < hardLimitDate) {
-                startOfDay.setTime(hardLimitDate.getTime());
-            }
-            // ---------------------------------------------
+const liveBadge =
+    document.getElementById('badge-live-radar');
 
-            const endOfDay = new Date(ySD, mSD - 1, dSD);
-            endOfDay.setHours(23, 59, 59, 999);
+const areaFilter =
+    document.getElementById('filter-sd-area').value;
 
-            let qDaily = db.from('transactions')
-                .select('*')
-                .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-                .gte('created_at', startOfDay.toISOString()) 
-                .lte('created_at', endOfDay.toISOString())
-                .order('created_at', { ascending: true });
+const selectedDate =
+    document.getElementById('filter-radar-date').value;
 
-            const targetArea = document.getElementById('filter-sd-area') ? document.getElementById('filter-sd-area').value : '';
+radarTable.innerHTML = `
+<tr>
+    <td colspan="5" class="p-6 text-center text-slate-400">
+        Loading pending radar...
+    </td>
+</tr>
+`;
 
-            if (!adminAreas.includes('All')) {
-                if (targetArea && targetArea !== '') {
-                    qDaily = qDaily.eq('area', targetArea); 
-                } else {
-                    qDaily = qDaily.in('area', adminAreas); 
-                }
-            } else {
-                if (targetArea && targetArea !== '') {
-                    qDaily = qDaily.eq('area', targetArea); 
-                }
-            }
-            const { data: dailyData } = await qDaily;
-            let allLogs = dailyData || [];
-            
-            let radarList = [];
-            let historyList = [];
-            let pendingQueue = {}; 
+historyTable.innerHTML = `
+<tr>
+    <td colspan="6" class="p-6 text-center text-slate-400">
+        Loading SD history...
+    </td>
+</tr>
+`;
 
-            // Helper untuk parsing angka aman, agar angka 0 tidak dianggap falsy dan ditimpa fallback
-            const parseQty = (v) => isNaN(parseInt(v)) ? null : parseInt(v);
+try {
 
-            allLogs.forEach(log => {
-                const biz = log.business_name ? log.business_name.trim() : null; 
-                if (!biz) return;
-
-                if (!pendingQueue[biz]) pendingQueue[biz] = [];
-
-                if (log.phase === 'Phase 2') {
-                    pendingQueue[biz].push(log);
-                }
-                else if (log.phase === 'Phase 3' || log.phase === 'SYSTEM CLEAR') {
-                    let matchedP2 = pendingQueue[biz].shift();
-
-                    // BUG FIX: Gunakan Nullish Coalescing (??) agar saat tim lapangan menginput '0', sistem tidak menimpanya
-                    let p3Qty = parseQty(log.sd_pickup_qty) ?? parseQty(log.sd_qty) ?? parseQty(log.sd_uploaded) ?? 0;
-                    let p3Up = parseQty(log.sd_uploaded) ?? 0;
-
-                    if (matchedP2) {
-                        let p2Qty = parseQty(matchedP2.sd_card_qty) ?? parseQty(matchedP2.sd_drop_qty) ?? parseQty(matchedP2.sd_qty) ?? 0;
-                        // BUG FIX LOGIKA: Blok pemotongan otomatis (unshift) DIHAPUS. 
-                        // Phase 3 selalu mengakhiri antrean Phase 2 untuk merchant tersebut. 
-                        // Sisa selisih (contoh Drop 3, terbaca Pickup 2) tidak lagi dilempar ke Radar, 
-                        // melainkan langsung terekam sebagai SHORTAGE 1 di tabel History.
-
-                        let durationStr = '-';
-                        if (log.phase === 'SYSTEM CLEAR') {
-                            durationStr = 'Manual Clear';
-                        } else {
-                            const dropDate = new Date(matchedP2.created_at);
-                            const pickDate = new Date(log.created_at);
-                            if (!isNaN(dropDate) && !isNaN(pickDate)) {
-                                const diffMs = pickDate - dropDate;
-                                const diffMins = Math.max(0, Math.floor(diffMs / (1000 * 60)));
-                                const hrs = Math.floor(diffMins / 60);
-                                const mins = diffMins % 60;
-                                durationStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins} Mins`;
-                            }
-                        }
-
-                        historyList.push({
-                            p3Id: log.id, 
-                            merchant: biz,
-                            p2Time: matchedP2.created_at,
-                            p2Runner: matchedP2.runner_name,
-                            p3Time: log.created_at,
-                            p3Runner: log.runner_name,
-                            p2Qty: p2Qty,
-                            p3Qty: p3Qty,
-                            p3Up: p3Up,
-                            duration: durationStr,
-                            isCleared: log.phase === 'SYSTEM CLEAR' || (log.missing_or_issue && log.missing_or_issue.includes('[CLEARED]'))
-                        });
-                    } else {
-                        historyList.push({
-                            p3Id: log.id,
-                            merchant: biz,
-                            p2Time: '-',
-                            p2Runner: '-',
-                            p3Time: log.created_at,
-                            p3Runner: log.runner_name,
-                            p2Qty: 0,
-                            p3Qty: p3Qty,
-                            p3Up: p3Up,
-                            duration: log.phase === 'SYSTEM CLEAR' ? 'Manual Clear' : 'No Phase 2',
-                            isCleared: log.phase === 'SYSTEM CLEAR' || (log.missing_or_issue && log.missing_or_issue.includes('[CLEARED]'))
-                        });
-                    }
-                }
+    let cycleQuery =
+        db
+            .from('sd_business_cycles')
+            .select('*')
+            .order('opened_at', {
+                ascending: false
             });
 
-            for (const biz in pendingQueue) {
-                pendingQueue[biz].forEach(p2 => {
-                    if (getLocalDateStr(p2.created_at) <= targetDateStr) { 
-                        radarList.push({
-                            merchant: biz,
-                            time: p2.created_at,
-                            runner: p2.runner_name,
-                            qty: parseInt(p2.sd_card_qty) || parseInt(p2.sd_drop_qty) || parseInt(p2.sd_qty) || 0 
-                        });
-                    }
-                });
-            }
+    if (areaFilter) {
 
-            radarList.sort((a, b) => new Date(b.time) - new Date(a.time));
+        cycleQuery =
+            cycleQuery.eq(
+                'area',
+                areaFilter
+            );
+    }
 
-            historyList = historyList.filter(h => getLocalDateStr(h.p3Time) === targetDateStr); 
+    if (selectedDate) {
 
-            const tbodyRadar = document.getElementById('table-live-radar');
-            if (tbodyRadar) {
-                tbodyRadar.innerHTML = radarList.length === 0
-                    ? `<tr><td colspan="5" class="p-6 text-center text-emerald-600 font-bold italic bg-emerald-50 rounded-b-xl"><i class="fa-solid fa-check-circle mr-2"></i>All clear! All targets today have been picked up.</td></tr>`
-                    : radarList.map(p => `
-                        <tr class="hover:bg-blue-50/50 transition border-b border-blue-50">
-                            <td class="p-4 font-black text-slate-800">${p.merchant}</td>
-                            <td class="p-4">
-    <div class="text-[9px] font-black uppercase text-slate-400 tracking-widest">${new Date(p.time).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'})}</div>
-    <div class="font-bold text-slate-600">${new Date(p.time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-</td>
-                            <td class="p-4 text-slate-500 uppercase tracking-widest">${p.runner || '-'}</td>
-                            <td class="p-4 text-center font-black text-blue-600 bg-blue-50/50">${p.qty} SD</td>
-                            <td class="p-4 text-right flex justify-end gap-2 items-center">
-                                <span class="font-black text-amber-500 animate-pulse mt-1 text-[10px] uppercase tracking-widest"><i class="fa-solid fa-spinner animate-spin mr-1"></i> Pending</span>
-                                <button onclick="resolveLiveRadar('${p.merchant.replace(/'/g, "\\'")}', ${p.qty})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-md transition shrink-0"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                            </td>
-                        </tr>
-                    `).join('');
-            }
-            
-            const badgeRadar = document.getElementById('badge-live-radar');
-            if (badgeRadar) badgeRadar.innerText = radarList.length;
+        cycleQuery =
+            cycleQuery.gte(
+                'opened_at',
+                `${selectedDate}T00:00:00`
+            );
 
-            historyList.sort((a, b) => new Date(b.p3Time) - new Date(a.p3Time)); 
-            
-            document.getElementById('table-sd-history').innerHTML = historyList.length === 0 ?
-                `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic bg-slate-50">No daily exchange history available.</td></tr>` :
-                historyList.map(h => {
-                    let statusHtml = '';
-                    const diff = h.p2Qty - h.p3Qty;
-                    
-                    if (diff === 0 || h.isCleared) {
-                        statusHtml = `<span class="text-[10px] font-black text-emerald-600 border border-emerald-200 bg-emerald-50 px-2 py-1 rounded shadow-sm"><i class="fa-solid fa-check-double mr-1"></i> RECONCILED</span>`;
-                    } else if (diff > 0) {
-                        statusHtml = `
-                            <div class="flex items-center justify-end gap-2">
-                                <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-red-100 text-red-700 border border-red-200 whitespace-nowrap"><i class="fa-solid fa-arrow-down mr-1"></i> SHORTAGE ${diff}</span>
-                                <button onclick="resolveSD(${h.p3Id}, 'SHORTAGE', ${diff})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                            </div>`;
-                    } else {
-                        const surplus = Math.abs(diff);
-                        statusHtml = `
-                            <div class="flex items-center justify-end gap-2">
-                                <span class="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap"><i class="fa-solid fa-arrow-up mr-1"></i> SURPLUS ${surplus}</span>
-                                <button onclick="resolveSD(${h.p3Id}, 'SURPLUS', ${surplus})" class="bg-white border border-slate-200 text-slate-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition"><i class="fa-solid fa-check mr-1"></i> Clear</button>
-                            </div>`;
-                    }
+        cycleQuery =
+            cycleQuery.lte(
+                'opened_at',
+                `${selectedDate}T23:59:59`
+            );
+    }
 
-                    const p2TimeStr = h.p2Time !== '-' ? `
-    <div class="text-[9px] font-black uppercase text-slate-400 tracking-widest">${new Date(h.p2Time).toLocaleDateString('en-GB', {day:'numeric', month:'short'})}</div>
-    <div class="font-bold text-slate-600">${new Date(h.p2Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-` : '-';
+    const {
+        data: cycles,
+        error: cycleError
+    } = await cycleQuery;
 
-const p3TimeStr = h.p3Time !== '-' ? `
-    <div class="text-[9px] font-black uppercase text-slate-400 tracking-widest">${new Date(h.p3Time).toLocaleDateString('en-GB', {day:'numeric', month:'short'})}</div>
-    <div class="font-bold text-slate-600">${new Date(h.p3Time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-` : '-';
+    if (cycleError) {
 
-                    return `
-                    <tr class="hover:bg-indigo-50/30 transition border-b border-slate-100">
-                        <td class="p-4 font-black text-slate-800">${h.merchant}</td>
-<td class="p-4">
-    ${p2TimeStr}
-    <div class="text-[10px] uppercase text-slate-400 mt-0.5">${h.p2Runner}</div>
-</td>
-<td class="p-4">
-    ${p3TimeStr}
-    <div class="text-[10px] uppercase text-slate-400 mt-0.5">${h.p3Runner}</div>
-</td>                       <td class="p-4 text-center font-bold text-indigo-600">${h.duration}</td>
-                        <td class="p-4 text-center font-black bg-indigo-50/50 text-indigo-700 whitespace-nowrap">
-                            ${h.p2Qty} / ${h.p3Qty} / <span class="text-emerald-600 ml-1" title="SD Card Uploaded">${h.p3Up}</span>
-                        </td>
-                        <td class="p-4 text-right">${statusHtml}</td>
-                    </tr>
-                    `;
-                }).join('');
+        console.error(cycleError);
+
+        throw cycleError;
+    }
+
+    const safeCycles =
+        cycles || [];
+
+    const pendingCycles =
+        safeCycles.filter(
+            cycle =>
+                Number(
+                    cycle.outstanding_sd || 0
+                ) > 0
+        );
+
+    liveBadge.textContent =
+        pendingCycles.length;
+
+    if (!pendingCycles.length) {
+
+        radarTable.innerHTML = `
+        <tr>
+            <td colspan="5" class="p-6 text-center text-emerald-500 font-bold">
+                No pending Phase 3
+            </td>
+        </tr>
+        `;
+
+    } else {
+
+        const businessNames =
+            pendingCycles.map(
+                x => x.business_name
+            );
+
+const {
+    data: phase2Transactions
+} = await db
+    .from('transactions')
+    .select(`
+        business_name,
+        runner_name,
+        created_at,
+        phase
+    `)
+    .eq(
+        'phase',
+        'Phase 2'
+    )
+    .in(
+        'business_name',
+        businessNames
+    )
+    .order(
+        'created_at',
+        {
+            ascending: false
         }
+    );
+
+
+        radarTable.innerHTML =
+            pendingCycles.map(cycle => {
+
+const latestTx =
+    phase2Transactions
+        ?.filter(
+            tx =>
+                tx.business_name ===
+                cycle.business_name
+        )
+        ?.sort(
+            (a, b) =>
+                Math.abs(
+                    new Date(a.created_at) -
+                    new Date(cycle.opened_at)
+                ) -
+                Math.abs(
+                    new Date(b.created_at) -
+                    new Date(cycle.opened_at)
+                )
+        )?.[0];
+                return `
+                <tr class="hover:bg-blue-50/40 transition">
+
+                    <td class="p-4 font-black text-slate-700">
+                        ${cycle.business_name || '-'}
+                    </td>
+
+                    <td class="p-4 text-xs font-bold text-slate-500">
+                        ${
+                            cycle.opened_at
+                                ? new Date(cycle.opened_at)
+                                    .toLocaleString()
+                                : '-'
+                        }
+                    </td>
+
+                    <td class="p-4 text-xs font-bold text-slate-600">
+                        ${
+                            latestTx?.runner_name || '-'
+                        }
+                    </td>
+
+                    <td class="p-4 text-center">
+                        <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black">
+                            ${
+                                cycle.outstanding_sd || 0
+                            } SD
+                        </span>
+                    </td>
+
+                    <td class="p-4 text-right">
+                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                            OPEN
+                        </span>
+                    </td>
+
+                </tr>
+                `;
+            }).join('');
+    }
+
+    if (!safeCycles.length) {
+
+        historyTable.innerHTML = `
+        <tr>
+            <td colspan="6" class="p-6 text-center text-slate-400">
+                No SD history found
+            </td>
+        </tr>
+        `;
+
+        return;
+    }
+
+    historyTable.innerHTML =
+        safeCycles.map(cycle => {
+
+            const durationHours =
+                cycle.closed_at
+                    ? (
+                        (
+                            new Date(cycle.closed_at)
+                            -
+                            new Date(cycle.opened_at)
+                        ) / 36e5
+                    ).toFixed(1)
+                    : '-';
+
+            let statusColor =
+                'red';
+
+            if (
+                cycle.status ===
+                'CLOSED_RECONCILED'
+            ) {
+
+                statusColor =
+                    'emerald';
+
+            } else if (
+                cycle.status ===
+                'CLOSED_SHORTAGE_UPLOAD'
+            ) {
+
+                statusColor =
+                    'amber';
+            }
+
+            return `
+            <tr class="hover:bg-slate-50 transition">
+
+                <td class="p-4 font-black text-slate-700">
+                    ${cycle.business_name || '-'}
+                </td>
+
+                <td class="p-4 text-xs font-bold text-slate-500">
+                    ${
+                        cycle.opened_at
+                            ? new Date(cycle.opened_at)
+                                .toLocaleString()
+                            : '-'
+                    }
+                </td>
+
+                <td class="p-4 text-xs font-bold text-slate-500">
+                    ${
+                        cycle.closed_at
+                            ? new Date(cycle.closed_at)
+                                .toLocaleString()
+                            : '-'
+                    }
+                </td>
+
+                <td class="p-4 text-center text-xs font-black">
+                    ${durationHours}
+                    ${
+                        durationHours !== '-'
+                            ? ' hrs'
+                            : ''
+                    }
+                </td>
+
+                <td class="p-4 text-center text-xs font-black">
+                    <span class="text-blue-600">
+                        ${cycle.total_sent || 0}
+                    </span>
+                    /
+                    <span class="text-indigo-600">
+                        ${cycle.total_returned || 0}
+                    </span>
+                    /
+                    <span class="text-emerald-600">
+                        ${cycle.total_uploaded || 0}
+                    </span>
+                </td>
+
+                <td class="p-4 text-right">
+                    <span class="
+                        bg-${statusColor}-100
+                        text-${statusColor}-700
+                        px-3 py-1
+                        rounded-full
+                        text-[10px]
+                        font-black
+                    ">
+                        ${cycle.status || '-'}
+                    </span>
+                </td>
+
+            </tr>
+            `;
+        }).join('');
+
+} catch (err) {
+
+    console.error(
+        'SD TRACKER ERROR:',
+        err
+    );
+
+    radarTable.innerHTML = `
+    <tr>
+        <td colspan="5" class="p-6 text-center text-red-500 font-bold">
+            Failed loading SD radar
+        </td>
+    </tr>
+    `;
+
+    historyTable.innerHTML = `
+    <tr>
+        <td colspan="6" class="p-6 text-center text-red-500 font-bold">
+            Failed loading SD history
+        </td>
+    </tr>
+    `;
+}
+}
 
         function renderLogs() {
             const s = document.getElementById('search-logs').value.toLowerCase();
