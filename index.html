@@ -190,15 +190,14 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left whitespace-nowrap">
                             <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
-<tr>
-    <th class="p-4">Merchant</th>
-    <th class="p-4">Phase 2 (Drop)</th>
-    <th class="p-4">Phase 3 (Pick Up)</th>
-    <th class="p-4 text-center">Duration</th>
-    <th class="p-4 text-center">Qty (Drop/Return/Pending)</th>
-    <th class="p-4 text-center">System Status</th>
-    <th class="p-4 text-center">Action</th>
-</tr>
+                                <tr>
+                                    <th class="p-4">Merchant</th>
+                                    <th class="p-4">Phase 2 (Drop)</th>
+                                    <th class="p-4">Phase 3 (Pick Up)</th>
+                                    <th class="p-4 text-center">Duration</th>
+                                    <th class="p-4 text-center">Qty (Drop/Pick/Up)</th>
+                                    <th class="p-4 text-right">System Status</th>
+                                </tr>
                             </thead>
                             <tbody id="table-sd-history" class="divide-y divide-indigo-50 text-xs"></tbody>
                         </table>
@@ -220,26 +219,30 @@
                         <select id="filter-fo-area" onchange="document.getElementById('filter-fo-name').value=''; fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none filter-area-dropdown min-w-[120px]"></select>
                     </div>
                     
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Date Range</label>
-
-<div class="flex gap-2">
+<div class="flex flex-col gap-1">
+    <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">
+        Start Date
+    </label>
     <input
         type="date"
         id="filter-fo-date-start"
         onchange="fetchAndRenderFOTracker()"
-        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]"
-    >
+        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
+</div>
 
+<div class="flex flex-col gap-1">
+    <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">
+        End Date
+    </label>
     <input
         type="date"
         id="filter-fo-date-end"
         onchange="fetchAndRenderFOTracker()"
-        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]"
-    >
+        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
 </div>
-                    </div>
-                    <div class="flex flex-col gap-1">
+
+
+<div class="flex flex-col gap-1">
                         <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Officer Name</label>                        
                         <select id="filter-fo-name" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none min-w-[150px]">
                             <option value="">All Officers</option>
@@ -309,26 +312,23 @@
                 <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Area</label>
                 <select id="filter-rt-area" onchange="fetchAndRenderRunnerTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none filter-area-dropdown min-w-[120px]"></select>
             </div>
-            <div class="flex flex-col gap-1">
-                <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Date Range</label>
-
-<div class="flex gap-2">
-    <input
-        type="date"
-        id="filter-rt-date-start"
-        onchange="fetchAndRenderRunnerTracker()"
-        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]"
-    >
-
-    <input
-        type="date"
-        id="filter-rt-date-end"
-        onchange="fetchAndRenderRunnerTracker()"
-        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]"
-    >
+<div class="flex flex-col gap-1">
+    <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Start Date</label>
+    <input type="date"
+           id="filter-rt-date-start"
+           onchange="fetchAndRenderRunnerTracker()"
+           class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
 </div>
-            </div>
-            <button onclick="fetchAndRenderRunnerTracker()" class="h-[34px] w-[34px] flex items-center justify-center bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-blue-600 hover:text-white transition shadow-sm mb-[1px]" title="Refresh KPI">
+
+<div class="flex flex-col gap-1">
+    <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">End Date</label>
+    <input type="date"
+           id="filter-rt-date-end"
+           onchange="fetchAndRenderRunnerTracker()"
+           class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
+</div>
+
+<button onclick="fetchAndRenderRunnerTracker()" class="h-[34px] w-[34px] flex items-center justify-center bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-blue-600 hover:text-white transition shadow-sm mb-[1px]" title="Refresh KPI">
                 <i class="fa-solid fa-rotate-right"></i>
             </button>
         </div>
@@ -1560,6 +1560,7 @@ async function fetchAndRenderRunnerTracker() {
     }
 }
 
+
 function populateAreaDropdowns() {
             const adminAreas = getAdminAreas();
             let filterOpts = '';
@@ -1633,6 +1634,8 @@ function initFOTrackerFilters() {
         endInput.value = todayStr;
     }
 }
+
+
         // ----------------------------------------------------------------------
         // 5. FETCH DATA FUNCTIONS
         // ----------------------------------------------------------------------
@@ -2070,7 +2073,7 @@ async function fetchAndRenderFOTracker() {
     }
 }
 
-        // ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
         // 6. RENDER FUNCTIONS
         // ----------------------------------------------------------------------
 
@@ -2213,381 +2216,337 @@ async function fetchAndRenderFOTracker() {
         }
         
 async function renderSDTracker() {
+const radarTable =
+    document.getElementById('table-live-radar');
 
-    const radarTable =
-        document.getElementById('table-live-radar');
+const historyTable =
+    document.getElementById('table-sd-history');
 
-    const historyTable =
-        document.getElementById('table-sd-history');
+const liveBadge =
+    document.getElementById('badge-live-radar');
 
-    const liveBadge =
-        document.getElementById('badge-live-radar');
+const areaFilter =
+    document.getElementById('filter-sd-area').value;
 
-    const areaFilter =
-        document.getElementById('filter-sd-area').value;
+const selectedDate =
+    document.getElementById('filter-radar-date').value;
+
+radarTable.innerHTML = `
+<tr>
+    <td colspan="5" class="p-6 text-center text-slate-400">
+        Loading pending radar...
+    </td>
+</tr>
+`;
+
+historyTable.innerHTML = `
+<tr>
+    <td colspan="6" class="p-6 text-center text-slate-400">
+        Loading SD history...
+    </td>
+</tr>
+`;
+
+try {
+
+    let cycleQuery =
+        db
+            .from('sd_business_cycles')
+            .select('*')
+            .order('opened_at', {
+                ascending: false
+            });
+
+    if (areaFilter) {
+
+        cycleQuery =
+            cycleQuery.eq(
+                'area',
+                areaFilter
+            );
+    }
+
+    if (selectedDate) {
+
+        cycleQuery =
+            cycleQuery.gte(
+                'opened_at',
+                `${selectedDate}T00:00:00`
+            );
+
+        cycleQuery =
+            cycleQuery.lte(
+                'opened_at',
+                `${selectedDate}T23:59:59`
+            );
+    }
+
+    const {
+        data: cycles,
+        error: cycleError
+    } = await cycleQuery;
+
+    if (cycleError) {
+
+        console.error(cycleError);
+
+        throw cycleError;
+    }
+
+    const safeCycles =
+        cycles || [];
+
+    const pendingCycles =
+        safeCycles.filter(
+            cycle =>
+                Number(
+                    cycle.outstanding_sd || 0
+                ) > 0
+        );
+
+    liveBadge.textContent =
+        pendingCycles.length;
+
+    if (!pendingCycles.length) {
+
+        radarTable.innerHTML = `
+        <tr>
+            <td colspan="5" class="p-6 text-center text-emerald-500 font-bold">
+                No pending Phase 3
+            </td>
+        </tr>
+        `;
+
+    } else {
+
+        const businessNames =
+            pendingCycles.map(
+                x => x.business_name
+            );
+
+const {
+    data: phase2Transactions
+} = await db
+    .from('transactions')
+    .select(`
+        business_name,
+        runner_name,
+        created_at,
+        phase
+    `)
+    .eq(
+        'phase',
+        'Phase 2'
+    )
+    .in(
+        'business_name',
+        businessNames
+    )
+    .order(
+        'created_at',
+        {
+            ascending: false
+        }
+    );
+
+
+        radarTable.innerHTML =
+            pendingCycles.map(cycle => {
+
+const latestTx =
+    phase2Transactions
+        ?.filter(
+            tx =>
+                tx.business_name ===
+                cycle.business_name
+        )
+        ?.sort(
+            (a, b) =>
+                Math.abs(
+                    new Date(a.created_at) -
+                    new Date(cycle.opened_at)
+                ) -
+                Math.abs(
+                    new Date(b.created_at) -
+                    new Date(cycle.opened_at)
+                )
+        )?.[0];
+                return `
+                <tr class="hover:bg-blue-50/40 transition">
+
+                    <td class="p-4 font-black text-slate-700">
+                        ${cycle.business_name || '-'}
+                    </td>
+
+                    <td class="p-4 text-xs font-bold text-slate-500">
+                        ${
+                            cycle.opened_at
+                                ? new Date(cycle.opened_at)
+                                    .toLocaleString()
+                                : '-'
+                        }
+                    </td>
+
+                    <td class="p-4 text-xs font-bold text-slate-600">
+                        ${
+                            latestTx?.runner_name || '-'
+                        }
+                    </td>
+
+                    <td class="p-4 text-center">
+                        <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black">
+                            ${
+                                cycle.outstanding_sd || 0
+                            } SD
+                        </span>
+                    </td>
+
+                    <td class="p-4 text-right">
+                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                            OPEN
+                        </span>
+                    </td>
+
+                </tr>
+                `;
+            }).join('');
+    }
+
+    if (!safeCycles.length) {
+
+        historyTable.innerHTML = `
+        <tr>
+            <td colspan="6" class="p-6 text-center text-slate-400">
+                No SD history found
+            </td>
+        </tr>
+        `;
+
+        return;
+    }
+
+    historyTable.innerHTML =
+        safeCycles.map(cycle => {
+
+            const durationHours =
+                cycle.closed_at
+                    ? (
+                        (
+                            new Date(cycle.closed_at)
+                            -
+                            new Date(cycle.opened_at)
+                        ) / 36e5
+                    ).toFixed(1)
+                    : '-';
+
+            let statusColor =
+                'red';
+
+            if (
+                cycle.status ===
+                'CLOSED_RECONCILED'
+            ) {
+
+                statusColor =
+                    'emerald';
+
+            } else if (
+                cycle.status ===
+                'CLOSED_SHORTAGE_UPLOAD'
+            ) {
+
+                statusColor =
+                    'amber';
+            }
+
+            return `
+            <tr class="hover:bg-slate-50 transition">
+
+                <td class="p-4 font-black text-slate-700">
+                    ${cycle.business_name || '-'}
+                </td>
+
+                <td class="p-4 text-xs font-bold text-slate-500">
+                    ${
+                        cycle.opened_at
+                            ? new Date(cycle.opened_at)
+                                .toLocaleString()
+                            : '-'
+                    }
+                </td>
+
+                <td class="p-4 text-xs font-bold text-slate-500">
+                    ${
+                        cycle.closed_at
+                            ? new Date(cycle.closed_at)
+                                .toLocaleString()
+                            : '-'
+                    }
+                </td>
+
+                <td class="p-4 text-center text-xs font-black">
+                    ${durationHours}
+                    ${
+                        durationHours !== '-'
+                            ? ' hrs'
+                            : ''
+                    }
+                </td>
+
+                <td class="p-4 text-center text-xs font-black">
+                    <span class="text-blue-600">
+                        ${cycle.total_sent || 0}
+                    </span>
+                    /
+                    <span class="text-indigo-600">
+                        ${cycle.total_returned || 0}
+                    </span>
+                    /
+                    <span class="text-emerald-600">
+                        ${cycle.total_uploaded || 0}
+                    </span>
+                </td>
+
+                <td class="p-4 text-right">
+                    <span class="
+                        bg-${statusColor}-100
+                        text-${statusColor}-700
+                        px-3 py-1
+                        rounded-full
+                        text-[10px]
+                        font-black
+                    ">
+                        ${cycle.status || '-'}
+                    </span>
+                </td>
+
+            </tr>
+            `;
+        }).join('');
+
+} catch (err) {
+
+    console.error(
+        'SD TRACKER ERROR:',
+        err
+    );
 
     radarTable.innerHTML = `
     <tr>
-        <td colspan="5" class="p-6 text-center text-slate-400">
-            Loading SD Tracker...
+        <td colspan="5" class="p-6 text-center text-red-500 font-bold">
+            Failed loading SD radar
         </td>
     </tr>
     `;
 
     historyTable.innerHTML = `
     <tr>
-        <td colspan="6" class="p-6 text-center text-slate-400">
-            Loading SD History...
+        <td colspan="6" class="p-6 text-center text-red-500 font-bold">
+            Failed loading SD history
         </td>
     </tr>
     `;
-
-    try {
-
-        let query =
-            db
-                .from('sd_phase3_tracker')
-                .select('*')
-                .order(
-                    'opened_at',
-                    {
-                        ascending: false
-                    }
-                );
-
-        if (areaFilter) {
-
-            query =
-                query.eq(
-                    'area',
-                    areaFilter
-                );
-        }
-
-        const {
-            data,
-            error
-        } = await query;
-
-        if (error) {
-
-            throw error;
-        }
-
-        const rows =
-            data || [];
-
-        const pendingRows =
-            rows.filter(
-                row =>
-                    row.status === 'OPEN'
-            );
-
-        liveBadge.textContent =
-            pendingRows.length;
-
-        // =====================
-        // PENDING RADAR
-        // =====================
-
-        if (!pendingRows.length) {
-
-            radarTable.innerHTML = `
-            <tr>
-                <td colspan="5"
-                    class="p-6 text-center text-emerald-600 font-black">
-                    No Pending SD
-                </td>
-            </tr>
-            `;
-
-        } else {
-
-            radarTable.innerHTML =
-                pendingRows.map(row => {
-
-                    return `
-                    <tr class="hover:bg-blue-50">
-
-                        <td class="p-4 font-black">
-                            ${row.business_name || '-'}
-                        </td>
-
-                        <td class="p-4 text-xs">
-                            ${
-                                row.opened_at
-                                    ? new Date(row.opened_at)
-                                        .toLocaleString()
-                                    : '-'
-                            }
-                        </td>
-
-                        <td class="p-4 text-xs font-bold">
-                            ${row.runner_name || '-'}
-                        </td>
-
-                        <td class="p-4 text-center">
-
-                            <span class="
-                                bg-red-100
-                                text-red-600
-                                px-3
-                                py-1
-                                rounded-full
-                                text-[10px]
-                                font-black
-                            ">
-                                ${row.remaining_qty || 0} SD
-                            </span>
-
-                        </td>
-
-                        <td class="p-4 text-right">
-
-                            <span class="
-                                bg-amber-100
-                                text-amber-700
-                                px-3
-                                py-1
-                                rounded-full
-                                text-[10px]
-                                font-black
-                            ">
-                                OPEN
-                            </span>
-
-                        </td>
-
-                    </tr>
-                    `;
-
-                }).join('');
-        }
-
-        // =====================
-        // HISTORY
-        // =====================
-
-        if (!rows.length) {
-
-            historyTable.innerHTML = `
-            <tr>
-                <td colspan="6"
-                    class="p-6 text-center text-slate-400">
-                    No SD History
-                </td>
-            </tr>
-            `;
-
-            return;
-        }
-
-        historyTable.innerHTML =
-            rows.map(row => {
-
-                const durationHours =
-                    row.closed_at
-                        ? (
-                            (
-                                new Date(row.closed_at)
-                                -
-                                new Date(row.opened_at)
-                            ) / 36e5
-                        ).toFixed(1)
-                        : '-';
-
-                const statusColor =
-                    row.status === 'OPEN'
-                        ? 'amber'
-                        : 'emerald';
-
-                return `
-                <tr class="hover:bg-slate-50">
-
-                    <td class="p-4 font-black">
-                        ${row.business_name || '-'}
-                    </td>
-
-                    <td class="p-4 text-xs">
-                        ${
-                            row.opened_at
-                                ? new Date(row.opened_at)
-                                    .toLocaleString()
-                                : '-'
-                        }
-                    </td>
-
-                    <td class="p-4 text-xs">
-                        ${
-                            row.closed_at
-                                ? new Date(row.closed_at)
-                                    .toLocaleString()
-                                : '-'
-                        }
-                    </td>
-
-                    <td class="p-4 text-center text-xs font-black">
-                        ${
-                            durationHours === '-'
-                                ? '-'
-                                : durationHours + ' hrs'
-                        }
-                    </td>
-
-                    <td class="p-4 text-center text-xs font-black">
-
-                        <span class="text-blue-600">
-                            ${row.sent_qty || 0}
-                        </span>
-
-                        /
-
-                        <span class="text-indigo-600">
-                            ${row.returned_qty || 0}
-                        </span>
-
-                        /
-
-                        <span class="text-red-600">
-                            ${row.remaining_qty || 0}
-                        </span>
-
-                    </td>
-
-<td class="p-4 text-center">
-
-    <span class="
-        bg-${statusColor}-100
-        text-${statusColor}-700
-        px-3
-        py-1
-        rounded-full
-        text-[10px]
-        font-black
-    ">
-        ${row.status}
-    </span>
-
-</td>
-
-<td class="p-4 text-center">
-
-    ${
-        row.status === 'OPEN'
-        ? `
-            <button
-                onclick="manualClearSD(${row.id})"
-                class="
-                    bg-red-500
-                    hover:bg-red-600
-                    text-white
-                    px-3
-                    py-1
-                    rounded-lg
-                    text-[10px]
-                    font-black
-                "
-            >
-                CLEAR
-            </button>
-        `
-        : '-'
-    }
-
-</td>
-                </tr>
-                `;
-
-            }).join('');
-
-    } catch (err) {
-
-        console.error(
-            'SD TRACKER ERROR',
-            err
-        );
-
-        radarTable.innerHTML = `
-        <tr>
-            <td colspan="5"
-                class="p-6 text-center text-red-500">
-                Failed loading SD Tracker
-            </td>
-        </tr>
-        `;
-
-        historyTable.innerHTML = `
-        <tr>
-            <td colspan="6"
-                class="p-6 text-center text-red-500">
-                Failed loading SD History
-            </td>
-        </tr>
-        `;
-    }
 }
-
-async function manualClearSD(id) {
-
-    const reason =
-        prompt(
-            'Reason for manual clear?'
-        );
-
-    if (!reason) return;
-
-    const confirmClear =
-        confirm(
-            'Close this SD obligation?'
-        );
-
-    if (!confirmClear) return;
-
-    const { error } =
-        await db
-            .from('sd_phase3_tracker')
-            .update({
-
-                status:
-                    'MANUAL_CLEARED',
-
-                remaining_qty:
-                    0,
-
-                closed_at:
-                    new Date()
-                    .toISOString(),
-
-                cleared_at:
-                    new Date()
-                    .toISOString(),
-
-                cleared_by:
-                    CURRENT_USER?.name
-                    || 'ADMIN',
-
-                cleared_reason:
-                    reason
-
-            })
-            .eq('id', id);
-
-    if (error) {
-
-        alert(
-            'Failed to clear SD'
-        );
-
-        console.error(error);
-
-        return;
-    }
-
-    alert(
-        'SD obligation cleared'
-    );
-
-    renderSDTracker();
 }
 
         function renderLogs() {
