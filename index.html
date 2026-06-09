@@ -190,14 +190,15 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-left whitespace-nowrap">
                             <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
-                                <tr>
-                                    <th class="p-4">Merchant</th>
-                                    <th class="p-4">Phase 2 (Drop)</th>
-                                    <th class="p-4">Phase 3 (Pick Up)</th>
-                                    <th class="p-4 text-center">Duration</th>
-                                    <th class="p-4 text-center">Qty (Drop/Pick/Up)</th>
-                                    <th class="p-4 text-right">System Status</th>
-                                </tr>
+<tr>
+    <th class="p-4">Merchant</th>
+    <th class="p-4">Phase 2 (Drop)</th>
+    <th class="p-4">Phase 3 (Pick Up)</th>
+    <th class="p-4 text-center">Duration</th>
+    <th class="p-4 text-center">Qty (Drop/Return/Pending)</th>
+    <th class="p-4 text-center">System Status</th>
+    <th class="p-4 text-center">Action</th>
+</tr>
                             </thead>
                             <tbody id="table-sd-history" class="divide-y divide-indigo-50 text-xs"></tbody>
                         </table>
@@ -220,8 +221,23 @@
                     </div>
                     
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Filter Date</label>
-                        <input type="date" id="filter-fo-date" onchange="fetchAndRenderFOTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
+                        <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Date Range</label>
+
+<div class="flex gap-2">
+    <input
+        type="date"
+        id="filter-fo-date-start"
+        onchange="fetchAndRenderFOTracker()"
+        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]"
+    >
+
+    <input
+        type="date"
+        id="filter-fo-date-end"
+        onchange="fetchAndRenderFOTracker()"
+        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]"
+    >
+</div>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Officer Name</label>                        
@@ -294,8 +310,23 @@
                 <select id="filter-rt-area" onchange="fetchAndRenderRunnerTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none filter-area-dropdown min-w-[120px]"></select>
             </div>
             <div class="flex flex-col gap-1">
-                <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Filter Date</label>
-                <input type="date" id="filter-rt-date" onchange="fetchAndRenderRunnerTracker()" class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]">
+                <label class="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-wide ml-1">Date Range</label>
+
+<div class="flex gap-2">
+    <input
+        type="date"
+        id="filter-rt-date-start"
+        onchange="fetchAndRenderRunnerTracker()"
+        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]"
+    >
+
+    <input
+        type="date"
+        id="filter-rt-date-end"
+        onchange="fetchAndRenderRunnerTracker()"
+        class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold outline-none cursor-pointer min-w-[130px]"
+    >
+</div>
             </div>
             <button onclick="fetchAndRenderRunnerTracker()" class="h-[34px] w-[34px] flex items-center justify-center bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-blue-600 hover:text-white transition shadow-sm mb-[1px]" title="Refresh KPI">
                 <i class="fa-solid fa-rotate-right"></i>
@@ -1272,175 +1303,260 @@
             if(tab === 'runner_tracker') fetchAndRenderRunnerTracker();
         }
 
-        function initRunnerTrackerFilters() {
-    const dateInput = document.getElementById('filter-rt-date');
-    if (!dateInput.value) {
-        const today = new Date();
-        const y = today.getFullYear();
-        const m = String(today.getMonth() + 1).padStart(2, '0');
-        const d = String(today.getDate()).padStart(2, '0');
-        dateInput.value = `${y}-${m}-${d}`;
+function initRunnerTrackerFilters() {
+
+    const startInput = document.getElementById('filter-rt-date-start');
+    const endInput = document.getElementById('filter-rt-date-end');
+
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+
+    const todayStr = `${y}-${m}-${d}`;
+
+    if (!startInput.value) {
+        startInput.value = todayStr;
+    }
+
+    if (!endInput.value) {
+        endInput.value = todayStr;
     }
 }
 
 async function fetchAndRenderRunnerTracker() {
-    initRunnerTrackerFilters();
-    const dateStr = document.getElementById('filter-rt-date').value;
-    const targetArea = document.getElementById('filter-rt-area').value;
-    const tbody = document.getElementById('table-runner-tracker');
-
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Calculating Runner KPI...</td></tr>`;
-
     try {
-        const [y, m, d] = dateStr.split('-');
-        const start = new Date(y, m - 1, d);
+
+        initRunnerTrackerFilters();
+
+        const tbody = document.getElementById('table-runner-tracker');
+        const targetArea = document.getElementById('filter-rt-area').value;
+
+        const startDateStr = document.getElementById('filter-rt-date-start').value;
+        const endDateStr = document.getElementById('filter-rt-date-end').value;
+
+        const start = new Date(startDateStr);
         start.setHours(0, 0, 0, 0);
-        const end = new Date(y, m - 1, d);
+
+        const end = new Date(endDateStr);
         end.setHours(23, 59, 59, 999);
 
-        // Ambil data transaksi (logs) untuk mengetahui performa hari tersebut
-        let query = db.from('transactions')
+        let query = db
+            .from('transactions')
             .select('*')
             .gte('created_at', start.toISOString())
             .lte('created_at', end.toISOString());
 
         const adminAreas = getAdminAreas();
+
         if (!adminAreas.includes('All')) {
-            if (targetArea) query = query.eq('area', targetArea);
-            else query = query.in('area', adminAreas);
-        } else if (targetArea && targetArea !== 'All') {
+
+            if (targetArea) {
+                query = query.eq('area', targetArea);
+            } else {
+                query = query.in('area', adminAreas);
+            }
+
+        } else if (targetArea) {
+
             query = query.eq('area', targetArea);
+
         }
 
         const { data, error } = await query;
+
         if (error) throw error;
 
         if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-400 italic"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>No runner activities on this date.</td></tr>`;
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-8 text-gray-400 italic">
+                        <i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>
+                        No runner activities found.
+                    </td>
+                </tr>
+            `;
+
             document.getElementById('rt-total-trips').innerText = '0';
             document.getElementById('rt-total-kits').innerText = '0';
             document.getElementById('rt-total-sd-drop').innerText = '0';
             document.getElementById('rt-total-sd-pick').innerText = '0';
+
             document.getElementById('rt-most-trips-name').innerText = '-';
             document.getElementById('rt-most-trips-val').innerText = '0';
+
             document.getElementById('rt-least-trips-name').innerText = '-';
             document.getElementById('rt-least-trips-val').innerText = '0';
+
             return;
         }
 
         const stats = {};
-        let overallTrips = 0, overallKits = 0, overallDrop = 0, overallPick = 0;
 
-        // 1. URUTKAN DATA BERDASARKAN WAKTU
-        // Ini wajib agar kita bisa menghitung jarak waktu antar trip dengan akurat
-        data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        let overallTrips = 0;
+        let overallKits = 0;
+        let overallDrop = 0;
+        let overallPick = 0;
 
-        // 2. TRACKER UNTUK MENGINGAT KUNJUNGAN TERAKHIR (Runner + Tempat)
+        data.sort((a, b) =>
+            new Date(a.created_at) - new Date(b.created_at)
+        );
+
         const visitTracker = {};
 
         data.forEach(t => {
-            // Hindari log admin / sistem dari perhitungan KPI lapangan
+
             if (t.phase === 'SYSTEM CLEAR') return;
 
             const runner = t.runner_name || 'Unknown';
             const merchant = t.business_name || 'Unknown';
-            const currentTime = new Date(t.created_at).getTime();
+
+            const currentTime =
+                new Date(t.created_at).getTime();
 
             if (!stats[runner]) {
-                stats[runner] = { trips: 0, kits: 0, sdDrop: 0, sdPick: 0, sdUp: 0 };
+
+                stats[runner] = {
+                    trips: 0,
+                    kits: 0,
+                    sdDrop: 0,
+                    sdPick: 0,
+                    sdUp: 0
+                };
+
             }
 
-            // --- PERHITUNGAN TOTAL TRIPS (BERDASARKAN PERJALANAN) ---
             const trackerKey = `${runner}_${merchant}`;
+
             let isNewTrip = true;
 
             if (visitTracker[trackerKey]) {
-                // Hitung selisih waktu dalam menit
-                const timeDiffMinutes = (currentTime - visitTracker[trackerKey]) / (1000 * 60);
-                
-                // Jika masih di tempat yang sama dalam batas waktu 1 menit (atau kurang), 
-                // ini dihitung sebagai 1 trip yang sama.
-                if (timeDiffMinutes <= 1) {
+
+                const diffMinutes =
+                    (currentTime - visitTracker[trackerKey]) /
+                    (1000 * 60);
+
+                if (diffMinutes <= 1) {
                     isNewTrip = false;
                 }
             }
 
-            // Tambahkan hitungan trip hanya jika ini perjalanan baru
             if (isNewTrip) {
-                stats[runner].trips += 1;
-                overallTrips += 1;
-                // Update waktu kunjungan terakhir
+
+                stats[runner].trips++;
+                overallTrips++;
+
                 visitTracker[trackerKey] = currentTime;
             }
-            // ---------------------------------------------------------
 
             if (t.kit_id) {
-                stats[runner].kits += 1;
-                overallKits += 1;
+
+                stats[runner].kits++;
+                overallKits++;
+
             }
 
-            // Normalisasi pengambilan nilai qty SD Card
-            const drop = parseInt(t.sd_card_qty) || parseInt(t.sd_drop_qty) || parseInt(t.sd_qty) || 0;
-            const pick = parseInt(t.sd_pickup_qty) || parseInt(t.sd_qty) || 0;
-            const up = parseInt(t.sd_uploaded) || 0;
+            const drop =
+                parseInt(t.sd_card_qty) ||
+                parseInt(t.sd_drop_qty) ||
+                parseInt(t.sd_qty) ||
+                0;
+
+            const pick =
+                parseInt(t.sd_pickup_qty) ||
+                parseInt(t.sd_qty) ||
+                0;
+
+            const up =
+                parseInt(t.sd_uploaded) ||
+                0;
 
             if (t.phase === 'Phase 2') {
+
                 stats[runner].sdDrop += drop;
                 overallDrop += drop;
-            } else if (t.phase === 'Phase 3' || t.phase === 'Phase 4') {
-                stats[runner].sdPick += pick;
-                overallPick += pick;
-                stats[runner].sdUp += up;
+
             }
+
+            if (
+                t.phase === 'Phase 3' ||
+                t.phase === 'Phase 4'
+            ) {
+
+                stats[runner].sdPick += pick;
+                stats[runner].sdUp += up;
+
+                overallPick += pick;
+
+            }
+
         });
 
-        // Tentukan runner terbaik dan terendah berdasarkan trip
-        let maxRunner = '-', maxVal = -1;
-        let minRunner = '-', minVal = Infinity;
+        let maxRunner = '-';
+        let maxVal = -1;
 
-        const runnerArray = Object.keys(stats).map(name => ({ name, ...stats[name] }));
-        
-        if (runnerArray.length > 0) {
-            runnerArray.forEach(r => {
-                if (r.trips > maxVal) { maxVal = r.trips; maxRunner = r.name; }
-                if (r.trips < minVal) { minVal = r.trips; minRunner = r.name; }
-            });
-        } else {
-            minVal = 0;
-        }
+        let minRunner = '-';
+        let minVal = Infinity;
 
-        // Render DOM Angka Dashboard
+        const runnerArray =
+            Object.keys(stats).map(name => ({
+                name,
+                ...stats[name]
+            }));
+
+        runnerArray.forEach(r => {
+
+            if (r.trips > maxVal) {
+
+                maxVal = r.trips;
+                maxRunner = r.name;
+
+            }
+
+            if (r.trips < minVal) {
+
+                minVal = r.trips;
+                minRunner = r.name;
+
+            }
+
+        });
+
         document.getElementById('rt-total-trips').innerText = overallTrips;
         document.getElementById('rt-total-kits').innerText = overallKits;
         document.getElementById('rt-total-sd-drop').innerText = overallDrop;
         document.getElementById('rt-total-sd-pick').innerText = overallPick;
-        
+
         document.getElementById('rt-most-trips-name').innerText = maxRunner;
-        document.getElementById('rt-most-trips-val').innerText = maxVal === -1 ? 0 : maxVal;
-        
+        document.getElementById('rt-most-trips-val').innerText = maxVal < 0 ? 0 : maxVal;
+
         document.getElementById('rt-least-trips-name').innerText = minRunner;
         document.getElementById('rt-least-trips-val').innerText = minVal === Infinity ? 0 : minVal;
 
-        // Urutkan table berdasarkan trip tertinggi
         runnerArray.sort((a, b) => b.trips - a.trips);
 
         tbody.innerHTML = runnerArray.map(r => `
-            <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
-                <td class="p-4 font-black text-slate-800">${r.name}</td>
-                <td class="p-4 text-center">
-                    <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-black border border-blue-100 shadow-sm">${r.trips} Trips</span>
-                </td>
-                <td class="p-4 text-center font-bold text-emerald-600">${r.kits}</td>
-                <td class="p-4 text-center font-bold text-blue-600">${r.sdDrop}</td>
-                <td class="p-4 text-center font-bold text-indigo-600">${r.sdPick}</td>
-                <td class="p-4 text-center font-bold text-slate-600">${r.sdUp > 0 ? `<span class="text-emerald-600"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>${r.sdUp}</span>` : '0'}</td>
+            <tr class="hover:bg-slate-50 border-b border-slate-100">
+                <td class="p-4 font-black">${r.name}</td>
+                <td class="p-4 text-center">${r.trips}</td>
+                <td class="p-4 text-center">${r.kits}</td>
+                <td class="p-4 text-center">${r.sdDrop}</td>
+                <td class="p-4 text-center">${r.sdPick}</td>
+                <td class="p-4 text-center">${r.sdUp}</td>
             </tr>
         `).join('');
 
     } catch (error) {
-        let pesanError = error.message || error.details || JSON.stringify(error);
-        console.error("Error fetching Runner Tracker KPI Detail:", pesanError);
-        alert("Error Supabase: " + pesanError);
+
+        console.error(error);
+
+        alert(
+            error.message ||
+            error.details ||
+            JSON.stringify(error)
+        );
+
     }
 }
 
@@ -1497,17 +1613,26 @@ function populateAreaDropdowns() {
             if(refreshBtn) refreshBtn.classList.remove('fa-spin');
         }
         
-        function initFOTrackerFilters() {
-            const dateInput = document.getElementById('filter-fo-date');
-            if (!dateInput.value) {
-                const today = new Date();
-                const y = today.getFullYear();
-                const m = String(today.getMonth() + 1).padStart(2, '0');
-                const d = String(today.getDate()).padStart(2, '0');
-                dateInput.value = `${y}-${m}-${d}`;
-            }
-        }
+function initFOTrackerFilters() {
 
+    const startInput = document.getElementById('filter-fo-date-start');
+    const endInput = document.getElementById('filter-fo-date-end');
+
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+
+    const todayStr = `${y}-${m}-${d}`;
+
+    if (!startInput.value) {
+        startInput.value = todayStr;
+    }
+
+    if (!endInput.value) {
+        endInput.value = todayStr;
+    }
+}
         // ----------------------------------------------------------------------
         // 5. FETCH DATA FUNCTIONS
         // ----------------------------------------------------------------------
@@ -1724,153 +1849,226 @@ function populateAreaDropdowns() {
             return { loc: kit.last_location, isOffice: false };
         }
 
-        async function fetchAndRenderFOTracker() {
-            const tableSummary = document.getElementById('table-fo-tracker');
-            const tableLogs = document.getElementById('table-fo-logs');
-            
-            initFOTrackerFilters();
+async function fetchAndRenderFOTracker() {
+    try {
+        const tableSummary = document.getElementById('table-fo-tracker');
+        const tableLogs = document.getElementById('table-fo-logs');
 
-            const targetDateStr = document.getElementById('filter-fo-date').value;
-            const targetFO = document.getElementById('filter-fo-name').value;
+        initFOTrackerFilters();
 
-            tableSummary.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Calculating FO visits...</td></tr>`;
-            tableLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading detailed logs...</td></tr>`;
+        const startDateStr = document.getElementById('filter-fo-date-start').value;
+        const endDateStr = document.getElementById('filter-fo-date-end').value;
+        const targetFO = document.getElementById('filter-fo-name').value;
 
-            try {
-                const [yFO, mFO, dFO] = targetDateStr.split('-');
-                const start = new Date(yFO, mFO - 1, dFO);
-                start.setHours(0, 0, 0, 0);
+        const start = new Date(startDateStr);
+        start.setHours(0, 0, 0, 0);
 
-                const end = new Date(yFO, mFO - 1, dFO);
-                end.setHours(23, 59, 59, 999);
+        const end = new Date(endDateStr);
+        end.setHours(23, 59, 59, 999);
 
-                let query = db.from('fo_visits') 
-                    .select('*')
-                    .gte('check_in_time', start.toISOString())
-                    .lte('check_in_time', end.toISOString())
-                    .order('check_in_time', { ascending: true });
+        let query = db.from('fo_visits')
+            .select('*')
+            .gte('check_in_time', start.toISOString())
+            .lte('check_in_time', end.toISOString())
+            .order('check_in_time', { ascending: true });
 
-                if (targetFO) query = query.eq('runner_name', targetFO);
+        if (targetFO) {
+            query = query.eq('runner_name', targetFO);
+        }
 
-                const { data: rawData, error } = await query;
-                if (error) throw error;
+        const { data: rawData, error } = await query;
 
-                let data = rawData || [];
-                const adminAreas = getAdminAreas();
-                
-                if (globalRunners.length === 0) {
-                    await fetchRunners();
-                }
+        if (error) throw error;
 
-                const filterAreaDropdown = document.getElementById('filter-fo-area');
-                const targetArea = filterAreaDropdown ? filterAreaDropdown.value : '';
-                
-                let activeAreas = [];
-                if (!adminAreas.includes('All')) {
-                    if (targetArea && targetArea !== '') {
-                        activeAreas = [targetArea];
-                    } else {
-                        activeAreas = adminAreas;
-                    }
-                } else {
-                    if (targetArea && targetArea !== '') {
-                        activeAreas = [targetArea];
-                    }
-                }
+        let data = rawData || [];
 
-                if (activeAreas.length > 0) {
-                    const validFOs = globalRunners.filter(r => activeAreas.includes(r.area_name)).map(r => r.runner_name);
-                    data = data.filter(v => validFOs.includes(v.runner_name));
-                }
+        const adminAreas = getAdminAreas();
 
-                window.currentFOData = data;
+        if (globalRunners.length === 0) {
+            await fetchRunners();
+        }
 
-                const foSelect = document.getElementById('filter-fo-name');
-                const uniqueFOs = [...new Set(data.map(item => item.runner_name))].sort();
-                let opts = '<option value="">All Officers</option>';
-                uniqueFOs.forEach(fo => { opts += `<option value="${fo}" ${targetFO === fo ? 'selected' : ''}>${fo}</option>`; });
-                foSelect.innerHTML = opts;
-                
-                if (!data || data.length === 0) {
-                    tableSummary.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500"><i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>No FO visits recorded.</td></tr>`;
-                    tableLogs.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400 italic">No detailed logs found.</td></tr>`;
-                    return;
-                }
+        const filterAreaDropdown = document.getElementById('filter-fo-area');
+        const targetArea = filterAreaDropdown ? filterAreaDropdown.value : '';
 
-                const runnerStats = {};
-                data.forEach(visit => {
-                    const runner = visit.runner_name;
-                    if (!runnerStats[runner]) {
-                        runnerStats[runner] = {
-                            nama_fo: runner, jumlah_trip: 0, jam_pergi: visit.check_in_time, 
-                            jam_pulang: visit.check_out_time, status_posisi: 'Standby', last_activity: visit.check_in_time
-                        };
-                    }
-                    runnerStats[runner].jumlah_trip += 1;
-                    if (visit.check_out_time) {
-                        if (!runnerStats[runner].jam_pulang || new Date(visit.check_out_time) > new Date(runnerStats[runner].jam_pulang)) {
-                            runnerStats[runner].jam_pulang = visit.check_out_time;
-                        }
-                    }
-                    if (!visit.check_out_time) runnerStats[runner].status_posisi = `At ${visit.business_name}`;
-                    else if (new Date(visit.check_in_time) >= new Date(runnerStats[runner].last_activity)) runnerStats[runner].status_posisi = 'Transit / Completed';
-                    runnerStats[runner].last_activity = visit.check_in_time;
-                });
+        let activeAreas = [];
 
-                tableSummary.innerHTML = Object.values(runnerStats).map(stat => {
-                    const formatTime = (iso) => !iso ? '<span class="text-slate-300 italic">Not Yet</span>' : new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                    const badge = stat.status_posisi.startsWith('At ') 
-                        ? `<span class="px-3 py-1 bg-rose-50 border border-rose-100 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><i class="fa-solid fa-location-dot mr-1"></i> ${stat.status_posisi}</span>` 
-                        : `<span class="px-3 py-1 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><i class="fa-solid fa-person-walking-arrow-right mr-1"></i> ${stat.status_posisi}</span>`;
-                    return `
-                        <tr class="border-b hover:bg-slate-50 transition border-slate-100">
-                            <td class="py-4 px-4 font-black text-slate-800">${stat.nama_fo}</td>
-                            <td class="py-4 px-4 text-center"><span class="bg-blue-50 text-blue-700 font-black px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">${stat.jumlah_trip} Trips</span></td>
-                            <td class="py-4 px-4 text-center font-bold text-slate-600 text-base">${formatTime(stat.jam_pergi)}</td>
-                            <td class="py-4 px-4 text-center font-bold text-slate-600 text-base">${formatTime(stat.jam_pulang)}</td>
-                            <td class="py-4 px-4 text-center">${badge}</td>
-                        </tr>`;
-                }).join('');
-
-                const sortedLogs = [...data].reverse();
-                tableLogs.innerHTML = sortedLogs.map(log => {
-                    const timeIn = new Date(log.check_in_time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-                    const timeOut = log.check_out_time ? new Date(log.check_out_time).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '<i class="fa-solid fa-spinner fa-spin text-rose-400"></i>';
-                    
-                    const outcomeBadge = !log.outcome_status 
-                        ? `<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-400 border border-slate-200">IN PROGRESS</span>` 
-                        : (log.outcome_status.includes('Success') || log.outcome_status.includes('Resolved') 
-                            ? `<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">${log.outcome_status}</span>` 
-                            : `<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-50 text-amber-600 border border-amber-200">${log.outcome_status}</span>`);
-
-                    const notes = log.notes ? `<div class="mt-1.5 text-[10px] text-slate-500 italic whitespace-normal leading-relaxed break-words max-w-xs"><i class="fa-solid fa-comment-dots mr-1"></i>${log.notes}</div>` : '';
-                    const photoBtn = log.proof_photo 
-                        ? `<a href="${log.proof_photo}" target="_blank" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2.5 rounded-lg border border-blue-100 transition shadow-sm" title="View Proof Photo"><i class="fa-solid fa-image"></i></a>` 
-                        : '<span class="text-slate-300 p-2"><i class="fa-solid fa-image-slash"></i></span>';
-
-                    return `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
-                        <td class="p-4 align-top w-32">
-                            <div class="font-black text-slate-800 flex items-center gap-2"><i class="fa-solid fa-arrow-right-to-bracket text-emerald-500"></i> ${timeIn}</div>
-                            <div class="font-black text-slate-500 flex items-center gap-2 mt-1"><i class="fa-solid fa-arrow-right-from-bracket text-rose-400"></i> ${timeOut}</div>
-                        </td>
-                        <td class="p-4 align-top font-bold text-slate-700">${log.runner_name}</td>
-                        <td class="p-4 align-top">
-                            <div class="font-black text-blue-700 text-xs">${log.business_name}</div>
-                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">${log.visit_type || '-'}</div>
-                        </td>
-                        <td class="p-4 align-top">
-                            ${outcomeBadge}
-                            ${notes}
-                        </td>
-                        <td class="p-4 align-top text-center">${photoBtn}</td>
-                    </tr>`;
-                }).join('');
-
-            } catch (error) {
-                console.error("Error fetching FO Tracker logs:", error);
+        if (!adminAreas.includes('All')) {
+            if (targetArea) {
+                activeAreas = [targetArea];
+            } else {
+                activeAreas = adminAreas;
+            }
+        } else {
+            if (targetArea) {
+                activeAreas = [targetArea];
             }
         }
+
+        if (activeAreas.length > 0) {
+            const validFOs = globalRunners
+                .filter(r => activeAreas.includes(r.area_name))
+                .map(r => r.runner_name);
+
+            data = data.filter(v => validFOs.includes(v.runner_name));
+        }
+
+        window.currentFOData = data;
+
+        const foSelect = document.getElementById('filter-fo-name');
+
+        const uniqueFOs = [...new Set(data.map(item => item.runner_name))]
+            .sort();
+
+        let opts = '<option value="">All Officers</option>';
+
+        uniqueFOs.forEach(fo => {
+            opts += `<option value="${fo}" ${targetFO === fo ? 'selected' : ''}>${fo}</option>`;
+        });
+
+        foSelect.innerHTML = opts;
+
+        if (!data.length) {
+            tableSummary.innerHTML =
+                `<tr><td colspan="5" class="text-center py-8 text-gray-500">
+                    <i class="fa-solid fa-folder-open text-2xl mb-2 block"></i>
+                    No FO visits recorded.
+                </td></tr>`;
+
+            tableLogs.innerHTML =
+                `<tr><td colspan="5" class="text-center py-8 text-gray-400 italic">
+                    No detailed logs found.
+                </td></tr>`;
+
+            return;
+        }
+
+        const runnerStats = {};
+
+        data.forEach(visit => {
+
+            const runner = visit.runner_name;
+
+            if (!runnerStats[runner]) {
+                runnerStats[runner] = {
+                    nama_fo: runner,
+                    jumlah_trip: 0,
+                    jam_pergi: visit.check_in_time,
+                    jam_pulang: visit.check_out_time,
+                    status_posisi: 'Standby',
+                    last_activity: visit.check_in_time
+                };
+            }
+
+            runnerStats[runner].jumlah_trip++;
+
+            if (visit.check_out_time) {
+                if (
+                    !runnerStats[runner].jam_pulang ||
+                    new Date(visit.check_out_time) >
+                    new Date(runnerStats[runner].jam_pulang)
+                ) {
+                    runnerStats[runner].jam_pulang = visit.check_out_time;
+                }
+            }
+
+            if (!visit.check_out_time) {
+                runnerStats[runner].status_posisi = `At ${visit.business_name}`;
+            } else if (
+                new Date(visit.check_in_time) >=
+                new Date(runnerStats[runner].last_activity)
+            ) {
+                runnerStats[runner].status_posisi = 'Transit / Completed';
+            }
+
+            runnerStats[runner].last_activity = visit.check_in_time;
+        });
+
+        tableSummary.innerHTML = Object.values(runnerStats).map(stat => {
+
+            const formatTime = (iso) =>
+                !iso
+                    ? '<span class="text-slate-300 italic">Not Yet</span>'
+                    : new Date(iso).toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+            const badge =
+                stat.status_posisi.startsWith('At ')
+                    ? `<span class="px-3 py-1 bg-rose-50 border border-rose-100 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                        <i class="fa-solid fa-location-dot mr-1"></i>
+                        ${stat.status_posisi}
+                    </span>`
+                    : `<span class="px-3 py-1 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                        <i class="fa-solid fa-person-walking-arrow-right mr-1"></i>
+                        ${stat.status_posisi}
+                    </span>`;
+
+            return `
+                <tr class="border-b hover:bg-slate-50 transition border-slate-100">
+                    <td class="py-4 px-4 font-black text-slate-800">${stat.nama_fo}</td>
+                    <td class="py-4 px-4 text-center">
+                        <span class="bg-blue-50 text-blue-700 font-black px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
+                            ${stat.jumlah_trip} Trips
+                        </span>
+                    </td>
+                    <td class="py-4 px-4 text-center font-bold text-slate-600">
+                        ${formatTime(stat.jam_pergi)}
+                    </td>
+                    <td class="py-4 px-4 text-center font-bold text-slate-600">
+                        ${formatTime(stat.jam_pulang)}
+                    </td>
+                    <td class="py-4 px-4 text-center">${badge}</td>
+                </tr>`;
+        }).join('');
+
+        const sortedLogs = [...data].reverse();
+
+        tableLogs.innerHTML = sortedLogs.map(log => {
+
+            const timeIn = new Date(log.check_in_time)
+                .toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+            const timeOut = log.check_out_time
+                ? new Date(log.check_out_time).toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
+                : '<i class="fa-solid fa-spinner fa-spin text-rose-400"></i>';
+
+            const outcomeBadge =
+                !log.outcome_status
+                    ? `<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-slate-100 text-slate-400 border border-slate-200">IN PROGRESS</span>`
+                    : `<span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">${log.outcome_status}</span>`;
+
+            const notes = log.notes
+                ? `<div class="mt-1 text-[10px] text-slate-500 italic">${log.notes}</div>`
+                : '';
+
+            const photoBtn = log.proof_photo
+                ? `<a href="${log.proof_photo}" target="_blank" class="text-blue-600">
+                        <i class="fa-solid fa-image"></i>
+                   </a>`
+                : '-';
+
+            return `
+                <tr>
+                    <td class="p-4">${timeIn} - ${timeOut}</td>
+                    <td class="p-4">${log.runner_name}</td>
+                    <td class="p-4">${log.business_name}</td>
+                    <td class="p-4">${outcomeBadge}${notes}</td>
+                    <td class="p-4 text-center">${photoBtn}</td>
+                </tr>`;
+        }).join('');
+
+    } catch (error) {
+        console.error("Error fetching FO Tracker logs:", error);
+    }
+}
 
         // ----------------------------------------------------------------------
         // 6. RENDER FUNCTIONS
@@ -2015,337 +2213,381 @@ function populateAreaDropdowns() {
         }
         
 async function renderSDTracker() {
-const radarTable =
-    document.getElementById('table-live-radar');
 
-const historyTable =
-    document.getElementById('table-sd-history');
+    const radarTable =
+        document.getElementById('table-live-radar');
 
-const liveBadge =
-    document.getElementById('badge-live-radar');
+    const historyTable =
+        document.getElementById('table-sd-history');
 
-const areaFilter =
-    document.getElementById('filter-sd-area').value;
+    const liveBadge =
+        document.getElementById('badge-live-radar');
 
-const selectedDate =
-    document.getElementById('filter-radar-date').value;
-
-radarTable.innerHTML = `
-<tr>
-    <td colspan="5" class="p-6 text-center text-slate-400">
-        Loading pending radar...
-    </td>
-</tr>
-`;
-
-historyTable.innerHTML = `
-<tr>
-    <td colspan="6" class="p-6 text-center text-slate-400">
-        Loading SD history...
-    </td>
-</tr>
-`;
-
-try {
-
-    let cycleQuery =
-        db
-            .from('sd_business_cycles')
-            .select('*')
-            .order('opened_at', {
-                ascending: false
-            });
-
-    if (areaFilter) {
-
-        cycleQuery =
-            cycleQuery.eq(
-                'area',
-                areaFilter
-            );
-    }
-
-    if (selectedDate) {
-
-        cycleQuery =
-            cycleQuery.gte(
-                'opened_at',
-                `${selectedDate}T00:00:00`
-            );
-
-        cycleQuery =
-            cycleQuery.lte(
-                'opened_at',
-                `${selectedDate}T23:59:59`
-            );
-    }
-
-    const {
-        data: cycles,
-        error: cycleError
-    } = await cycleQuery;
-
-    if (cycleError) {
-
-        console.error(cycleError);
-
-        throw cycleError;
-    }
-
-    const safeCycles =
-        cycles || [];
-
-    const pendingCycles =
-        safeCycles.filter(
-            cycle =>
-                Number(
-                    cycle.outstanding_sd || 0
-                ) > 0
-        );
-
-    liveBadge.textContent =
-        pendingCycles.length;
-
-    if (!pendingCycles.length) {
-
-        radarTable.innerHTML = `
-        <tr>
-            <td colspan="5" class="p-6 text-center text-emerald-500 font-bold">
-                No pending Phase 3
-            </td>
-        </tr>
-        `;
-
-    } else {
-
-        const businessNames =
-            pendingCycles.map(
-                x => x.business_name
-            );
-
-const {
-    data: phase2Transactions
-} = await db
-    .from('transactions')
-    .select(`
-        business_name,
-        runner_name,
-        created_at,
-        phase
-    `)
-    .eq(
-        'phase',
-        'Phase 2'
-    )
-    .in(
-        'business_name',
-        businessNames
-    )
-    .order(
-        'created_at',
-        {
-            ascending: false
-        }
-    );
-
-
-        radarTable.innerHTML =
-            pendingCycles.map(cycle => {
-
-const latestTx =
-    phase2Transactions
-        ?.filter(
-            tx =>
-                tx.business_name ===
-                cycle.business_name
-        )
-        ?.sort(
-            (a, b) =>
-                Math.abs(
-                    new Date(a.created_at) -
-                    new Date(cycle.opened_at)
-                ) -
-                Math.abs(
-                    new Date(b.created_at) -
-                    new Date(cycle.opened_at)
-                )
-        )?.[0];
-                return `
-                <tr class="hover:bg-blue-50/40 transition">
-
-                    <td class="p-4 font-black text-slate-700">
-                        ${cycle.business_name || '-'}
-                    </td>
-
-                    <td class="p-4 text-xs font-bold text-slate-500">
-                        ${
-                            cycle.opened_at
-                                ? new Date(cycle.opened_at)
-                                    .toLocaleString()
-                                : '-'
-                        }
-                    </td>
-
-                    <td class="p-4 text-xs font-bold text-slate-600">
-                        ${
-                            latestTx?.runner_name || '-'
-                        }
-                    </td>
-
-                    <td class="p-4 text-center">
-                        <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black">
-                            ${
-                                cycle.outstanding_sd || 0
-                            } SD
-                        </span>
-                    </td>
-
-                    <td class="p-4 text-right">
-                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">
-                            OPEN
-                        </span>
-                    </td>
-
-                </tr>
-                `;
-            }).join('');
-    }
-
-    if (!safeCycles.length) {
-
-        historyTable.innerHTML = `
-        <tr>
-            <td colspan="6" class="p-6 text-center text-slate-400">
-                No SD history found
-            </td>
-        </tr>
-        `;
-
-        return;
-    }
-
-    historyTable.innerHTML =
-        safeCycles.map(cycle => {
-
-            const durationHours =
-                cycle.closed_at
-                    ? (
-                        (
-                            new Date(cycle.closed_at)
-                            -
-                            new Date(cycle.opened_at)
-                        ) / 36e5
-                    ).toFixed(1)
-                    : '-';
-
-            let statusColor =
-                'red';
-
-            if (
-                cycle.status ===
-                'CLOSED_RECONCILED'
-            ) {
-
-                statusColor =
-                    'emerald';
-
-            } else if (
-                cycle.status ===
-                'CLOSED_SHORTAGE_UPLOAD'
-            ) {
-
-                statusColor =
-                    'amber';
-            }
-
-            return `
-            <tr class="hover:bg-slate-50 transition">
-
-                <td class="p-4 font-black text-slate-700">
-                    ${cycle.business_name || '-'}
-                </td>
-
-                <td class="p-4 text-xs font-bold text-slate-500">
-                    ${
-                        cycle.opened_at
-                            ? new Date(cycle.opened_at)
-                                .toLocaleString()
-                            : '-'
-                    }
-                </td>
-
-                <td class="p-4 text-xs font-bold text-slate-500">
-                    ${
-                        cycle.closed_at
-                            ? new Date(cycle.closed_at)
-                                .toLocaleString()
-                            : '-'
-                    }
-                </td>
-
-                <td class="p-4 text-center text-xs font-black">
-                    ${durationHours}
-                    ${
-                        durationHours !== '-'
-                            ? ' hrs'
-                            : ''
-                    }
-                </td>
-
-                <td class="p-4 text-center text-xs font-black">
-                    <span class="text-blue-600">
-                        ${cycle.total_sent || 0}
-                    </span>
-                    /
-                    <span class="text-indigo-600">
-                        ${cycle.total_returned || 0}
-                    </span>
-                    /
-                    <span class="text-emerald-600">
-                        ${cycle.total_uploaded || 0}
-                    </span>
-                </td>
-
-                <td class="p-4 text-right">
-                    <span class="
-                        bg-${statusColor}-100
-                        text-${statusColor}-700
-                        px-3 py-1
-                        rounded-full
-                        text-[10px]
-                        font-black
-                    ">
-                        ${cycle.status || '-'}
-                    </span>
-                </td>
-
-            </tr>
-            `;
-        }).join('');
-
-} catch (err) {
-
-    console.error(
-        'SD TRACKER ERROR:',
-        err
-    );
+    const areaFilter =
+        document.getElementById('filter-sd-area').value;
 
     radarTable.innerHTML = `
     <tr>
-        <td colspan="5" class="p-6 text-center text-red-500 font-bold">
-            Failed loading SD radar
+        <td colspan="5" class="p-6 text-center text-slate-400">
+            Loading SD Tracker...
         </td>
     </tr>
     `;
 
     historyTable.innerHTML = `
     <tr>
-        <td colspan="6" class="p-6 text-center text-red-500 font-bold">
-            Failed loading SD history
+        <td colspan="6" class="p-6 text-center text-slate-400">
+            Loading SD History...
         </td>
     </tr>
     `;
+
+    try {
+
+        let query =
+            db
+                .from('sd_phase3_tracker')
+                .select('*')
+                .order(
+                    'opened_at',
+                    {
+                        ascending: false
+                    }
+                );
+
+        if (areaFilter) {
+
+            query =
+                query.eq(
+                    'area',
+                    areaFilter
+                );
+        }
+
+        const {
+            data,
+            error
+        } = await query;
+
+        if (error) {
+
+            throw error;
+        }
+
+        const rows =
+            data || [];
+
+        const pendingRows =
+            rows.filter(
+                row =>
+                    row.status === 'OPEN'
+            );
+
+        liveBadge.textContent =
+            pendingRows.length;
+
+        // =====================
+        // PENDING RADAR
+        // =====================
+
+        if (!pendingRows.length) {
+
+            radarTable.innerHTML = `
+            <tr>
+                <td colspan="5"
+                    class="p-6 text-center text-emerald-600 font-black">
+                    No Pending SD
+                </td>
+            </tr>
+            `;
+
+        } else {
+
+            radarTable.innerHTML =
+                pendingRows.map(row => {
+
+                    return `
+                    <tr class="hover:bg-blue-50">
+
+                        <td class="p-4 font-black">
+                            ${row.business_name || '-'}
+                        </td>
+
+                        <td class="p-4 text-xs">
+                            ${
+                                row.opened_at
+                                    ? new Date(row.opened_at)
+                                        .toLocaleString()
+                                    : '-'
+                            }
+                        </td>
+
+                        <td class="p-4 text-xs font-bold">
+                            ${row.runner_name || '-'}
+                        </td>
+
+                        <td class="p-4 text-center">
+
+                            <span class="
+                                bg-red-100
+                                text-red-600
+                                px-3
+                                py-1
+                                rounded-full
+                                text-[10px]
+                                font-black
+                            ">
+                                ${row.remaining_qty || 0} SD
+                            </span>
+
+                        </td>
+
+                        <td class="p-4 text-right">
+
+                            <span class="
+                                bg-amber-100
+                                text-amber-700
+                                px-3
+                                py-1
+                                rounded-full
+                                text-[10px]
+                                font-black
+                            ">
+                                OPEN
+                            </span>
+
+                        </td>
+
+                    </tr>
+                    `;
+
+                }).join('');
+        }
+
+        // =====================
+        // HISTORY
+        // =====================
+
+        if (!rows.length) {
+
+            historyTable.innerHTML = `
+            <tr>
+                <td colspan="6"
+                    class="p-6 text-center text-slate-400">
+                    No SD History
+                </td>
+            </tr>
+            `;
+
+            return;
+        }
+
+        historyTable.innerHTML =
+            rows.map(row => {
+
+                const durationHours =
+                    row.closed_at
+                        ? (
+                            (
+                                new Date(row.closed_at)
+                                -
+                                new Date(row.opened_at)
+                            ) / 36e5
+                        ).toFixed(1)
+                        : '-';
+
+                const statusColor =
+                    row.status === 'OPEN'
+                        ? 'amber'
+                        : 'emerald';
+
+                return `
+                <tr class="hover:bg-slate-50">
+
+                    <td class="p-4 font-black">
+                        ${row.business_name || '-'}
+                    </td>
+
+                    <td class="p-4 text-xs">
+                        ${
+                            row.opened_at
+                                ? new Date(row.opened_at)
+                                    .toLocaleString()
+                                : '-'
+                        }
+                    </td>
+
+                    <td class="p-4 text-xs">
+                        ${
+                            row.closed_at
+                                ? new Date(row.closed_at)
+                                    .toLocaleString()
+                                : '-'
+                        }
+                    </td>
+
+                    <td class="p-4 text-center text-xs font-black">
+                        ${
+                            durationHours === '-'
+                                ? '-'
+                                : durationHours + ' hrs'
+                        }
+                    </td>
+
+                    <td class="p-4 text-center text-xs font-black">
+
+                        <span class="text-blue-600">
+                            ${row.sent_qty || 0}
+                        </span>
+
+                        /
+
+                        <span class="text-indigo-600">
+                            ${row.returned_qty || 0}
+                        </span>
+
+                        /
+
+                        <span class="text-red-600">
+                            ${row.remaining_qty || 0}
+                        </span>
+
+                    </td>
+
+<td class="p-4 text-center">
+
+    <span class="
+        bg-${statusColor}-100
+        text-${statusColor}-700
+        px-3
+        py-1
+        rounded-full
+        text-[10px]
+        font-black
+    ">
+        ${row.status}
+    </span>
+
+</td>
+
+<td class="p-4 text-center">
+
+    ${
+        row.status === 'OPEN'
+        ? `
+            <button
+                onclick="manualClearSD(${row.id})"
+                class="
+                    bg-red-500
+                    hover:bg-red-600
+                    text-white
+                    px-3
+                    py-1
+                    rounded-lg
+                    text-[10px]
+                    font-black
+                "
+            >
+                CLEAR
+            </button>
+        `
+        : '-'
+    }
+
+</td>
+                </tr>
+                `;
+
+            }).join('');
+
+    } catch (err) {
+
+        console.error(
+            'SD TRACKER ERROR',
+            err
+        );
+
+        radarTable.innerHTML = `
+        <tr>
+            <td colspan="5"
+                class="p-6 text-center text-red-500">
+                Failed loading SD Tracker
+            </td>
+        </tr>
+        `;
+
+        historyTable.innerHTML = `
+        <tr>
+            <td colspan="6"
+                class="p-6 text-center text-red-500">
+                Failed loading SD History
+            </td>
+        </tr>
+        `;
+    }
 }
+
+async function manualClearSD(id) {
+
+    const reason =
+        prompt(
+            'Reason for manual clear?'
+        );
+
+    if (!reason) return;
+
+    const confirmClear =
+        confirm(
+            'Close this SD obligation?'
+        );
+
+    if (!confirmClear) return;
+
+    const { error } =
+        await db
+            .from('sd_phase3_tracker')
+            .update({
+
+                status:
+                    'MANUAL_CLEARED',
+
+                remaining_qty:
+                    0,
+
+                closed_at:
+                    new Date()
+                    .toISOString(),
+
+                cleared_at:
+                    new Date()
+                    .toISOString(),
+
+                cleared_by:
+                    CURRENT_USER?.name
+                    || 'ADMIN',
+
+                cleared_reason:
+                    reason
+
+            })
+            .eq('id', id);
+
+    if (error) {
+
+        alert(
+            'Failed to clear SD'
+        );
+
+        console.error(error);
+
+        return;
+    }
+
+    alert(
+        'SD obligation cleared'
+    );
+
+    renderSDTracker();
 }
 
         function renderLogs() {
