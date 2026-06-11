@@ -1411,9 +1411,9 @@ async function fetchAndRenderRunnerTracker() {
 
             const runner = t.runner_name || 'Unknown';
             const merchant = t.business_name || 'Unknown';
+            const phase = t.phase || 'Unknown'; // Ambil data phase
 
-            const currentTime =
-                new Date(t.created_at).getTime();
+            const currentTime = new Date(t.created_at).getTime();
 
             if (!stats[runner]) {
 
@@ -1427,7 +1427,8 @@ async function fetchAndRenderRunnerTracker() {
 
             }
 
-            const trackerKey = `${runner}_${merchant}`;
+            // PERBAIKAN 1: Tambahkan phase ke trackerKey
+            const trackerKey = `${runner}_${merchant}_${phase}`;
 
             let isNewTrip = true;
 
@@ -1437,18 +1438,19 @@ async function fetchAndRenderRunnerTracker() {
                     (currentTime - visitTracker[trackerKey]) /
                     (1000 * 60);
 
-                if (diffMinutes <= 1) {
+                // PERBAIKAN 2: Perbesar toleransi waktu jadi 60 menit agar input banyak kit tidak bocor jadi trip baru
+                if (diffMinutes <= 60) {
                     isNewTrip = false;
                 }
             }
 
             if (isNewTrip) {
-
                 stats[runner].trips++;
                 overallTrips++;
-
-                visitTracker[trackerKey] = currentTime;
             }
+            
+            // PERBAIKAN 3: Selalu perbarui waktu pelacak di sini, jadi jeda 60 menit dihitung dari input kit TERAKHIR
+            visitTracker[trackerKey] = currentTime;
 
             if (t.kit_id) {
 
