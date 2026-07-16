@@ -1081,12 +1081,12 @@
         // ----------------------------------------------------------------------
         // 1. SUPABASE INIT & GLOBALS
         // ----------------------------------------------------------------------
-        const { createClient } = window.supabase;
-        const db = createClient(
-            'https://ksdulyitxvtfvxgoqotd.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzZHVseWl0eHZ0ZnZ4Z29xb3RkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODgzNzEsImV4cCI6MjA5MTE2NDM3MX0.nJ4lUtAKKBt_NQu0vZo8Dn6R7GfuE4qpgEfGYkkvh40'
-        );
+const { createClient } = window.supabase;
 
+const db = createClient(
+    'https://ezmevzvxqbsvwxufapck.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6bWV2enZ4cWJzdnd4dWZhcGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzEyNzUsImV4cCI6MjA5OTc0NzI3NX0.mrbmvvU4sKQT3aFLGbtrrqbzKcRPSEViXRmEyfGSGPE'
+);
         let globalLogs = [];
         let globalAreas = [];
         let globalRunners = [];
@@ -1218,13 +1218,15 @@
                 return;
             }
 
-            if (userData.role !== 'Admin') { 
-                document.getElementById('login-error').innerText = "Access Denied: This page is for Administrators only.";
-                document.getElementById('login-error').classList.remove('hidden');
-                await db.auth.signOut(); 
-                return;
-            }
+const role = (userData.role || "").toLowerCase();
 
+if (!["admin", "super_admin"].includes(role)) {
+    document.getElementById('login-error').innerText =
+        "Access Denied: This page is for Administrators only.";
+    document.getElementById('login-error').classList.remove('hidden');
+    await db.auth.signOut();
+    return;
+}
             document.getElementById('login-error').classList.add('hidden');
             localStorage.setItem('admin_user', JSON.stringify(userData));
             await logAdminAction('LOGIN', 'Admin logged into the portal.');
@@ -1241,10 +1243,12 @@
             const { data: { session } } = await db.auth.getSession();
             const admin = JSON.parse(localStorage.getItem('admin_user'));
             
-            if(!session || !admin || admin.role !== 'Admin') { 
-                document.getElementById('login-screen').classList.remove('hidden-view');
-                return; 
-            }
+            const role = (admin?.role || "").toLowerCase();
+
+if (!["admin", "super_admin"].includes(role)) {
+    document.getElementById('login-screen').classList.remove('hidden-view');
+    return;
+}
             
             const safeAreas = getAdminAreas();
             document.getElementById('login-screen').classList.add('hidden-view'); 
@@ -3367,16 +3371,23 @@ async function resolveSD(logId, type, variance) {
             if (!id) {
                 if (!pinInput) { alert("PIN/Password is required for new users!"); return; }
 
-                const ghostDb = window.supabase.createClient(
-                    'https://ksdulyitxvtfvxgoqotd.supabase.co',
-                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzZHVseWl0eHZ0ZnZ4Z29xb3RkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1ODgzNzEsImV4cCI6MjA5MTE2NDM3MX0.nJ4lUtAKKBt_NQu0vZo8Dn6R7GfuE4qpgEfGYkkvh40',
-                    { auth: { persistSession: false } }
-                );
+const ghostDb = window.supabase.createClient(
+    'https://ezmevzvxqbsvwxufapck.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6bWV2enZ4cWJzdnd4dWZhcGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzEyNzUsImV4cCI6MjA5OTc0NzI3NX0.mrbmvvU4sKQT3aFLGbtrrqbzKcRPSEViXRmEyfGSGPE',
+    {
+        auth: {
+            persistSession: false
+        }
+    }
+);
 
-                const { data: authData, error: authError } = await ghostDb.auth.signUp({
+const { data: authData, error: authError } = await ghostDb.auth.signUp({
                     email: emailInput,
                     password: pinInput
                 });
+                console.log(authData);
+console.log(authError);
+
                 if (authError) { alert("Failed to create user in Auth system: " + authError.message); return; }
 
                 const { error: dbError } = await db.from('master_users').insert([payload]);
