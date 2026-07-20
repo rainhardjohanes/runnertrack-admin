@@ -1587,8 +1587,16 @@ function populateAreaDropdowns() {
             }
             document.querySelectorAll('.filter-area-dropdown').forEach(el => el.innerHTML = filterOpts);
             
-            // Area Add User diisi oleh openAddUserModal()
-}
+            const areaAdminContainer = document.getElementById('user-area-checkboxes');
+            if(areaAdminContainer) {
+                areaAdminContainer.innerHTML = globalAreas.map(a => `
+                    <label class="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer">
+                        <input type="checkbox" class="user-area-cb rounded border-slate-300" value="${a.area_name}">
+                        <span>${a.area_name}</span>
+                    </label>
+                `).join('');
+            }
+        }
 
         function updateLogBusinessDropdown() {
             const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
@@ -1604,21 +1612,12 @@ function populateAreaDropdowns() {
 
         async function refreshAllData() {
             const refreshBtn = document.querySelector('button[onclick="refreshAllData()"] i');
+            if(refreshBtn) refreshBtn.classList.add('fa-spin');
             
-            // Tambahkan animasi berputar saat proses refresh
-            if (refreshBtn) refreshBtn.classList.add('fa-spin');
+            await Promise.all([fetchKits(true), fetchKitTypes(true), fetchBusinesses(true)]);
+            await renderDashboard(); 
             
-            try {
-                // Panggil fungsi render utama untuk memperbarui UI
-                if (typeof renderDashboard === "function") await renderDashboard();
-                if (typeof renderSDTracker === "function") await renderSDTracker();
-                // Tambahkan fungsi fetch lainnya sesuai kebutuhan tab yang aktif
-            } catch (error) {
-                console.error("Gagal memuat ulang data:", error);
-            } finally {
-                // Hapus animasi setelah selesai
-                if (refreshBtn) refreshBtn.classList.remove('fa-spin');
-            }
+            if(refreshBtn) refreshBtn.classList.remove('fa-spin');
         }
         
 function initFOTrackerFilters() {
@@ -3285,16 +3284,22 @@ async function resolveSD(logId, type, variance) {
         ? 'Deployed'
         : 'Available';
 
-const { error: updateError } = await db.from('master_kits')
-    .update({
-        last_location: biz,
-        status_deployment: deploymentStatus
-    })
+const updateData = {
+    last_location: biz,
+    status_deployment: deploymentStatus,
+    business_name: deploymentStatus === 'Deployed'
+        ? biz
+        : null
+};
+
+const { error: updateError } = await db
+    .from('master_kits')
+    .update(updateData)
     .eq('kit_id', kitId);
-                
-            if (updateError) {
-                console.error("Gagal update last_location:", updateError);
-            }
+
+if (updateError) {
+    console.error("Gagal update master_kits:", updateError);
+}
             
             await logAdminAction('MANUAL_ALLOCATION', `Forced ${kitId} to ${phase} at ${biz}`);
             fetchLogs(true); fetchKits(true); closeModal('modal-manual-deploy');
@@ -3302,56 +3307,24 @@ const { error: updateError } = await db.from('master_kits')
         });
 
         // --- Users ---
-        function openAddUserModal(userId = null) {
-    const currentUser = JSON.parse(localStorage.getItem('admin_user'));
-    
-    document.getElementById('form-user').reset();
-    document.getElementById('input-user-id').value = userId || '';
-    
-    const roleSelect = document.getElementById('input-user-role');
-    roleSelect.innerHTML = ''; 
-    
-    if (currentUser.role === 'super_admin') {
-        roleSelect.innerHTML += '<option value="staff">Staff</option>';
-        roleSelect.innerHTML += '<option value="admin">Admin</option>';
-        roleSelect.innerHTML += '<option value="super_admin">Super Admin</option>';
-    } else {
-        roleSelect.innerHTML += '<option value="staff">Staff</option>';
-    }
+        function openAddUserModal() { 
+            document.getElementById('form-user').reset(); 
+            document.getElementById('input-user-id').value = ''; 
+            document.getElementById('user-modal-title').innerText = 'Add System User'; 
+            document.getElementById('input-user-pin').required = true; 
 
-    const areaContainer = document.getElementById('user-area-checkboxes');
-    const grantAllContainer = document.getElementById('user-area-all').closest('div.mt-2');
-    areaContainer.innerHTML = '';
-    
-    let availableAreas = globalAreas; 
+            document.getElementById('user-area-all').checked = false;
+            document.querySelectorAll('.user-area-cb').forEach(cb => cb.checked = false);
 
-    if (currentUser.role === 'super_admin') {
-        grantAllContainer.style.display = 'block'; 
-    } else {
-        grantAllContainer.style.display = 'none'; 
-        
-        const myAreas = currentUser.assigned_area ? currentUser.assigned_area.split(',').map(a => a.trim()) : [];
-        availableAreas = globalAreas.filter(a => myAreas.includes(a.area_name));
-    }
-
-    availableAreas.forEach(area => {
-    areaContainer.innerHTML += `
-        <label class="flex items-center space-x-2 text-[10px] font-bold text-slate-700 bg-white p-2 rounded border border-slate-200">
-            <input
-                type="checkbox"
-                value="${area.area_name}"
-                class="user-area-cb rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                ${currentUser.role !== 'super_admin'
-                    ? `onclick="document.querySelectorAll('.user-area-cb').forEach(cb=>{if(cb!==this) cb.checked=false;})"`
-                    : ''
-                }>
-            <span>${area.area_name}</span>
-        </label>
-    `;
-});
-
-    showModal('modal-user');
-}
+            const admin = JSON.parse(localStorage.getItem('admin_user'));
+            const roleSelect = document.getElementById('input-user-role');
+            if(admin.email === 'rainhardjohanes@gmail.com') {
+                roleSelect.innerHTML = `<option value="Staff">Field Staff</option><option value="Admin">Administrator</option>`;
+            } else {
+                roleSelect.innerHTML = `<option value="Staff">Field Staff</option>`;
+            }
+            showModal('modal-user'); 
+        }
 
         function editUser(id) { 
             const u = globalUsers.find(x => x.id === id); 
@@ -3389,50 +3362,18 @@ const { error: updateError } = await db.from('master_kits')
             const pinInput = document.getElementById('input-user-pin').value;
             const fullName = document.getElementById('input-user-fullname').value.trim();
 
-const admin = JSON.parse(localStorage.getItem('admin_user'));
+            let areaValue = '';
+            if (document.getElementById('user-area-all').checked) {
+                areaValue = 'All';
+            } else {
+                const selectedCBs = Array.from(document.querySelectorAll('.user-area-cb:checked')).map(cb => cb.value);
+                if (selectedCBs.length === 0) {
+                    alert('Silakan pilih minimal 1 area untuk user ini!');
+                    return;
+                }
+                areaValue = selectedCBs.join(',');
+            }
 
-let areaValue = '';
-
-if(admin.email === 'rainhardjohanes@gmail.com'){
-
-    if(document.getElementById('user-area-all').checked){
-
-        areaValue = 'All';
-
-    }else{
-
-        const selectedCBs = Array
-            .from(document.querySelectorAll('.user-area-cb:checked'))
-            .map(cb=>cb.value);
-
-        if(selectedCBs.length===0){
-            alert('Silakan pilih minimal 1 area!');
-            return;
-        }
-
-        areaValue = selectedCBs.join(',');
-
-    }
-
-}else{
-
-    const selectedCBs = Array
-        .from(document.querySelectorAll('.user-area-cb:checked'))
-        .map(cb => cb.value);
-
-    if(selectedCBs.length === 0){
-        alert('Silakan pilih 1 area!');
-        return;
-    }
-
-    if(selectedCBs.length > 1){
-        alert('Admin hanya boleh memilih 1 area untuk setiap user.');
-        return;
-    }
-
-    areaValue = selectedCBs[0];
-
-}
             const payload = {
                 email: emailInput.toLowerCase(),
                 role: role,
@@ -3509,6 +3450,7 @@ console.log(authError);
             e.target.reset();
             closeModal('modal-user');
         });
+
         // --- Universal Delete Row ---
         async function deleteRow(tbl, id) { 
             if(confirm("DANGER: This action is permanent. Continue deleting?")) {
