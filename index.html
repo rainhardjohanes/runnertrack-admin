@@ -2222,340 +2222,168 @@ async function fetchAndRenderFOTracker() {
         }
         
 async function renderSDTracker() {
-const radarTable =
-    document.getElementById('table-live-radar');
+    const radarTable = document.getElementById('table-live-radar');
+    const historyTable = document.getElementById('table-sd-history');
+    const liveBadge = document.getElementById('badge-live-radar');
+    const areaFilter = document.getElementById('filter-sd-area').value;
+    const selectedDate = document.getElementById('filter-radar-date').value;
 
-const historyTable =
-    document.getElementById('table-sd-history');
+    radarTable.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading pending radar...</td></tr>`;
+    historyTable.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading SD history...</td></tr>`;
 
-const liveBadge =
-    document.getElementById('badge-live-radar');
+    try {
+        // Menggunakan select('*') untuk mengambil semua kolom dan mencegah error 400 Bad Request
+        let query = db.from('transactions')
+            .select('*') 
+            .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
+            .order('created_at', { ascending: true });
 
-const areaFilter =
-    document.getElementById('filter-sd-area').value;
-
-const selectedDate =
-    document.getElementById('filter-radar-date').value;
-
-radarTable.innerHTML = `
-<tr>
-    <td colspan="5" class="p-6 text-center text-slate-400">
-        Loading pending radar...
-    </td>
-</tr>
-`;
-
-historyTable.innerHTML = `
-<tr>
-    <td colspan="6" class="p-6 text-center text-slate-400">
-        Loading SD history...
-    </td>
-</tr>
-`;
-
-try {
-
-    let cycleQuery =
-        db
-            .from('sd_business_cycles')
-            .select('*')
-            .order('opened_at', {
-                ascending: false
-            });
-
-    if (areaFilter) {
-
-        cycleQuery =
-            cycleQuery.eq(
-                'area',
-                areaFilter
-            );
-    }
-
-    if (selectedDate) {
-
-        cycleQuery =
-            cycleQuery.gte(
-                'opened_at',
-                `${selectedDate}T00:00:00`
-            );
-
-        cycleQuery =
-            cycleQuery.lte(
-                'opened_at',
-                `${selectedDate}T23:59:59`
-            );
-    }
-
-    const {
-        data: cycles,
-        error: cycleError
-    } = await cycleQuery;
-
-    if (cycleError) {
-
-        console.error(cycleError);
-
-        throw cycleError;
-    }
-
-    const safeCycles =
-        cycles || [];
-
-    const pendingCycles =
-        safeCycles.filter(
-            cycle =>
-                Number(
-                    cycle.outstanding_sd || 0
-                ) > 0
-        );
-
-    liveBadge.textContent =
-        pendingCycles.length;
-
-    if (!pendingCycles.length) {
-
-        radarTable.innerHTML = `
-        <tr>
-            <td colspan="5" class="p-6 text-center text-emerald-500 font-bold">
-                No pending Phase 3
-            </td>
-        </tr>
-        `;
-
-    } else {
-
-        const businessNames =
-            pendingCycles.map(
-                x => x.business_name
-            );
-
-const {
-    data: phase2Transactions
-} = await db
-    .from('transactions')
-    .select(`
-        business_name,
-        runner_name,
-        created_at,
-        phase
-    `)
-    .eq(
-        'phase',
-        'Phase 2'
-    )
-    .in(
-        'business_name',
-        businessNames
-    )
-    .order(
-        'created_at',
-        {
-            ascending: false
+        // Memanggil filter area jika ada
+        if (typeof getAdminAreas === 'function') {
+            const adminAreas = getAdminAreas();
+            if (!adminAreas.includes('All')) {
+                query = query.in('area', adminAreas);
+            }
         }
-    );
 
+        const { data: txData, error: txError } = await query;
+        if (txError) throw txError;
 
-        radarTable.innerHTML =
-            pendingCycles.map(cycle => {
+        let allCycles = [];
+        let merchantState = {};
 
-const latestTx =
-    phase2Transactions
-        ?.filter(
-            tx =>
-                tx.business_name ===
-                cycle.business_name
-        )
-        ?.sort(
-            (a, b) =>
-                Math.abs(
-                    new Date(a.created_at) -
-                    new Date(cycle.opened_at)
-                ) -
-                Math.abs(
-                    new Date(b.created_at) -
-                    new Date(cycle.opened_at)
-                )
-        )?.[0];
-                return `
-                <tr class="hover:bg-blue-50/40 transition">
+        // Agregasi Phase 2 vs Phase 3 untuk membentuk siklus Drop & Pick
+        (txData || []).forEach(tx => {
+            const biz = tx.business_name;
+            if (!biz) return;
 
-                    <td class="p-4 font-black text-slate-700">
-                        ${cycle.business_name || '-'}
-                    </td>
-
-                    <td class="p-4 text-xs font-bold text-slate-500">
-                        ${
-                            cycle.opened_at
-                                ? new Date(cycle.opened_at)
-                                    .toLocaleString()
-                                : '-'
-                        }
-                    </td>
-
-                    <td class="p-4 text-xs font-bold text-slate-600">
-                        ${
-                            latestTx?.runner_name || '-'
-                        }
-                    </td>
-
-                    <td class="p-4 text-center">
-                        <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black">
-                            ${
-                                cycle.outstanding_sd || 0
-                            } SD
-                        </span>
-                    </td>
-
-                    <td class="p-4 text-right">
-                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">
-                            OPEN
-                        </span>
-                    </td>
-
-                </tr>
-                `;
-            }).join('');
-    }
-
-    if (!safeCycles.length) {
-
-        historyTable.innerHTML = `
-        <tr>
-            <td colspan="6" class="p-6 text-center text-slate-400">
-                No SD history found
-            </td>
-        </tr>
-        `;
-
-        return;
-    }
-
-    historyTable.innerHTML =
-        safeCycles.map(cycle => {
-
-            const durationHours =
-                cycle.closed_at
-                    ? (
-                        (
-                            new Date(cycle.closed_at)
-                            -
-                            new Date(cycle.opened_at)
-                        ) / 36e5
-                    ).toFixed(1)
-                    : '-';
-
-            let statusColor =
-                'red';
-
-            if (
-                cycle.status ===
-                'CLOSED_RECONCILED'
-            ) {
-
-                statusColor =
-                    'emerald';
-
-            } else if (
-                cycle.status ===
-                'CLOSED_SHORTAGE_UPLOAD'
-            ) {
-
-                statusColor =
-                    'amber';
+            if (!merchantState[biz] || merchantState[biz].status !== 'OPEN') {
+                merchantState[biz] = {
+                    business_name: biz,
+                    area: tx.area,
+                    opened_at: null,
+                    closed_at: null,
+                    runner_name: null,
+                    total_sent: 0,
+                    total_returned: 0,
+                    total_uploaded: 0,
+                    status: 'OPEN'
+                };
             }
 
-            return `
-            <tr class="hover:bg-slate-50 transition">
+            let state = merchantState[biz];
 
-                <td class="p-4 font-black text-slate-700">
-                    ${cycle.business_name || '-'}
-                </td>
+            if (tx.phase === 'Phase 2') {
+                if (!state.opened_at) {
+                    state.opened_at = tx.created_at;
+                    state.runner_name = tx.runner_name;
+                }
+                // Menghitung kuantitas dari kolom yang tersedia di tabel
+                state.total_sent += (parseInt(tx.sd_card_qty) || parseInt(tx.sd_drop_qty) || parseInt(tx.sd_qty) || 0);
+            }
+            else if (tx.phase === 'Phase 3' || tx.phase === 'SYSTEM CLEAR') {
+                if (!state.opened_at) state.opened_at = tx.created_at; 
+                
+                state.total_returned += (parseInt(tx.sd_pickup_qty) || parseInt(tx.sd_qty) || 0);
+                state.total_uploaded += (parseInt(tx.sd_uploaded) || 0);
+                state.closed_at = tx.created_at;
 
-                <td class="p-4 text-xs font-bold text-slate-500">
-                    ${
-                        cycle.opened_at
-                            ? new Date(cycle.opened_at)
-                                .toLocaleString()
-                            : '-'
-                    }
-                </td>
+                // Evaluasi status jika Drop Quantity sudah ter-cover oleh Pick Up
+                if (state.total_returned >= state.total_sent && state.total_sent > 0) {
+                    state.status = (state.total_uploaded >= state.total_returned) ? 'CLOSED_RECONCILED' : 'CLOSED_SHORTAGE_UPLOAD';
+                    allCycles.push({ ...state });
+                    merchantState[biz].status = 'DONE';
+                } else if (tx.phase === 'SYSTEM CLEAR') {
+                    state.status = 'CLOSED_RECONCILED';
+                    allCycles.push({ ...state });
+                    merchantState[biz].status = 'DONE';
+                }
+            }
+        });
 
-                <td class="p-4 text-xs font-bold text-slate-500">
-                    ${
-                        cycle.closed_at
-                            ? new Date(cycle.closed_at)
-                                .toLocaleString()
-                            : '-'
-                    }
-                </td>
+        // Masukkan sisa siklus yang masih gantung (Pending)
+        Object.values(merchantState).forEach(state => {
+            if (state.status === 'OPEN' && state.total_sent > 0) {
+                state.outstanding_sd = state.total_sent - state.total_returned;
+                allCycles.push(state);
+            }
+        });
 
-                <td class="p-4 text-center text-xs font-black">
-                    ${durationHours}
-                    ${
-                        durationHours !== '-'
-                            ? ' hrs'
-                            : ''
-                    }
-                </td>
+        // Terapkan Filter Area & Tanggal dari UI
+        if (areaFilter && areaFilter !== 'All') {
+            allCycles = allCycles.filter(c => c.area === areaFilter);
+        }
+        
+        if (selectedDate) {
+            const startD = new Date(`${selectedDate}T00:00:00`).getTime();
+            const endD = new Date(`${selectedDate}T23:59:59.999`).getTime();
+            allCycles = allCycles.filter(c => {
+                if (!c.opened_at) return false;
+                const t = new Date(c.opened_at).getTime();
+                return t >= startD && t <= endD;
+            });
+        }
 
-                <td class="p-4 text-center text-xs font-black">
-                    <span class="text-blue-600">
-                        ${cycle.total_sent || 0}
-                    </span>
-                    /
-                    <span class="text-indigo-600">
-                        ${cycle.total_returned || 0}
-                    </span>
-                    /
-                    <span class="text-emerald-600">
-                        ${cycle.total_uploaded || 0}
-                    </span>
-                </td>
+        // Urutkan data dari siklus terbaru
+        allCycles.sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at));
 
-                <td class="p-4 text-right">
-                    <span class="
-                        bg-${statusColor}-100
-                        text-${statusColor}-700
-                        px-3 py-1
-                        rounded-full
-                        text-[10px]
-                        font-black
-                    ">
-                        ${cycle.status || '-'}
-                    </span>
-                </td>
+        const pendingCycles = allCycles.filter(c => c.status === 'OPEN' && c.outstanding_sd > 0);
+        const historyCycles = allCycles.filter(c => c.status !== 'OPEN');
 
-            </tr>
-            `;
-        }).join('');
+        if (liveBadge) {
+            liveBadge.textContent = pendingCycles.length;
+        }
 
-} catch (err) {
+        // Render Tabel Live Radar
+        if (!pendingCycles.length) {
+            radarTable.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-emerald-500 font-bold">No pending Phase 3</td></tr>`;
+        } else {
+            radarTable.innerHTML = pendingCycles.map(cycle => `
+                <tr class="hover:bg-blue-50/40 transition border-b border-slate-100 last:border-0">
+                    <td class="p-4 font-black text-slate-700">${cycle.business_name || '-'}</td>
+                    <td class="p-4 text-xs font-bold text-slate-500">${cycle.opened_at ? new Date(cycle.opened_at).toLocaleString('en-GB') : '-'}</td>
+                    <td class="p-4 text-xs font-bold text-slate-600">${cycle.runner_name || '-'}</td>
+                    <td class="p-4 text-center"><span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black">${cycle.outstanding_sd || 0} SD</span></td>
+                    <td class="p-4 text-right flex items-center justify-end gap-2">
+                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">OPEN</span>
+                        <button onclick="resolveLiveRadar('${(cycle.business_name || '').replace(/'/g, "\\'")}', ${cycle.outstanding_sd})" class="bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white px-2 py-1 rounded text-[10px] font-black transition" title="Clear Radar"><i class="fa-solid fa-check"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
 
-    console.error(
-        'SD TRACKER ERROR:',
-        err
-    );
-
-    radarTable.innerHTML = `
-    <tr>
-        <td colspan="5" class="p-6 text-center text-red-500 font-bold">
-            Failed loading SD radar
-        </td>
-    </tr>
-    `;
-
-    historyTable.innerHTML = `
-    <tr>
-        <td colspan="6" class="p-6 text-center text-red-500 font-bold">
-            Failed loading SD history
-        </td>
-    </tr>
-    `;
+        // Render Tabel History
+        if (!historyCycles.length) {
+            historyTable.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No SD history found</td></tr>`;
+        } else {
+            historyTable.innerHTML = historyCycles.map(cycle => {
+                const durationHours = cycle.closed_at ? ((new Date(cycle.closed_at) - new Date(cycle.opened_at)) / 36e5).toFixed(1) : '-';
+                let statusColor = cycle.status === 'CLOSED_RECONCILED' ? 'emerald' : 'amber';
+                return `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100 last:border-0">
+                    <td class="p-4 font-black text-slate-700">${cycle.business_name || '-'}</td>
+                    <td class="p-4 text-xs font-bold text-slate-500">${cycle.opened_at ? new Date(cycle.opened_at).toLocaleString('en-GB') : '-'}</td>
+                    <td class="p-4 text-xs font-bold text-slate-500">${cycle.closed_at ? new Date(cycle.closed_at).toLocaleString('en-GB') : '-'}</td>
+                    <td class="p-4 text-center text-xs font-black">${durationHours} ${durationHours !== '-' ? ' hrs' : ''}</td>
+                    <td class="p-4 text-center text-xs font-black">
+                        <span class="text-blue-600" title="Sent">${cycle.total_sent || 0}</span> / 
+                        <span class="text-indigo-600" title="Returned">${cycle.total_returned || 0}</span> / 
+                        <span class="text-emerald-600" title="Uploaded">${cycle.total_uploaded || 0}</span>
+                    </td>
+                    <td class="p-4 text-right">
+                        <span class="bg-${statusColor}-100 text-${statusColor}-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">${cycle.status.replace('_', ' ') || '-'}</span>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+    } catch (err) {
+        console.error('SD TRACKER ERROR:', err);
+        radarTable.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-red-500 font-bold">Failed loading SD radar: ${err.message || 'Check Console'}</td></tr>`;
+        historyTable.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 font-bold">Failed loading SD history</td></tr>`;
+    }
 }
-}
 
-        function renderLogs() {
+function renderLogs() {
             const s = document.getElementById('search-logs').value.toLowerCase();
             const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
             const fPhase = document.getElementById('filter-logs-phase') ? document.getElementById('filter-logs-phase').value : '';
