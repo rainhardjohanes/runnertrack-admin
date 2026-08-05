@@ -409,7 +409,7 @@
                     
                     <input type="date" id="filter-logs-date" onchange="logPage=0; fetchLogs(true)" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 font-bold text-slate-600 cursor-pointer">
 
-                    <select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); logPage=0; fetchLogs(true);"></select>
+                    <select id="filter-logs-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="updateLogBusinessDropdown(); updateLogRunnerDropdown(); logPage=0; fetchLogs(true);"></select>
                     
                     <select id="filter-logs-phase" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="logPage=0; fetchLogs(true)">
                         <option value="">All Phases</option>
@@ -421,6 +421,10 @@
 
                     <select id="filter-logs-business" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 w-32" onchange="logPage=0; fetchLogs(true)">
                         <option value="">All Merchants</option>
+                    </select>
+
+                    <select id="filter-logs-runner" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 w-32" onchange="logPage=0; fetchLogs(true)">
+                        <option value="">All Runners</option>
                     </select>
 
                     <div class="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
@@ -1610,6 +1614,20 @@ function populateAreaDropdowns() {
                 filteredBiz.map(b => `<option value="${b.business_name}">${b.business_name}</option>`).join('');
         }
 
+        function updateLogRunnerDropdown() {
+            const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
+            const runnerSelect = document.getElementById('filter-logs-runner');
+            if(!runnerSelect) return;
+            
+            let filteredRunners = globalRunners;
+            if(fA) filteredRunners = globalRunners.filter(r => r.area_name === fA);
+            
+            const uniqueRunners = [...new Set(filteredRunners.map(r => r.runner_name))].sort();
+            
+            runnerSelect.innerHTML = `<option value="">All Runners</option>` + 
+                uniqueRunners.map(rName => `<option value="${rName}">${rName}</option>`).join('');
+        }
+
         async function refreshAllData() {
             const refreshBtn = document.querySelector('button[onclick="refreshAllData()"] i');
             if(refreshBtn) refreshBtn.classList.add('fa-spin');
@@ -1646,6 +1664,11 @@ function initFOTrackerFilters() {
         // 5. FETCH DATA FUNCTIONS
         // ----------------------------------------------------------------------
         async function fetchLogs(force = false) {
+            if (globalRunners.length === 0) {
+                await fetchRunners();
+                updateLogRunnerDropdown();
+            }
+
             const searchInput = document.getElementById('search-logs');
             const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
@@ -1665,10 +1688,12 @@ function initFOTrackerFilters() {
 
             const fPhase = document.getElementById('filter-logs-phase')?.value;
             const fBiz = document.getElementById('filter-logs-business')?.value;
+            const fRunner = document.getElementById('filter-logs-runner')?.value;
             const fDate = document.getElementById('filter-logs-date')?.value;
 
             if(fPhase) q = q.eq('phase', fPhase);
             if(fBiz) q = q.eq('business_name', fBiz);
+            if(fRunner) q = q.eq('runner_name', fRunner);
 
             if (fDate) {
                 const [yD, mD, dD] = fDate.split('-');
@@ -1715,7 +1740,14 @@ function initFOTrackerFilters() {
             const adminAreas = getAdminAreas();
             if (!adminAreas.includes('All')) q = q.in('area_name', adminAreas); 
             const { data } = await q.order('runner_name'); 
-            if (data) { globalRunners = data; renderRunners(); } 
+            if (data) { 
+                globalRunners = data; 
+                renderRunners(); 
+                // Tambahkan ini agar dropdown runner di Logs otomatis terisi
+                if (typeof updateLogRunnerDropdown === 'function') {
+                    updateLogRunnerDropdown();
+                }
+            } 
         }
 
         async function fetchSDRs(force = false) { 
@@ -2388,12 +2420,14 @@ function renderLogs() {
             const fA = document.getElementById('filter-logs-area') ? document.getElementById('filter-logs-area').value : '';
             const fPhase = document.getElementById('filter-logs-phase') ? document.getElementById('filter-logs-phase').value : '';
             const fBiz = document.getElementById('filter-logs-business') ? document.getElementById('filter-logs-business').value : '';
+            const fRunner = document.getElementById('filter-logs-runner') ? document.getElementById('filter-logs-runner').value : '';
             const fDate = document.getElementById('filter-logs-date') ? document.getElementById('filter-logs-date').value : '';
 
             const f = globalLogs.filter(i => {
                 const matchArea = !fA || i.area === fA;
                 const matchPhase = !fPhase || i.phase === fPhase;
                 const matchBiz = !fBiz || i.business_name === fBiz;
+                const matchRunner = !fRunner || i.runner_name === fRunner;
                 const matchSearch = (i.business_name || '').toLowerCase().includes(s) || (i.runner_name || '').toLowerCase().includes(s) || (i.kit_id || '').toLowerCase().includes(s);
                 
                 let matchDate = true;
@@ -2402,7 +2436,7 @@ function renderLogs() {
                     matchDate = (logDateStr === fDate);
                 }
 
-                return matchArea && matchPhase && matchBiz && matchSearch && matchDate;
+                return matchArea && matchPhase && matchBiz && matchRunner && matchSearch && matchDate;
             });
 
             document.getElementById('table-logs').innerHTML = f.map(i => {
@@ -2516,9 +2550,15 @@ function renderLogs() {
         }
 
         async function renderBusinesses() { 
-            const s = document.getElementById('search-businesses').value.toLowerCase(); 
-            const fA = document.getElementById('filter-businesses-area') ? document.getElementById('filter-businesses-area').value : ''; 
-            const f = globalBusinesses.filter(i => (!fA || i.area_name === fA) && i.business_name.toLowerCase().includes(s)); 
+    const s = document.getElementById('search-businesses').value.toLowerCase(); 
+    const fA = document.getElementById('filter-businesses-area') ? document.getElementById('filter-businesses-area').value : ''; 
+    
+    // Mencegah data dobel tampil dengan menyaring berdasarkan nama merchant yang unik
+    const uniqueBusinesses = Array.from(
+        new Map(globalBusinesses.map(item => [item.business_name, item])).values()
+    );
+
+    const f = uniqueBusinesses.filter(i => (!fA || i.area_name === fA) && i.business_name.toLowerCase().includes(s));
             
             const adminAreas = getAdminAreas();
             let qDep = db.from('master_kits').select('kit_id, kit_type, last_location').neq('last_location', 'Warehouse').not('last_location', 'is', null);
