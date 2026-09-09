@@ -41,12 +41,15 @@
             <div id="admin-badge" class="mt-2 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded inline-block bg-blue-900 text-blue-200 border border-blue-700"></div>
         </div>
         
-        <nav class="p-4 space-y-1 flex-1 overflow-y-auto">
+<nav class="p-4 space-y-1 flex-1 overflow-y-auto">
             <button onclick="switchTab('dashboard')" id="btn-dashboard" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-chart-line w-6"></i> Dashboard</button>
             <button onclick="switchTab('sd_tracker')" id="btn-sd_tracker" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-microchip w-6"></i> SD Tracker</button>
             <button onclick="switchTab('fo_tracker')" id="btn-fo_tracker" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-list-check w-6"></i> FO Tracker</button>
             <button onclick="switchTab('runner_tracker')" id="btn-runner_tracker" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-person-running w-6"></i> Runner Tracker</button>
             <button onclick="switchTab('logs')" id="btn-logs" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-list-ul w-6"></i> Activity Logs</button>
+            
+            <button onclick="window.location.href='expenses.html'" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-money-bill-wave w-6"></i> Expenses</button>
+
             <button onclick="switchTab('runners')" id="btn-runners" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-users w-6"></i> Field Personnel</button>
             <button onclick="switchTab('sdrs')" id="btn-sdrs" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-user-tie w-6"></i> SDR / Sales</button>
             <button onclick="switchTab('businesses')" id="btn-businesses" class="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition flex items-center"><i class="fa-solid fa-store w-6"></i> Merchants</button>
