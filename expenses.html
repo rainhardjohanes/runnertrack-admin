@@ -48,7 +48,7 @@
 
     <!-- MODAL ADD EXPENSE -->
     <div id="modal-add-expense" class="fixed inset-0 z-50 bg-slate-900/80 hidden flex-col justify-end backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md mx-auto rounded-t-[2.5rem] h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+        <div class="bg-white w-full max-w-md mx-auto rounded-t-[2.5rem] h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="p-6 border-b flex justify-between items-center bg-white sticky top-0 z-10">
                 <h3 class="font-black text-blue-600 uppercase text-xs tracking-widest">Add Expense Detail</h3>
                 <button type="button" onclick="toggleModal('modal-add-expense')"><i class="fa-solid fa-xmark text-xl text-slate-400"></i></button>
@@ -61,9 +61,22 @@
                         <input type="text" id="input-item-name" class="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-slate-700" placeholder="e.g. SD card delivery..." required>
                     </div>
 
+                    <!-- KURS DAN IDR -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Kurs Dolar *</label>
+                            <input type="number" id="input-kurs" class="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-slate-700" placeholder="e.g. 18000" oninput="calculateUSD()" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Price IDR *</label>
+                            <input type="number" id="input-price-idr" class="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-blue-700" placeholder="Rp" oninput="calculateUSD()" required>
+                        </div>
+                    </div>
+
+                    <!-- AUTO CALCULATED USD -->
                     <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Price IDR *</label>
-                        <input type="number" id="input-price-idr" class="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-blue-700" placeholder="Rp" required>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Price USD (Auto)</label>
+                        <input type="text" id="input-price-usd" class="w-full p-4 bg-slate-100 border border-slate-200 rounded-2xl outline-none font-black text-emerald-600" placeholder="$0.00" readonly>
                     </div>
 
                     <div>
@@ -105,7 +118,8 @@
     <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 px-8 py-5 rounded-full shadow-2xl opacity-0 transition-all pointer-events-none z-50 font-black text-xs uppercase tracking-widest bg-slate-900 text-white border border-slate-700">Success!</div>
 
     <script>
-        const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwPcPA6wfSRsVsKSpHH1lN5k22FzMqTVU_odubCSCNPlu9dgCWq7Jk1_IIJuM2Fx9uY3A/exec';
+        // PASTIKAN MENGGANTI DENGAN URL DEPLOYMENT BARU
+        const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdVC3UiqYeP0qW64l6DbhOclWg0jLa4JeUhGdIdohOM3WUYpYm-6Yqrtx8hH_3Z4M0nQ/exec'; 
         
         let expensesQueue = [];
 
@@ -113,9 +127,25 @@
             const el = document.getElementById(id);
             if(el.classList.contains('hidden')) { 
                 el.classList.replace('hidden', 'flex'); 
-                document.getElementById('input-date').valueAsDate = new Date();
+                if(!document.getElementById('input-date').value) {
+                    document.getElementById('input-date').valueAsDate = new Date();
+                }
             } else {
                 el.classList.replace('flex', 'hidden');
+            }
+        }
+
+        // Fungsi Otomatis Hitung USD
+        function calculateUSD() {
+            const kurs = parseFloat(document.getElementById('input-kurs').value);
+            const idr = parseFloat(document.getElementById('input-price-idr').value);
+            const usdField = document.getElementById('input-price-usd');
+
+            if (kurs > 0 && idr > 0) {
+                const usd = idr / kurs;
+                usdField.value = usd.toFixed(2);
+            } else {
+                usdField.value = "";
             }
         }
 
@@ -176,6 +206,7 @@
                             <div class="text-[10px] text-slate-400 font-bold">${exp.date}</div>
                             <div class="text-right">
                                 <div class="font-black text-emerald-600 text-sm">Rp ${parseInt(exp.priceIdr).toLocaleString('id-ID')}</div>
+                                <div class="text-[10px] font-bold text-slate-400">$ ${exp.priceUsd}</div>
                             </div>
                         </div>
                     </div>
@@ -207,6 +238,7 @@
             const expenseData = {
                 itemName: document.getElementById('input-item-name').value,
                 priceIdr: document.getElementById('input-price-idr').value,
+                priceUsd: document.getElementById('input-price-usd').value,
                 region: document.getElementById('input-region').value,
                 date: document.getElementById('input-date').value,
                 by: document.getElementById('input-by').value.toUpperCase(),
@@ -215,7 +247,20 @@
 
             expensesQueue.push(expenseData);
             
+            // Simpan variabel statis agar tidak harus input ulang tiap nambah item
+            const savedKurs = document.getElementById('input-kurs').value;
+            const savedDate = document.getElementById('input-date').value;
+            const savedBy = document.getElementById('input-by').value;
+            const savedRegion = document.getElementById('input-region').value;
+
             this.reset();
+            
+            // Kembalikan variabel statis
+            document.getElementById('input-kurs').value = savedKurs;
+            document.getElementById('input-date').value = savedDate;
+            document.getElementById('input-by').value = savedBy;
+            document.getElementById('input-region').value = savedRegion;
+
             btn.innerHTML = originalBtnHtml;
             btn.disabled = false;
             
