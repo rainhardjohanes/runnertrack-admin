@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RunnerTrack - Expenses</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hidden-view { display: none !important; }
+        .spinner { border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; width: 20px; height: 20px; animation: spin 1s ease-in-out infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased pb-24">
+
+    <div id="app-container" class="max-w-md mx-auto bg-slate-50 min-h-screen shadow-2xl relative">
+        <header class="bg-blue-600 text-white p-5 shadow-md sticky top-0 z-30 flex justify-between items-center rounded-b-3xl">
+            <h1 class="text-xl font-black italic tracking-tighter">RunnerTrack</h1>
+            <div class="flex items-center gap-2">
+                <span class="bg-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-inner">
+                    <i class="fa-solid fa-money-bill-wave mr-1"></i> Expenses
+                </span>
+            </div>
+        </header>
+
+        <div id="view-dashboard" class="p-6">
+            <div class="flex justify-between items-center mb-4 mt-2">
+                <h2 class="text-lg font-black text-slate-900">Pending Expenses</h2>
+                <button onclick="toggleModal('modal-add-expense')" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[11px] font-black uppercase shadow-md hover:bg-blue-700">
+                    <i class="fa-solid fa-plus mr-1"></i> Add
+                </button>
+            </div>
+            
+            <div id="empty-state" class="text-center py-10 bg-white rounded-3xl shadow-sm border border-slate-200">
+                <i class="fa-solid fa-receipt text-4xl text-slate-300 mb-3"></i>
+                <p class="text-xs font-bold text-slate-400">No expenses added yet.</p>
+            </div>
+
+            <div class="space-y-3" id="expenses-list"></div>
+
+            <button type="button" id="btn-submit-all" onclick="submitAllExpenses()" class="w-full bg-emerald-600 text-white font-black py-5 rounded-[2rem] shadow-xl hover:bg-emerald-700 flex justify-center items-center text-lg mt-6 hidden-view uppercase tracking-widest">
+                <span id="btn-text">Submit All Data</span>
+                <span id="btn-loading" class="hidden"><div class="spinner mr-2"></div> Uploading...</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL ADD EXPENSE -->
+    <div id="modal-add-expense" class="fixed inset-0 z-50 bg-slate-900/80 hidden flex-col justify-end backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md mx-auto rounded-t-[2.5rem] h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-6 border-b flex justify-between items-center bg-white sticky top-0 z-10">
+                <h3 class="font-black text-blue-600 uppercase text-xs tracking-widest">Add Expense Detail</h3>
+                <button type="button" onclick="toggleModal('modal-add-expense')"><i class="fa-solid fa-xmark text-xl text-slate-400"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50 space-y-4">
+                <form id="expense-form" class="space-y-4 pb-10">
+                    
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Item Name *</label>
+                        <input type="text" id="input-item-name" class="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-slate-700" placeholder="e.g. SD card delivery..." required>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Price IDR *</label>
+                        <input type="number" id="input-price-idr" class="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-blue-700" placeholder="Rp" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Region *</label>
+                        <select id="input-region" class="w-full p-4 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 outline-none" required>
+                            <option value="">-- Select Region --</option>
+                            <option value="Jakarta">Jakarta</option>
+                            <option value="Tangerang">Tangerang</option>
+                            <option value="Bali">Bali</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Date *</label>
+                            <input type="date" id="input-date" class="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none text-sm font-bold text-slate-700" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">By (Name) *</label>
+                            <input type="text" id="input-by" class="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-slate-700 uppercase" placeholder="e.g. ARIS" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Proof Picture *</label>
+                        <div class="bg-white p-4 border border-slate-200 rounded-2xl">
+                            <input type="file" id="input-photo" accept="image/*" class="w-full text-sm" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-blue-700 mt-4 uppercase tracking-widest text-sm">
+                        <i class="fa-solid fa-check mr-1"></i> Add to Queue
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-10 left-1/2 transform -translate-x-1/2 px-8 py-5 rounded-full shadow-2xl opacity-0 transition-all pointer-events-none z-50 font-black text-xs uppercase tracking-widest bg-slate-900 text-white border border-slate-700">Success!</div>
+
+    <script>
+        const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwPcPA6wfSRsVsKSpHH1lN5k22FzMqTVU_odubCSCNPlu9dgCWq7Jk1_IIJuM2Fx9uY3A/exec';
+        
+        let expensesQueue = [];
+
+        function toggleModal(id) {
+            const el = document.getElementById(id);
+            if(el.classList.contains('hidden')) { 
+                el.classList.replace('hidden', 'flex'); 
+                document.getElementById('input-date').valueAsDate = new Date();
+            } else {
+                el.classList.replace('flex', 'hidden');
+            }
+        }
+
+        async function compressImageToBase64(file) {
+            return new Promise((res) => {
+                const reader = new FileReader(); 
+                reader.readAsDataURL(file);
+                reader.onload = e => {
+                    const img = new Image(); 
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas'); 
+                        let w = img.width, h = img.height; 
+                        const max = 1024;
+                        if(w>h && w>max){ h*=max/w; w=max; } 
+                        else if(h>max){ w*=max/h; h=max; }
+                        canvas.width = w; canvas.height = h; 
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        res(canvas.toDataURL('image/jpeg', 0.6));
+                    };
+                };
+            });
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.remove('opacity-0'); 
+            setTimeout(() => t.classList.add('opacity-0'), 3000);
+        }
+
+        function renderQueue() {
+            const listEl = document.getElementById('expenses-list');
+            const emptyEl = document.getElementById('empty-state');
+            const btnSubmit = document.getElementById('btn-submit-all');
+
+            listEl.innerHTML = '';
+            
+            if(expensesQueue.length === 0) {
+                emptyEl.classList.remove('hidden-view');
+                btnSubmit.classList.add('hidden-view');
+                return;
+            }
+
+            emptyEl.classList.add('hidden-view');
+            btnSubmit.classList.remove('hidden-view');
+
+            expensesQueue.forEach((exp, index) => {
+                listEl.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative">
+                        <button onclick="removeExpense(${index})" class="absolute top-4 right-4 text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
+                        <h4 class="font-black text-slate-800 text-sm mb-1 pr-6">${exp.itemName}</h4>
+                        <div class="flex gap-2 mb-2">
+                            <span class="text-[9px] font-black bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 uppercase">${exp.region}</span>
+                            <span class="text-[9px] font-black bg-slate-100 text-slate-600 px-2 py-1 rounded border border-slate-200 uppercase"><i class="fa-solid fa-user mr-1"></i>${exp.by}</span>
+                        </div>
+                        <div class="flex justify-between items-end border-t pt-2 mt-2">
+                            <div class="text-[10px] text-slate-400 font-bold">${exp.date}</div>
+                            <div class="text-right">
+                                <div class="font-black text-emerald-600 text-sm">Rp ${parseInt(exp.priceIdr).toLocaleString('id-ID')}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('btn-text').innerText = `Submit All (${expensesQueue.length} Data)`;
+        }
+
+        function removeExpense(index) {
+            expensesQueue.splice(index, 1);
+            renderQueue();
+        }
+
+        document.getElementById('expense-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('input-photo');
+            if(!fileInput.files[0]) {
+                alert("Please attach a proof picture."); return;
+            }
+
+            const btn = this.querySelector('button[type="submit"]');
+            const originalBtnHtml = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner mr-2"></div> Processing...';
+            btn.disabled = true;
+
+            const photoBase64 = await compressImageToBase64(fileInput.files[0]);
+
+            const expenseData = {
+                itemName: document.getElementById('input-item-name').value,
+                priceIdr: document.getElementById('input-price-idr').value,
+                region: document.getElementById('input-region').value,
+                date: document.getElementById('input-date').value,
+                by: document.getElementById('input-by').value.toUpperCase(),
+                photoBase64: photoBase64
+            };
+
+            expensesQueue.push(expenseData);
+            
+            this.reset();
+            btn.innerHTML = originalBtnHtml;
+            btn.disabled = false;
+            
+            toggleModal('modal-add-expense');
+            renderQueue();
+            showToast("Added to Queue!");
+        });
+
+        async function submitAllExpenses() {
+            if(expensesQueue.length === 0) return;
+            
+            const btnText = document.getElementById('btn-text');
+            const btnLoading = document.getElementById('btn-loading');
+            const btnSubmit = document.getElementById('btn-submit-all');
+
+            btnText.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+            btnSubmit.disabled = true;
+
+            try {
+                const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(expensesQueue)
+                });
+                
+                const result = await response.json();
+                
+                if(result.status === 'success') {
+                    showToast("All Data Uploaded to Sheets!");
+                    expensesQueue = []; 
+                    renderQueue();
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (error) {
+                alert("Failed to submit data. Please check your connection.");
+                console.error(error);
+            } finally {
+                btnText.classList.remove('hidden');
+                btnLoading.classList.add('hidden');
+                btnSubmit.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
