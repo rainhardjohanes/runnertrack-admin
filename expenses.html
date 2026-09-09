@@ -16,7 +16,12 @@
 
     <div id="app-container" class="max-w-md mx-auto bg-slate-50 min-h-screen shadow-2xl relative">
         <header class="bg-blue-600 text-white p-5 shadow-md sticky top-0 z-30 flex justify-between items-center rounded-b-3xl">
-            <h1 class="text-xl font-black italic tracking-tighter">RunnerTrack</h1>
+            <div class="flex items-center gap-3">
+                <button onclick="window.location.href='index.html'" class="bg-blue-700 hover:bg-blue-800 text-white p-2 rounded-full h-8 w-8 flex items-center justify-center transition shadow-inner">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                </button>
+                <h1 class="text-xl font-black italic tracking-tighter">RunnerTrack</h1>
+            </div>
             <div class="flex items-center gap-2">
                 <span class="bg-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-inner">
                     <i class="fa-solid fa-money-bill-wave mr-1"></i> Expenses
