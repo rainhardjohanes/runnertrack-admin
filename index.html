@@ -150,35 +150,58 @@
         </div>
         
         <div id="view-sd_tracker" class="flex-1 flex flex-col hidden-view h-full">
-            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
+            <div class="p-6 border-b border-slate-200 bg-white flex flex-col lg:flex-row justify-between lg:items-center gap-4 shadow-sm z-10 flex-shrink-0">
                 <div>
                     <h2 class="text-xl font-black text-slate-800"><i class="fa-solid fa-microchip text-blue-600 mr-2"></i>SD Card Tracker</h2>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Daily Discrepancy & Delay Audit</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Collection Reconciliation & Upload Audit</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <select id="filter-sd-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderSDTracker()"></select>
+                    <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Activity Date</span>
+                        <input type="date" id="filter-radar-date" onchange="renderSDTracker()" class="p-1 border-0 outline-none bg-transparent text-xs font-bold text-blue-700 cursor-pointer">
+                    </div>
+                    <button onclick="document.getElementById('filter-radar-date').value=''; renderSDTracker()" class="bg-white text-slate-500 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-100 transition shadow-sm text-[10px] font-black uppercase" title="Clear date filter">All Dates</button>
                     <button onclick="renderSDTracker()" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition shadow-sm" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
                 </div>
             </div>
             
             <div class="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 p-3 lg:p-6 space-y-4 lg:space-y-6">
+                <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                    <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-sm">
+                        <p class="text-[9px] font-black text-amber-600 uppercase tracking-widest">Open Collection Cycles</p>
+                        <h3 id="sd-stat-open-cycles" class="text-2xl font-black text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="bg-white rounded-xl border border-red-200 p-4 shadow-sm">
+                        <p class="text-[9px] font-black text-red-600 uppercase tracking-widest">SD Still to Collect</p>
+                        <h3 id="sd-stat-pending-collection" class="text-2xl font-black text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="bg-white rounded-xl border border-blue-200 p-4 shadow-sm">
+                        <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest">Returned Not Uploaded</p>
+                        <h3 id="sd-stat-not-uploaded" class="text-2xl font-black text-slate-800 mt-1">0</h3>
+                    </div>
+                    <div class="bg-white rounded-xl border border-rose-200 p-4 shadow-sm">
+                        <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest">Anomaly Cycles</p>
+                        <h3 id="sd-stat-anomalies" class="text-2xl font-black text-slate-800 mt-1">0</h3>
+                    </div>
+                </div>
+
                 <div class="bg-white rounded-2xl shadow-sm border border-blue-200 overflow-hidden">
                     <div class="p-4 bg-blue-50 border-b border-blue-100 flex justify-between items-center flex-wrap gap-2">
-                        <h3 class="font-black text-blue-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-satellite-dish animate-pulse text-red-500 mr-2"></i>Radar Pending Phase 3</h3>
-                        <div class="flex items-center gap-2">
-                            <input type="date" id="filter-radar-date" onchange="renderSDTracker()" class="p-1 border border-blue-200 rounded text-xs outline-none bg-white font-bold text-blue-700 cursor-pointer">
-                            <span id="badge-live-radar" class="bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
-                        </div>
+                        <h3 class="font-black text-blue-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-satellite-dish animate-pulse text-red-500 mr-2"></i>Live Collection Radar (P2 → P3)</h3>
+                        <span id="badge-live-radar" class="bg-blue-600 text-white text-[10px] px-2 py-1 rounded font-black shadow-sm">0</span>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left whitespace-nowrap">
+                        <table class="min-w-[1150px] w-full text-left whitespace-nowrap">
                             <thead class="bg-white border-b border-blue-100 text-[10px] uppercase text-blue-400 font-black tracking-widest">
                                 <tr>
                                     <th class="p-4">Merchant</th>
-                                    <th class="p-4">Phase 2 Drop Time</th>
-                                    <th class="p-4">Runner (Personnel)</th>
-                                    <th class="p-4 text-center">Pending Qty</th>
-                                    <th class="p-4 text-right">Live Status</th>
+                                    <th class="p-4">P2 Window</th>
+                                    <th class="p-4">P2 Runner(s)</th>
+                                    <th class="p-4 text-center">Sent / Returned / Pending</th>
+                                    <th class="p-4">P3 Runner(s)</th>
+                                    <th class="p-4 text-center">Uploaded / Not Uploaded</th>
+                                    <th class="p-4 text-right">Collection Status</th>
                                 </tr>
                             </thead>
                             <tbody id="table-live-radar" class="divide-y divide-blue-50 text-xs"></tbody>
@@ -188,18 +211,23 @@
 
                 <div class="bg-white rounded-2xl shadow-sm border border-indigo-200 overflow-hidden mt-6">
                     <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
-                        <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>SD Card Exchange History & Anomalies (P2 -> P3)</h3>
+                        <div>
+                            <h3 class="font-black text-indigo-800 uppercase text-xs tracking-widest"><i class="fa-solid fa-clock-rotate-left mr-2"></i>SD Cycle History & Anomalies</h3>
+                            <p class="text-[9px] text-indigo-500 font-bold mt-1">Collection status is independent from upload status.</p>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left whitespace-nowrap">
+                        <table class="min-w-[1250px] w-full text-left whitespace-nowrap">
                             <thead class="bg-white border-b border-indigo-100 text-[10px] uppercase text-indigo-500 font-black tracking-widest">
                                 <tr>
                                     <th class="p-4">Merchant</th>
-                                    <th class="p-4">Phase 2 (Drop)</th>
-                                    <th class="p-4">Phase 3 (Pick Up)</th>
+                                    <th class="p-4">P2 First Drop</th>
+                                    <th class="p-4">P3 / Close Time</th>
+                                    <th class="p-4">Runner Flow</th>
+                                    <th class="p-4 text-center">Sent / Returned / Uploaded / Not Up</th>
                                     <th class="p-4 text-center">Duration</th>
-                                    <th class="p-4 text-center">Qty (Drop/Pick/Up)</th>
-                                    <th class="p-4 text-right">System Status</th>
+                                    <th class="p-4 text-center">Collection</th>
+                                    <th class="p-4 text-right">Upload</th>
                                 </tr>
                             </thead>
                             <tbody id="table-sd-history" class="divide-y divide-indigo-50 text-xs"></tbody>
@@ -784,15 +812,15 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Drop Qty (Phase 2)</label>
-                        <input type="number" id="edit-log-sd-drop" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                        <input type="number" id="edit-log-sd-drop" min="0" step="1" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Pickup Qty (Phase 3)</label>
-                        <input type="number" id="edit-log-sd-pickup" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                        <input type="number" id="edit-log-sd-pickup" min="0" step="1" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Upload Qty</label>
-                        <input type="number" id="edit-log-uploaded" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
+                        <input type="number" id="edit-log-uploaded" min="0" step="1" class="w-full p-2 border border-slate-300 rounded-lg outline-none text-xs">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Condition</label>
@@ -1471,7 +1499,6 @@ async function fetchAndRenderRunnerTracker() {
             }
 
             const drop =
-                parseInt(t.sd_card_qty) ||
                 parseInt(t.sd_drop_qty) ||
                 parseInt(t.sd_qty) ||
                 0;
@@ -2260,161 +2287,337 @@ async function renderSDTracker() {
     const radarTable = document.getElementById('table-live-radar');
     const historyTable = document.getElementById('table-sd-history');
     const liveBadge = document.getElementById('badge-live-radar');
-    const areaFilter = document.getElementById('filter-sd-area').value;
-    const selectedDate = document.getElementById('filter-radar-date').value;
+    const areaFilter = document.getElementById('filter-sd-area')?.value || '';
+    const selectedDate = document.getElementById('filter-radar-date')?.value || '';
 
-    radarTable.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading pending radar...</td></tr>`;
-    historyTable.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading SD history...</td></tr>`;
+    radarTable.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading collection radar...</td></tr>`;
+    historyTable.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading SD cycle history...</td></tr>`;
+
+    const setStat = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    const safe = (value) => {
+        const v = value == null ? '' : String(value);
+        return (typeof escapeHTML === 'function') ? escapeHTML(v) : v.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    };
+
+    const qty = (value) => {
+        if (value === null || value === undefined || value === '') return 0;
+        const n = parseInt(value, 10);
+        return Number.isFinite(n) && n > 0 ? n : 0;
+    };
+
+    const phaseQty = (tx, phase) => {
+        if (phase === 'Phase 2') {
+            const modern = qty(tx.sd_qty);
+            return modern > 0 ? modern : qty(tx.sd_drop_qty);
+        }
+        if (phase === 'Phase 3') {
+            const modern = qty(tx.sd_qty);
+            return modern > 0 ? modern : qty(tx.sd_pickup_qty);
+        }
+        return 0;
+    };
+
+    const addUnique = (arr, value) => {
+        const v = (value || '').trim();
+        if (v && !arr.includes(v)) arr.push(v);
+    };
+
+    const fmtDateTime = (iso) => iso ? new Date(iso).toLocaleString('en-GB') : '-';
+
+    const cycleKeyFor = (tx) => `${(tx.area || '').trim().toLowerCase()}|||${(tx.business_name || '').trim().toLowerCase()}`;
+
+    const createState = (tx) => ({
+        business_name: tx.business_name,
+        area: tx.area,
+        opened_at: null,
+        closed_at: null,
+        p2_first_at: null,
+        p2_last_at: null,
+        p3_first_at: null,
+        p3_last_at: null,
+        p2_count: 0,
+        p3_count: 0,
+        p2_runners: [],
+        p3_runners: [],
+        total_sent: 0,
+        total_returned: 0,
+        total_uploaded: 0,
+        manual_cleared: false,
+        orphan_phase3: false,
+        activity_dates: [],
+        status: 'OPEN'
+    });
+
+    const touchActivity = (state, tx) => {
+        const d = getLocalDateStr(tx.created_at);
+        if (d && d !== '-' && !state.activity_dates.includes(d)) state.activity_dates.push(d);
+        if (tx.area) state.area = tx.area;
+        if (tx.business_name) state.business_name = tx.business_name;
+    };
+
+    const derive = (state) => {
+        const c = { ...state, p2_runners: [...state.p2_runners], p3_runners: [...state.p3_runners], activity_dates: [...state.activity_dates] };
+        c.pending_collection = Math.max(c.total_sent - c.total_returned, 0);
+        c.over_return = Math.max(c.total_returned - c.total_sent, 0);
+        c.not_uploaded = Math.max(c.total_returned - c.total_uploaded, 0);
+        c.over_upload = Math.max(c.total_uploaded - c.total_returned, 0);
+
+        if (c.orphan_phase3) c.collection_status = 'ORPHAN_PHASE3';
+        else if (c.manual_cleared) c.collection_status = 'MANUAL_CLEARED';
+        else if (c.total_returned === 0) c.collection_status = 'WAITING_COLLECTION';
+        else if (c.total_returned < c.total_sent) c.collection_status = 'PARTIAL_COLLECTION';
+        else if (c.total_returned === c.total_sent) c.collection_status = 'COMPLETE';
+        else c.collection_status = 'OVER_RETURN';
+
+        if (c.total_returned === 0) c.upload_status = 'NO_RETURN_YET';
+        else if (c.total_uploaded === 0) c.upload_status = 'NOT_UPLOADED';
+        else if (c.total_uploaded < c.total_returned) c.upload_status = 'PARTIAL_UPLOAD';
+        else if (c.total_uploaded === c.total_returned) c.upload_status = 'COMPLETE';
+        else c.upload_status = 'OVER_UPLOAD';
+
+        c.is_anomaly = c.orphan_phase3 || c.manual_cleared || c.over_return > 0 || c.over_upload > 0;
+        return c;
+    };
+
+    const collectionBadge = (status) => {
+        const map = {
+            WAITING_COLLECTION: ['amber', 'WAITING COLLECTION'],
+            PARTIAL_COLLECTION: ['orange', 'PARTIAL COLLECTION'],
+            COMPLETE: ['emerald', 'COLLECTION COMPLETE'],
+            OVER_RETURN: ['rose', 'OVER RETURN'],
+            MANUAL_CLEARED: ['slate', 'MANUAL CLEAR'],
+            ORPHAN_PHASE3: ['red', 'ORPHAN P3']
+        };
+        const [color, label] = map[status] || ['slate', status || '-'];
+        return `<span class="bg-${color}-100 text-${color}-700 border border-${color}-200 px-2.5 py-1 rounded-full text-[9px] font-black uppercase">${label}</span>`;
+    };
+
+    const uploadBadge = (status, notUploaded = 0, overUpload = 0) => {
+        const map = {
+            NO_RETURN_YET: ['slate', 'NO RETURN YET'],
+            NOT_UPLOADED: ['amber', `NOT UPLOADED (${notUploaded})`],
+            PARTIAL_UPLOAD: ['blue', `PARTIAL · ${notUploaded} NOT UP`],
+            COMPLETE: ['emerald', 'UPLOAD COMPLETE'],
+            OVER_UPLOAD: ['rose', `OVER UPLOAD +${overUpload}`]
+        };
+        const [color, label] = map[status] || ['slate', status || '-'];
+        return `<span class="bg-${color}-100 text-${color}-700 border border-${color}-200 px-2.5 py-1 rounded-full text-[9px] font-black uppercase">${label}</span>`;
+    };
 
     try {
-        // Menggunakan select('*') untuk mengambil semua kolom dan mencegah error 400 Bad Request
-        let query = db.from('transactions')
-            .select('*') 
-            .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
-            .order('created_at', { ascending: true });
+        // Fetch ALL rows in pages. Supabase/PostgREST commonly caps a single request,
+        // so the SD tracker must not rely on one unpaged SELECT.
+        const adminAreas = (typeof getAdminAreas === 'function') ? getAdminAreas() : ['All'];
+        const txData = [];
+        let offset = 0;
+        const pageSize = 1000;
 
-        // Memanggil filter area jika ada
-        if (typeof getAdminAreas === 'function') {
-            const adminAreas = getAdminAreas();
-            if (!adminAreas.includes('All')) {
-                query = query.in('area', adminAreas);
-            }
+        while (true) {
+            let query = db.from('transactions')
+                .select('id,created_at,phase,area,runner_name,business_name,sd_qty,sd_drop_qty,sd_pickup_qty,sd_uploaded,missing_or_issue')
+                .in('phase', ['Phase 2', 'Phase 3', 'SYSTEM CLEAR'])
+                .order('created_at', { ascending: true })
+                .range(offset, offset + pageSize - 1);
+
+            if (!adminAreas.includes('All')) query = query.in('area', adminAreas);
+
+            const { data, error } = await query;
+            if (error) throw error;
+            const rows = data || [];
+            txData.push(...rows);
+            if (rows.length < pageSize) break;
+            offset += pageSize;
         }
 
-        const { data: txData, error: txError } = await query;
-        if (txError) throw txError;
+        const allCycles = [];
+        const merchantState = {};
 
-        let allCycles = [];
-        let merchantState = {};
-
-        // Agregasi Phase 2 vs Phase 3 untuk membentuk siklus Drop & Pick
-        (txData || []).forEach(tx => {
-            const biz = tx.business_name;
+        txData.forEach(tx => {
+            const biz = (tx.business_name || '').trim();
             if (!biz) return;
-
-            if (!merchantState[biz] || merchantState[biz].status !== 'OPEN') {
-                merchantState[biz] = {
-                    business_name: biz,
-                    area: tx.area,
-                    opened_at: null,
-                    closed_at: null,
-                    runner_name: null,
-                    total_sent: 0,
-                    total_returned: 0,
-                    total_uploaded: 0,
-                    status: 'OPEN'
-                };
-            }
-
-            let state = merchantState[biz];
+            const key = cycleKeyFor(tx);
 
             if (tx.phase === 'Phase 2') {
-                if (!state.opened_at) {
-                    state.opened_at = tx.created_at;
-                    state.runner_name = tx.runner_name;
-                }
-                // Menghitung kuantitas dari kolom yang tersedia di tabel
-                state.total_sent += (parseInt(tx.sd_card_qty) || parseInt(tx.sd_drop_qty) || parseInt(tx.sd_qty) || 0);
+                if (!merchantState[key]) merchantState[key] = createState(tx);
+                const state = merchantState[key];
+                touchActivity(state, tx);
+
+                const sent = phaseQty(tx, 'Phase 2');
+                if (!state.opened_at) state.opened_at = tx.created_at;
+                if (!state.p2_first_at) state.p2_first_at = tx.created_at;
+                state.p2_last_at = tx.created_at;
+                state.p2_count += 1;
+                state.total_sent += sent;
+                addUnique(state.p2_runners, tx.runner_name);
+                return;
             }
-            else if (tx.phase === 'Phase 3' || tx.phase === 'SYSTEM CLEAR') {
-                if (!state.opened_at) state.opened_at = tx.created_at; 
-                
-                state.total_returned += (parseInt(tx.sd_pickup_qty) || parseInt(tx.sd_qty) || 0);
-                state.total_uploaded += (parseInt(tx.sd_uploaded) || 0);
+
+            if (tx.phase === 'Phase 3') {
+                const returned = phaseQty(tx, 'Phase 3');
+                const uploaded = qty(tx.sd_uploaded);
+
+                // Phase 3 without an open P2 cycle is not silently discarded.
+                if (!merchantState[key] || merchantState[key].total_sent <= 0) {
+                    const orphan = createState(tx);
+                    touchActivity(orphan, tx);
+                    orphan.opened_at = tx.created_at;
+                    orphan.closed_at = tx.created_at;
+                    orphan.p3_first_at = tx.created_at;
+                    orphan.p3_last_at = tx.created_at;
+                    orphan.p3_count = 1;
+                    orphan.total_returned = returned;
+                    orphan.total_uploaded = uploaded;
+                    orphan.orphan_phase3 = true;
+                    orphan.status = 'CLOSED';
+                    addUnique(orphan.p3_runners, tx.runner_name);
+                    allCycles.push(derive(orphan));
+                    return;
+                }
+
+                const state = merchantState[key];
+                touchActivity(state, tx);
+                if (!state.p3_first_at) state.p3_first_at = tx.created_at;
+                state.p3_last_at = tx.created_at;
                 state.closed_at = tx.created_at;
+                state.p3_count += 1;
+                state.total_returned += returned;
+                state.total_uploaded += uploaded;
+                addUnique(state.p3_runners, tx.runner_name);
 
-                // Evaluasi status jika Drop Quantity sudah ter-cover oleh Pick Up
-                if (state.total_returned >= state.total_sent && state.total_sent > 0) {
-                    state.status = (state.total_uploaded >= state.total_returned) ? 'CLOSED_RECONCILED' : 'CLOSED_SHORTAGE_UPLOAD';
-                    allCycles.push({ ...state });
-                    merchantState[biz].status = 'DONE';
-                } else if (tx.phase === 'SYSTEM CLEAR') {
-                    state.status = 'CLOSED_RECONCILED';
-                    allCycles.push({ ...state });
-                    merchantState[biz].status = 'DONE';
+                // Collection cycle closes when all sent SDs have physically returned.
+                // Upload completeness is deliberately evaluated separately.
+                if (state.total_sent > 0 && state.total_returned >= state.total_sent) {
+                    state.status = 'CLOSED';
+                    allCycles.push(derive(state));
+                    delete merchantState[key];
+                }
+                return;
+            }
+
+            if (tx.phase === 'SYSTEM CLEAR') {
+                // Manual clear is administrative only. It does NOT fabricate a P3 return
+                // and it does NOT fabricate uploaded SD quantities.
+                if (merchantState[key] && merchantState[key].total_sent > 0) {
+                    const state = merchantState[key];
+                    touchActivity(state, tx);
+                    state.manual_cleared = true;
+                    state.closed_at = tx.created_at;
+                    state.status = 'CLOSED';
+                    allCycles.push(derive(state));
+                    delete merchantState[key];
                 }
             }
         });
 
-        // Masukkan sisa siklus yang masih gantung (Pending)
         Object.values(merchantState).forEach(state => {
-            if (state.status === 'OPEN' && state.total_sent > 0) {
-                state.outstanding_sd = state.total_sent - state.total_returned;
-                allCycles.push(state);
-            }
+            if (state.total_sent > 0) allCycles.push(derive(state));
         });
 
-        // Terapkan Filter Area & Tanggal dari UI
+        let filteredCycles = allCycles;
         if (areaFilter && areaFilter !== 'All') {
-            allCycles = allCycles.filter(c => c.area === areaFilter);
+            filteredCycles = filteredCycles.filter(c => c.area === areaFilter);
         }
-        
+
+        // Date filter means "cycle had activity on this local date".
+        // A P2 at 18:00 followed by P3 at 03:00 next day therefore appears on either day.
         if (selectedDate) {
-            const startD = new Date(`${selectedDate}T00:00:00`).getTime();
-            const endD = new Date(`${selectedDate}T23:59:59.999`).getTime();
-            allCycles = allCycles.filter(c => {
-                if (!c.opened_at) return false;
-                const t = new Date(c.opened_at).getTime();
-                return t >= startD && t <= endD;
-            });
+            filteredCycles = filteredCycles.filter(c => c.activity_dates.includes(selectedDate));
         }
 
-        // Urutkan data dari siklus terbaru
-        allCycles.sort((a, b) => new Date(b.opened_at) - new Date(a.opened_at));
+        filteredCycles.sort((a, b) => {
+            const ta = new Date(a.closed_at || a.p3_last_at || a.p2_last_at || a.opened_at || 0).getTime();
+            const tb = new Date(b.closed_at || b.p3_last_at || b.p2_last_at || b.opened_at || 0).getTime();
+            return tb - ta;
+        });
 
-        const pendingCycles = allCycles.filter(c => c.status === 'OPEN' && c.outstanding_sd > 0);
-        const historyCycles = allCycles.filter(c => c.status !== 'OPEN');
+        const pendingCycles = filteredCycles.filter(c => c.status === 'OPEN' && c.pending_collection > 0);
+        const historyCycles = filteredCycles.filter(c => c.status !== 'OPEN');
 
-        if (liveBadge) {
-            liveBadge.textContent = pendingCycles.length;
-        }
+        if (liveBadge) liveBadge.textContent = pendingCycles.length;
+        setStat('sd-stat-open-cycles', pendingCycles.length);
+        setStat('sd-stat-pending-collection', pendingCycles.reduce((sum, c) => sum + c.pending_collection, 0));
+        setStat('sd-stat-not-uploaded', filteredCycles.reduce((sum, c) => sum + c.not_uploaded, 0));
+        setStat('sd-stat-anomalies', filteredCycles.filter(c => c.is_anomaly).length);
 
-        // Render Tabel Live Radar
         if (!pendingCycles.length) {
-            radarTable.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-emerald-500 font-bold">No pending Phase 3</td></tr>`;
+            radarTable.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-emerald-600 font-bold"><i class="fa-solid fa-circle-check mr-2"></i>No collection pending for this filter</td></tr>`;
         } else {
-            radarTable.innerHTML = pendingCycles.map(cycle => `
-                <tr class="hover:bg-blue-50/40 transition border-b border-slate-100 last:border-0">
-                    <td class="p-4 font-black text-slate-700">${cycle.business_name || '-'}</td>
-                    <td class="p-4 text-xs font-bold text-slate-500">${cycle.opened_at ? new Date(cycle.opened_at).toLocaleString('en-GB') : '-'}</td>
-                    <td class="p-4 text-xs font-bold text-slate-600">${cycle.runner_name || '-'}</td>
-                    <td class="p-4 text-center"><span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black">${cycle.outstanding_sd || 0} SD</span></td>
-                    <td class="p-4 text-right flex items-center justify-end gap-2">
-                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">OPEN</span>
-                        <button onclick="resolveLiveRadar('${(cycle.business_name || '').replace(/'/g, "\\'")}', ${cycle.outstanding_sd})" class="bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white px-2 py-1 rounded text-[10px] font-black transition" title="Clear Radar"><i class="fa-solid fa-check"></i></button>
-                    </td>
-                </tr>
-            `).join('');
+            radarTable.innerHTML = pendingCycles.map(cycle => {
+                const p2Window = cycle.p2_count > 1
+                    ? `${fmtDateTime(cycle.p2_first_at)}<div class="text-[9px] text-slate-400 mt-1">Last P2: ${fmtDateTime(cycle.p2_last_at)} · ${cycle.p2_count} drops</div>`
+                    : fmtDateTime(cycle.p2_first_at);
+                const p2Runners = cycle.p2_runners.length ? cycle.p2_runners.map(safe).join('<br>') : '-';
+                const p3Runners = cycle.p3_runners.length ? cycle.p3_runners.map(safe).join('<br>') : '<span class="text-slate-300">No P3 yet</span>';
+                const encodedBiz = encodeURIComponent(cycle.business_name || '');
+                const encodedArea = encodeURIComponent(cycle.area || '');
+
+                return `
+                    <tr class="hover:bg-blue-50/40 transition border-b border-slate-100 last:border-0">
+                        <td class="p-4"><div class="font-black text-slate-700">${safe(cycle.business_name)}</div><div class="text-[9px] text-slate-400 font-bold uppercase mt-1">${safe(cycle.area)}</div></td>
+                        <td class="p-4 text-xs font-bold text-slate-500">${p2Window}</td>
+                        <td class="p-4 text-xs font-bold text-slate-600">${p2Runners}</td>
+                        <td class="p-4 text-center">
+                            <div class="font-black"><span class="text-blue-600">${cycle.total_sent}</span> / <span class="text-indigo-600">${cycle.total_returned}</span> / <span class="text-red-600">${cycle.pending_collection}</span></div>
+                            <div class="text-[9px] text-slate-400 mt-1">Sent / Returned / Pending</div>
+                        </td>
+                        <td class="p-4 text-xs font-bold text-slate-600">${p3Runners}${cycle.p3_last_at ? `<div class="text-[9px] text-slate-400 mt-1">Last P3: ${fmtDateTime(cycle.p3_last_at)}</div>` : ''}</td>
+                        <td class="p-4 text-center">
+                            <div class="font-black"><span class="text-emerald-600">${cycle.total_uploaded}</span> / <span class="text-amber-600">${cycle.not_uploaded}</span></div>
+                            <div class="text-[9px] text-slate-400 mt-1">Uploaded / Not Uploaded</div>
+                        </td>
+                        <td class="p-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                ${collectionBadge(cycle.collection_status)}
+                                <button onclick="resolveLiveRadar('${encodedBiz}', '${encodedArea}', ${cycle.pending_collection})" class="bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-700 hover:text-white px-2 py-1 rounded text-[10px] font-black transition" title="Administrative clear without adding fake collection/upload quantities"><i class="fa-solid fa-check"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
         }
 
-        // Render Tabel History
         if (!historyCycles.length) {
-            historyTable.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No SD history found</td></tr>`;
+            historyTable.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">No closed SD cycles found for this filter</td></tr>`;
         } else {
             historyTable.innerHTML = historyCycles.map(cycle => {
-                const durationHours = cycle.closed_at ? ((new Date(cycle.closed_at) - new Date(cycle.opened_at)) / 36e5).toFixed(1) : '-';
-                let statusColor = cycle.status === 'CLOSED_RECONCILED' ? 'emerald' : 'amber';
+                const endTime = cycle.closed_at || cycle.p3_last_at;
+                const durationHours = (cycle.opened_at && endTime)
+                    ? ((new Date(endTime) - new Date(cycle.opened_at)) / 36e5).toFixed(1)
+                    : '-';
+                const runnerFlow = `<div><span class="text-blue-600 font-black">P2:</span> ${cycle.p2_runners.length ? cycle.p2_runners.map(safe).join(', ') : '-'}</div><div class="mt-1"><span class="text-indigo-600 font-black">P3:</span> ${cycle.p3_runners.length ? cycle.p3_runners.map(safe).join(', ') : '-'}</div>`;
+                let anomalyNote = '';
+                if (cycle.over_return > 0) anomalyNote += `<div class="text-[9px] text-rose-600 font-black mt-1">OVER RETURN +${cycle.over_return}</div>`;
+                if (cycle.over_upload > 0) anomalyNote += `<div class="text-[9px] text-rose-600 font-black mt-1">OVER UPLOAD +${cycle.over_upload}</div>`;
+                if (cycle.manual_cleared && cycle.pending_collection > 0) anomalyNote += `<div class="text-[9px] text-slate-500 font-black mt-1">CLEARED WITH ${cycle.pending_collection} SD STILL OUTSTANDING</div>`;
+
                 return `
-                <tr class="hover:bg-slate-50 transition border-b border-slate-100 last:border-0">
-                    <td class="p-4 font-black text-slate-700">${cycle.business_name || '-'}</td>
-                    <td class="p-4 text-xs font-bold text-slate-500">${cycle.opened_at ? new Date(cycle.opened_at).toLocaleString('en-GB') : '-'}</td>
-                    <td class="p-4 text-xs font-bold text-slate-500">${cycle.closed_at ? new Date(cycle.closed_at).toLocaleString('en-GB') : '-'}</td>
-                    <td class="p-4 text-center text-xs font-black">${durationHours} ${durationHours !== '-' ? ' hrs' : ''}</td>
-                    <td class="p-4 text-center text-xs font-black">
-                        <span class="text-blue-600" title="Sent">${cycle.total_sent || 0}</span> / 
-                        <span class="text-indigo-600" title="Returned">${cycle.total_returned || 0}</span> / 
-                        <span class="text-emerald-600" title="Uploaded">${cycle.total_uploaded || 0}</span>
-                    </td>
-                    <td class="p-4 text-right">
-                        <span class="bg-${statusColor}-100 text-${statusColor}-700 px-3 py-1 rounded-full text-[10px] font-black uppercase">${cycle.status.replace('_', ' ') || '-'}</span>
-                    </td>
-                </tr>`;
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100 last:border-0">
+                        <td class="p-4"><div class="font-black text-slate-700">${safe(cycle.business_name)}</div><div class="text-[9px] text-slate-400 font-bold uppercase mt-1">${safe(cycle.area)}</div>${anomalyNote}</td>
+                        <td class="p-4 text-xs font-bold text-slate-500">${fmtDateTime(cycle.p2_first_at || cycle.opened_at)}${cycle.p2_count > 1 ? `<div class="text-[9px] text-slate-400 mt-1">${cycle.p2_count} P2 drops</div>` : ''}</td>
+                        <td class="p-4 text-xs font-bold text-slate-500">${fmtDateTime(cycle.p3_last_at || cycle.closed_at)}</td>
+                        <td class="p-4 text-xs text-slate-600">${runnerFlow}</td>
+                        <td class="p-4 text-center">
+                            <div class="font-black"><span class="text-blue-600">${cycle.total_sent}</span> / <span class="text-indigo-600">${cycle.total_returned}</span> / <span class="text-emerald-600">${cycle.total_uploaded}</span> / <span class="text-amber-600">${cycle.not_uploaded}</span></div>
+                            <div class="text-[9px] text-slate-400 mt-1">Sent / Returned / Uploaded / Not Up</div>
+                        </td>
+                        <td class="p-4 text-center text-xs font-black">${durationHours}${durationHours !== '-' ? ' hrs' : ''}</td>
+                        <td class="p-4 text-center">${collectionBadge(cycle.collection_status)}</td>
+                        <td class="p-4 text-right">${uploadBadge(cycle.upload_status, cycle.not_uploaded, cycle.over_upload)}</td>
+                    </tr>`;
             }).join('');
         }
     } catch (err) {
         console.error('SD TRACKER ERROR:', err);
-        radarTable.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-red-500 font-bold">Failed loading SD radar: ${err.message || 'Check Console'}</td></tr>`;
-        historyTable.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500 font-bold">Failed loading SD history</td></tr>`;
+        setStat('sd-stat-open-cycles', 0);
+        setStat('sd-stat-pending-collection', 0);
+        setStat('sd-stat-not-uploaded', 0);
+        setStat('sd-stat-anomalies', 0);
+        if (liveBadge) liveBadge.textContent = '0';
+        radarTable.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500 font-bold">Failed loading SD radar: ${safe(err.message || 'Check Console')}</td></tr>`;
+        historyTable.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-red-500 font-bold">Failed loading SD history</td></tr>`;
     }
 }
 
@@ -2466,7 +2669,7 @@ function renderLogs() {
                         ${i.sdr_name ? `<span><i class="fa-solid fa-user-tie"></i> ${i.sdr_name}</span>` : ''}
                     </div>`;
 
-                let dropQty = parseInt(i.sd_card_qty) || parseInt(i.sd_drop_qty) || parseInt(i.sd_qty) || 0;
+                let dropQty = parseInt(i.sd_drop_qty) || parseInt(i.sd_qty) || 0;
                 let pickupQty = parseInt(i.sd_pickup_qty) || parseInt(i.sd_qty) || 0;
                 let qtyToShow = i.phase === 'Phase 2' ? dropQty : (i.phase === 'Phase 3' ? pickupQty : (dropQty || pickupQty || 0));
 
@@ -2501,8 +2704,8 @@ function renderLogs() {
                     <td class="p-4 align-top text-right">
                         <div class="flex justify-end items-center gap-1">
                             ${photoBtn}
-                            <button onclick="editLog(${i.id})" class="text-slate-400 hover:text-blue-600 p-2 transition"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteRow('transactions', ${i.id})" class="text-slate-400 hover:text-red-500 p-2 transition"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="editLog('${i.id}')" class="text-slate-400 hover:text-blue-600 p-2 transition"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteRow('transactions', '${i.id}')" class="text-slate-400 hover:text-red-500 p-2 transition"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>`;
@@ -2725,10 +2928,10 @@ function renderLogs() {
             document.getElementById('edit-log-phase').value = log.phase; 
             document.getElementById('edit-log-kit').value = log.kit_id || ''; 
             
-            document.getElementById('edit-log-sd-drop').value = log.sd_card_qty || log.sd_drop_qty || log.sd_qty || 0; 
-            document.getElementById('edit-log-sd-pickup').value = log.sd_pickup_qty || log.sd_qty || 0; 
+            document.getElementById('edit-log-sd-drop').value = (log.phase === 'Phase 2' ? (log.sd_qty ?? log.sd_drop_qty ?? 0) : (log.sd_drop_qty ?? 0)); 
+            document.getElementById('edit-log-sd-pickup').value = log.phase === 'Phase 3' ? (log.sd_qty ?? log.sd_pickup_qty ?? 0) : (log.sd_pickup_qty ?? 0); 
             
-            document.getElementById('edit-log-uploaded').value = log.sd_uploaded || ''; 
+            document.getElementById('edit-log-uploaded').value = log.sd_uploaded ?? 0; 
             document.getElementById('edit-log-condition').value = log.device_condition || '';
             document.getElementById('edit-log-notes').value = log.missing_or_issue || ''; 
             
@@ -2742,70 +2945,121 @@ function renderLogs() {
         }
 
         document.getElementById('form-log').addEventListener('submit', async (e) => { 
-            e.preventDefault(); 
+            e.preventDefault();
+
+            const phase = document.getElementById('edit-log-phase').value;
+            const dropQty = Math.max(0, parseInt(document.getElementById('edit-log-sd-drop').value, 10) || 0);
+            const pickupQty = Math.max(0, parseInt(document.getElementById('edit-log-sd-pickup').value, 10) || 0);
+            const uploadedQty = Math.max(0, parseInt(document.getElementById('edit-log-uploaded').value, 10) || 0);
+
+            if (phase === 'Phase 3' && uploadedQty > pickupQty) {
+                alert('Upload Qty tidak boleh lebih besar dari Pickup Qty pada Phase 3.');
+                return;
+            }
+
             const p = {
-                phase: document.getElementById('edit-log-phase').value, 
-                business_name: document.getElementById('edit-log-business').value, 
-                kit_id: document.getElementById('edit-log-kit').value.toUpperCase() || null, 
-                
-                sd_card_qty: parseInt(document.getElementById('edit-log-sd-drop').value) || 0, 
-                sd_pickup_qty: parseInt(document.getElementById('edit-log-sd-pickup').value) || 0, 
-                
-                sd_uploaded: parseInt(document.getElementById('edit-log-uploaded').value) || 0,
+                phase,
+                business_name: document.getElementById('edit-log-business').value,
+                kit_id: document.getElementById('edit-log-kit').value.toUpperCase() || null,
                 device_condition: document.getElementById('edit-log-condition').value || null,
                 missing_or_issue: document.getElementById('edit-log-notes').value
-            }; 
+            };
 
-            await db.from('transactions').update(p).eq('id', document.getElementById('edit-log-id').value); 
+            // transactions sekarang memakai sd_qty sebagai quantity utama.
+            // Legacy sd_drop_qty / sd_pickup_qty tetap disinkronkan agar data lama tetap kompatibel.
+            if (phase === 'Phase 2') {
+                p.sd_qty = dropQty;
+                p.sd_drop_qty = dropQty;
+                p.sd_pickup_qty = 0;
+                p.sd_uploaded = 0;
+            } else if (phase === 'Phase 3') {
+                p.sd_qty = pickupQty;
+                p.sd_drop_qty = 0;
+                p.sd_pickup_qty = pickupQty;
+                p.sd_uploaded = uploadedQty;
+            } else if (phase === 'Phase 4') {
+                p.sd_qty = null;
+                p.sd_drop_qty = 0;
+                p.sd_pickup_qty = 0;
+                p.sd_uploaded = uploadedQty;
+            } else {
+                p.sd_qty = null;
+                p.sd_drop_qty = 0;
+                p.sd_pickup_qty = 0;
+                p.sd_uploaded = 0;
+            }
+
+            const { error: logUpdateError } = await db.from('transactions')
+                .update(p)
+                .eq('id', document.getElementById('edit-log-id').value);
+
+            if (logUpdateError) {
+                alert('Gagal update log: ' + logUpdateError.message);
+                return;
+            }
 
             if (p.kit_id) {
-                let targetLocation = p.phase === 'Phase 4' ? 'Warehouse' : p.business_name;
-
+                const targetLocation = p.phase === 'Phase 4' ? 'Warehouse' : p.business_name;
                 const { error: kitError } = await db.from('master_kits')
-                    .update({ 
+                    .update({
                         last_location: targetLocation,
                         current_status: p.device_condition || 'Good'
                     })
                     .eq('kit_id', p.kit_id);
-                
-                if (kitError) console.error("Gagal sinkronisasi master_kits saat edit log:", kitError);
+                if (kitError) console.error('Gagal sinkronisasi master_kits saat edit log:', kitError);
             }
 
-            await logAdminAction('UPDATE_LOG', `Modified log ID ${document.getElementById('edit-log-id').value}`); 
-            closeModal('modal-log'); 
-            fetchLogs(true);
-            fetchKits(true); 
+            await logAdminAction('UPDATE_LOG', `Modified log ID ${document.getElementById('edit-log-id').value}`);
+            closeModal('modal-log');
+            await fetchLogs(true);
+            fetchKits(true);
+            renderSDTracker();
+            renderDashboard();
         });
 
 
-async function resolveLiveRadar(merchant, pendingQty) {
-            const isUploaded = confirm(`Resolving Live Radar status for ${merchant} (${pendingQty} SD).\n\nWILL THIS SD CARD BE UPLOADED?\n\nPress [OK / Yes] = Yes, count towards Dashboard\nPress [Cancel / No] = No, count as 0 Upload`);
-            
+async function resolveLiveRadar(encodedMerchant, encodedArea, pendingQty) {
+            const merchant = decodeURIComponent(encodedMerchant || '');
+            const area = decodeURIComponent(encodedArea || '');
+            const pending = Math.max(0, parseInt(pendingQty, 10) || 0);
+
+            const confirmed = confirm(
+                `ADMINISTRATIVE CLEAR\n\nMerchant: ${merchant}\nOutstanding collection: ${pending} SD\n\n` +
+                `This action only closes the radar manually. It will NOT add fake Phase 3 returns and will NOT add uploaded SD.\n\nContinue?`
+            );
+            if (!confirmed) return;
+
             const admin = JSON.parse(localStorage.getItem('admin_user'));
             const adminName = admin ? (admin.runner_name || admin.email) : 'System Admin';
 
             const payload = {
-                area: globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
-                phase: 'SYSTEM CLEAR', // <--- UBAH DARI 'Phase 3' MENJADI 'SYSTEM CLEAR'
+                area: area || globalBusinesses.find(b => b.business_name === merchant)?.area_name || 'All',
+                phase: 'SYSTEM CLEAR',
                 runner_name: adminName,
                 business_name: merchant,
-                sd_pickup_qty: pendingQty,
-                sd_uploaded: isUploaded ? pendingQty : 0, 
-                device_condition: 'Good',
-                missing_or_issue: '[CLEARED] Manual Clear Radar by Admin' // <--- TAMBAHKAN [CLEARED] DI AWAL
+                sd_qty: 0,
+                sd_drop_qty: 0,
+                sd_pickup_qty: 0,
+                sd_uploaded: 0,
+                device_condition: null,
+                missing_or_issue: `[MANUAL CLEAR] Admin closed radar with ${pending} SD collection still outstanding. No operational quantity was added.`
             };
 
             const { error } = await db.from('transactions').insert([payload]);
-            if (error) { alert("Error database: " + error.message); return; }
-
-            if (typeof logAdminAction === "function") {
-                await logAdminAction('CLEAR_RADAR', `Admin cleared radar for ${merchant} (${pendingQty} SD) - Uploaded: ${isUploaded ? 'Yes' : 'No'}`);
+            if (error) {
+                alert('Error database: ' + error.message);
+                return;
             }
 
-            await renderSDTracker(); 
-            await fetchLogs(true); 
-            renderDashboard(); 
+            if (typeof logAdminAction === 'function') {
+                await logAdminAction('CLEAR_RADAR', `Manual clear: ${merchant}; ${pending} SD still outstanding; no return/upload quantity added.`);
+            }
+
+            await renderSDTracker();
+            await fetchLogs(true);
+            renderDashboard();
         }
+
         
 async function resolveSD(logId, type, variance) {
             const confirmAction = confirm(`Are you sure you want to clear this anomaly from the system?\n\nType: ${type}\nVariance: ${variance} SD`);
