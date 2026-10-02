@@ -642,9 +642,9 @@
         </div>
 
         <div id="view-kits" class="flex-1 flex flex-col hidden-view h-full">
-            <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10 flex-shrink-0">
-                <h2 class="text-xl font-black text-slate-800">Asset Allocation</h2>
-                <div class="flex gap-2">
+            <div class="p-6 pt-20 lg:pt-6 border-b border-slate-200 bg-white flex flex-col xl:flex-row justify-between xl:items-center gap-4 shadow-sm z-10 flex-shrink-0">
+                <h2 class="text-xl font-black text-slate-800 shrink-0">Asset Allocation</h2>
+                <div class="flex flex-wrap items-center justify-end gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
                         <input type="text" id="search-kits" onkeyup="if(event.key === 'Enter') { kitPage=0; fetchKits(true); }" placeholder="Search Kit ID (Press Enter)..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
@@ -658,6 +658,7 @@
                     <button onclick="openManualDeployModal()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-600 shadow-md transition"><i class="fa-solid fa-truck-fast mr-1"></i> Manual Override</button>
                     
                     <button onclick="showModal('modal-import')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition"><i class="fa-solid fa-file-excel mr-1"></i> Import</button>
+                    <button type="button" id="btn-export-kits" onclick="exportAssetAllocationToExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition disabled:opacity-60 disabled:cursor-wait" title="Export all matching kits across every page, using the current Region, Recipe and search filters"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
                     <div class="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                         <button onclick="changeKitPage(-1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-r border-slate-200 disabled:opacity-30" id="btn-kit-prev"><i class="fa-solid fa-chevron-left"></i></button>
                         <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">Page <span id="kit-page-display">1</span></div>
@@ -667,6 +668,7 @@
                     <button onclick="openAddKitModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Register New</button>
                 </div>
             </div>
+            <div id="kits-export-status" role="status" aria-live="polite" class="hidden px-6 py-3 border-b border-slate-200 bg-slate-50 text-xs font-bold shrink-0 break-words"></div>
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto">
@@ -1848,42 +1850,58 @@ function initFOTrackerFilters() {
             closeModal('modal-edit-kit');
         });
 
-        async function fetchKits(force = false) { 
-            const searchInput = document.getElementById('search-kits');
-            const searchTerm = searchInput ? searchInput.value.trim() : ''; 
-            const filterArea = document.getElementById('filter-kits-area') ? document.getElementById('filter-kits-area').value : '';
-            const filterType = document.getElementById('filter-kits-type') ? document.getElementById('filter-kits-type').value : '';
+        // One filter definition is shared by the table and the Excel export.
+        // Export captures these values once, so later UI changes cannot mix regions/recipes.
+        function getAssetAllocationFilters() {
+            return {
+                searchTerm: (document.getElementById('search-kits')?.value || '').trim(),
+                filterArea: document.getElementById('filter-kits-area')?.value || '',
+                filterType: document.getElementById('filter-kits-type')?.value || '',
+                adminAreas: [...getAdminAreas()]
+            };
+        }
 
-            if (!force && globalKits.length > 0 && !searchTerm) return renderKits(); 
+        function applyAssetAllocationFilters(query, filters) {
+            if (filters.searchTerm) {
+                // Quote PostgREST OR values so commas, parentheses and quotes in
+                // merchant names remain search text, not extra filter expressions.
+                const search = filters.searchTerm.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                query = query.or(`kit_id.ilike."%${search}%",last_location.ilike."%${search}%"`);
+            }
+            if (filters.filterType) query = query.eq('kit_type', filters.filterType);
+
+            // Apply the admin's area scope independently of the selected dropdown.
+            // Database RLS remains the authority for access to these records.
+            if (!filters.adminAreas.includes('All')) {
+                query = query.in('area_name', filters.adminAreas);
+            }
+            if (filters.filterArea && filters.filterArea !== 'All') {
+                query = query.eq('area_name', filters.filterArea);
+            }
+            return query;
+        }
+
+        async function fetchKits(force = false) {
+            const filters = getAssetAllocationFilters();
+            if (!force && globalKits.length > 0 && !filters.searchTerm) return renderKits();
 
             const from = kitPage * kitPageSize;
             const to = from + kitPageSize - 1;
+            const q = applyAssetAllocationFilters(
+                db.from('master_kits').select('*', { count: 'exact' }), filters
+            );
+            const { data, count, error } = await q.order('kit_id').order('id').range(from, to);
 
-            let q = db.from('master_kits').select('*', { count: 'exact' }); 
-            
-            if (searchTerm) {
-                q = q.or(`kit_id.ilike.%${searchTerm}%,last_location.ilike.%${searchTerm}%`);
+            if (error) {
+                console.error('Gagal tarik kits:', error.message);
+                return;
             }
-
-            if (filterType) q = q.eq('kit_type', filterType);
-
-            const adminAreas = getAdminAreas();
-            if (!adminAreas.includes('All')) {
-                if (filterArea) q = q.eq('area_name', filterArea);
-                else q = q.in('area_name', adminAreas);
-            } else if (filterArea && filterArea !== 'All') {
-                q = q.eq('area_name', filterArea);
-            }
-
-            const { data, count, error } = await q.order('kit_id').range(from, to); 
-            
-            if (data) { 
-                globalKits = data; 
+            if (data) {
+                globalKits = data;
                 document.getElementById('kit-page-display').innerText = data.length > 0 ? (kitPage + 1) : 0;
                 document.getElementById('btn-kit-prev').disabled = (kitPage === 0);
                 document.getElementById('btn-kit-next').disabled = (to >= (count || 0) - 1);
-
-                renderKits(); 
+                renderKits();
             }
         }
 
@@ -3709,6 +3727,181 @@ console.log(authError);
         // ----------------------------------------------------------------------
         // 9. EXCEL IMPORT / EXPORT FUNCTIONS
         // ----------------------------------------------------------------------
+        // --- Asset Allocation: export ALL filtered records, never just globalKits ---
+        let assetAllocationExportBusy = false;
+
+        function setAssetAllocationExportStatus(message, state = 'info') {
+            const el = document.getElementById('kits-export-status');
+            if (!el) return;
+            const tone = { info: 'text-slate-600', success: 'text-emerald-700', error: 'text-red-600' };
+            el.className = 'px-6 py-3 border-b border-slate-200 bg-slate-50 text-xs font-bold shrink-0 break-words ' + (tone[state] || tone.info);
+            el.textContent = message;
+        }
+
+        async function exportAssetAllocationToExcel() {
+            if (assetAllocationExportBusy) return;
+            const btn = document.getElementById('btn-export-kits');
+            const originalHTML = btn ? btn.innerHTML : '';
+            const originallyDisabled = btn ? btn.disabled : false;
+            assetAllocationExportBusy = true;
+
+            if (btn) {
+                btn.disabled = true;
+                btn.setAttribute('aria-busy', 'true');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Exporting...';
+            }
+
+            try {
+                if (!window.XLSX || !window.XLSX.utils || typeof window.XLSX.writeFile !== 'function') {
+                    throw new Error('Modul Excel belum termuat. Periksa koneksi internet, lalu refresh halaman.');
+                }
+                const admin = JSON.parse(localStorage.getItem('admin_user') || 'null');
+                if (!admin || !['admin', 'super_admin'].includes((admin.role || '').toLowerCase())) {
+                    throw new Error('Silakan login sebagai administrator sebelum mengekspor aset.');
+                }
+                const filters = getAssetAllocationFilters();
+                const startedAt = new Date();
+                const regionLabel = (filters.filterArea && filters.filterArea !== 'All')
+                    ? filters.filterArea
+                    : (filters.adminAreas.includes('All') ? 'All Regions' : 'All My Regions');
+                const recipeLabel = filters.filterType || 'All Recipes';
+                const filterLabel = `Region: ${regionLabel} | Recipe: ${recipeLabel} | Search: ${filters.searchTerm || '-'}`;
+                setAssetAllocationExportStatus(`Menyiapkan ekspor semua halaman. ${filterLabel}`);
+
+                const { data: authData, error: authError } = await db.auth.getSession();
+                if (authError) throw authError;
+                if (!authData?.session) throw new Error('Sesi login berakhir. Silakan login kembali.');
+
+                const allKits = [];
+                const seenIds = new Set();
+                const batchSize = 500;
+                const excelMaxDataRows = 1048575; // Worksheet row limit minus the header.
+                let offset = 0;
+                let expectedTotal = null;
+
+                while (true) {
+                    const query = applyAssetAllocationFilters(
+                        db.from('master_kits').select(
+                            'id,kit_id,kit_type,area_name,last_location,current_status',
+                            { count: 'exact' }
+                        ), filters
+                    );
+                    const { data, count, error } = await query
+                        .order('kit_id', { ascending: true })
+                        .order('id', { ascending: true })
+                        .range(offset, offset + batchSize - 1);
+
+                    if (error) throw error;
+                    if (!Array.isArray(data) || !Number.isInteger(count) || count < 0) {
+                        throw new Error('Respons data tidak lengkap. Ekspor dibatalkan; silakan coba lagi.');
+                    }
+                    if (expectedTotal === null) expectedTotal = count;
+                    else if (count !== expectedTotal) {
+                        throw new Error('Jumlah aset berubah selama ekspor. Silakan ulangi agar hasilnya lengkap.');
+                    }
+                    if (expectedTotal > excelMaxDataRows) {
+                        throw new Error('Data melebihi kapasitas satu sheet Excel. Persempit filter Region atau Recipe.');
+                    }
+                    if (expectedTotal === 0) {
+                        setAssetAllocationExportStatus(`Tidak ada kit yang sesuai filter. ${filterLabel}`);
+                        alert('Tidak ada kit yang sesuai filter untuk diekspor.');
+                        return;
+                    }
+                    if (data.length === 0 || offset + data.length > expectedTotal) {
+                        throw new Error('Data ekspor belum lengkap atau berubah. Silakan ulangi ekspor.');
+                    }
+                    for (const kit of data) {
+                        const key = kit.id == null ? null : String(kit.id);
+                        if (key === null || seenIds.has(key)) {
+                            throw new Error('Urutan data aset berubah selama ekspor. Silakan ulangi ekspor.');
+                        }
+                        seenIds.add(key);
+                        allKits.push(kit);
+                    }
+
+                    // Advance by the number actually returned, even if the server's
+                    // maximum row setting is smaller than our requested batch size.
+                    offset += data.length;
+                    if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> ${offset} / ${expectedTotal}`;
+                    setAssetAllocationExportStatus(`Mengambil ${offset} dari ${expectedTotal} kit. ${filterLabel}`);
+                    if (offset === expectedTotal) break;
+                }
+
+                const exportRows = allKits.map((kit, index) => {
+                    const isOffice = !kit.last_location || String(kit.last_location).toLowerCase() === 'warehouse';
+                    return {
+                        'No.': index + 1,
+                        'Kit ID': String(kit.kit_id ?? ''),
+                        'Recipe Type': String(kit.kit_type ?? ''),
+                        'Region': String(kit.area_name ?? ''),
+                        'Current Location': isOffice ? 'Warehouse' : String(kit.last_location),
+                        'Condition Status': String(kit.current_status || 'Good')
+                    };
+                });
+                const ws = XLSX.utils.json_to_sheet(exportRows, {
+                    header: ['No.', 'Kit ID', 'Recipe Type', 'Region', 'Current Location', 'Condition Status']
+                });
+                ws['!cols'] = [{ wch: 7 }, { wch: 22 }, { wch: 28 }, { wch: 20 }, { wch: 52 }, { wch: 22 }];
+                ws['!autofilter'] = { ref: ws['!ref'] };
+                ws['!rows'] = [{ hpt: 24 }];
+                // Keep barcodes and all database text as literal text, not formulas
+                // or numeric identifiers (preserves leading zeros).
+                for (let r = 1; r <= exportRows.length; r++) {
+                    for (let c = 1; c <= 5; c++) {
+                        const cell = ws[XLSX.utils.encode_cell({ r, c })];
+                        if (cell) {
+                            cell.t = 's';
+                            cell.z = '@';
+                            delete cell.f;
+                        }
+                    }
+                }
+
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local browser time';
+                const info = XLSX.utils.aoa_to_sheet([
+                    ['Export Information', 'Value'],
+                    ['Module', 'Asset Allocation'],
+                    ['Export started (local)', startedAt.toLocaleString('en-GB')],
+                    ['Timezone', timezone],
+                    ['Region filter', regionLabel],
+                    ['Recipe filter', recipeLabel],
+                    ['Search (Kit ID / Location)', filters.searchTerm || '-'],
+                    ['Admin region scope', filters.adminAreas.join(', ')],
+                    ['Exported kits', exportRows.length],
+                    ['Scope', 'All matching pages, not only the current page'],
+                    ['Region source', 'master_kits.area_name (same as Asset Allocation)']
+                ]);
+                info['!cols'] = [{ wch: 28 }, { wch: 64 }];
+                info['!rows'] = [{ hpt: 24 }];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Asset Allocation');
+                XLSX.utils.book_append_sheet(wb, info, 'Filter Info');
+
+                const safeName = value => String(value)
+                    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+                    .replace(/\s+/g, '_')
+                    .replace(/[. ]+$/g, '')
+                    .slice(0, 48) || 'All';
+                const pad = n => String(n).padStart(2, '0');
+                const stamp = `${startedAt.getFullYear()}-${pad(startedAt.getMonth() + 1)}-${pad(startedAt.getDate())}_${pad(startedAt.getHours())}${pad(startedAt.getMinutes())}${pad(startedAt.getSeconds())}`;
+                const fileName = `RunnerTrack_Asset_Allocation_${safeName(regionLabel)}_${safeName(recipeLabel)}_${stamp}.xlsx`;
+                XLSX.writeFile(wb, fileName, { bookType: 'xlsx', compression: true });
+                setAssetAllocationExportStatus(`File Excel berisi ${exportRows.length} kit telah dibuat: ${fileName}. ${filterLabel}`, 'success');
+            } catch (error) {
+                console.error('Asset Allocation export failed:', error);
+                const message = error?.message || 'Terjadi kesalahan saat mengekspor aset.';
+                setAssetAllocationExportStatus(`Ekspor gagal: ${message}`, 'error');
+                alert(`Gagal mengekspor Asset Allocation.\n\n${message}`);
+            } finally {
+                assetAllocationExportBusy = false;
+                if (btn) {
+                    btn.disabled = originallyDisabled;
+                    btn.innerHTML = originalHTML;
+                    btn.removeAttribute('aria-busy');
+                }
+            }
+        }
+
         function downloadTemplate() {
             const ws = XLSX.utils.aoa_to_sheet([
                 ["Kit ID", "Recipe Type", "Area Name"], 
