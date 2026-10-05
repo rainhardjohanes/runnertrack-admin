@@ -652,6 +652,13 @@
                     <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="kitPage=0; fetchKits(true)"></select>
                     <input id="filter-kits-sdr" list="asset-sdr-options" placeholder="Filter SDR / Last SDR (Enter)" aria-label="Filter SDR or Last SDR" class="p-2 border border-slate-200 rounded-lg text-xs outline-none w-56" onchange="kitPage=0; fetchKits(true)">
                     <datalist id="asset-sdr-options"></datalist>
+                    <label class="text-[10px] font-bold text-slate-500">Dari (WITA)
+                        <input type="date" id="filter-kits-date-start" aria-label="Tanggal mulai Asset Allocation" class="block p-2 border border-slate-200 rounded-lg text-xs bg-slate-50" onchange="kitPage=0; fetchKits(true)">
+                    </label>
+                    <label class="text-[10px] font-bold text-slate-500">Sampai (WITA)
+                        <input type="date" id="filter-kits-date-end" aria-label="Tanggal akhir Asset Allocation" class="block p-2 border border-slate-200 rounded-lg text-xs bg-slate-50" onchange="kitPage=0; fetchKits(true)">
+                    </label>
+                    <button type="button" onclick="clearAssetPeriod()" class="p-2 text-xs text-slate-500 border border-slate-200 rounded-lg" title="Kembali ke alokasi saat ini">Reset tanggal</button>
                     <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="kitPage=0; fetchKits(true)">
                         <option value="">All Recipes</option>
                     </select>
@@ -1862,6 +1869,8 @@ function initFOTrackerFilters() {
                 filterArea: document.getElementById('filter-kits-area')?.value || '',
                 filterType: document.getElementById('filter-kits-type')?.value || '',
                 filterSdr: (document.getElementById('filter-kits-sdr')?.value || '').trim(),
+                dateStart: document.getElementById('filter-kits-date-start')?.value || '',
+                dateEnd: document.getElementById('filter-kits-date-end')?.value || '',
                 adminAreas: [...getAdminAreas()]
             };
         }
@@ -1895,6 +1904,7 @@ function initFOTrackerFilters() {
         }
 
         function getAssetSdr(kit) {
+            if (kit.period_sdr) return { label: 'SDR dalam periode', name: kit.period_sdr };
             const isOffice = !kit.last_location || String(kit.last_location).toLowerCase() === 'warehouse';
             return {
                 label: isOffice ? 'Last SDR' : 'SDR',
@@ -1911,6 +1921,150 @@ function initFOTrackerFilters() {
             const names = [...new Set((data || []).map(row => row.sdr_name).filter(Boolean))];
             document.getElementById('asset-sdr-options').innerHTML =
                 ['havent deployed', ...names].map(name => `<option value="${escapeAssetText(name)}"></option>`).join('');
+        }
+
+        function clearAssetPeriod() {
+            document.getElementById('filter-kits-date-start').value = '';
+            document.getElementById('filter-kits-date-end').value = '';
+            kitPage = 0;
+            fetchKits(true);
+        }
+
+        function getAssetPeriod(filters) {
+            if (!filters.dateStart && !filters.dateEnd) return null;
+            if (!filters.dateStart || !filters.dateEnd) throw new Error('Pilih tanggal mulai dan tanggal akhir.');
+            const start = Date.parse(filters.dateStart + 'T00:00:00+08:00');
+            const end = Date.parse(filters.dateEnd + 'T00:00:00+08:00') + 86400000;
+            if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) throw new Error('Tanggal akhir harus sama atau setelah tanggal mulai.');
+            return { start, end };
+        }
+
+        async function fetchAllAssetRows(buildQuery, requestId) {
+            const rows = [];
+            const seen = new Set();
+            let expected = null;
+            while (true) {
+                const { data, count, error } = await buildQuery().range(rows.length, rows.length + 499);
+                if (requestId != null && requestId !== assetAllocationRequest) return null;
+                if (error) throw error;
+                if (!Array.isArray(data) || !Number.isInteger(count)) throw new Error('Respons riwayat aset tidak lengkap.');
+                if (expected === null) expected = count;
+                if (count !== expected) throw new Error('Riwayat aset berubah. Silakan refresh.');
+                for (const row of data) {
+                    if (seen.has(row.id)) throw new Error('Urutan riwayat berubah. Silakan refresh.');
+                    seen.add(row.id);
+                    rows.push(row);
+                }
+                if (rows.length === expected) return rows;
+                if (!data.length || rows.length > expected) throw new Error('Riwayat aset belum lengkap. Silakan refresh.');
+            }
+        }
+
+        // Reconstruct each deployment before applying the date/SDR filters.
+        // Phase 4 belongs to the preceding Phase 1, even after a kit changes SDR.
+        function buildAssetPeriodRows(kits, transactions, filters, period) {
+            const history = new Map();
+            for (const tx of transactions) {
+                if (!history.has(tx.kit_id)) history.set(tx.kit_id, []);
+                history.get(tx.kit_id).push(tx);
+            }
+            const result = [];
+            const sdrSearch = (filters.filterSdr || '').toLowerCase();
+            const search = (filters.searchTerm || '').toLowerCase();
+            for (const kit of kits) {
+                const events = (history.get(kit.kit_id) || []).sort((a, b) =>
+                    Date.parse(a.created_at) - Date.parse(b.created_at) || String(a.id).localeCompare(String(b.id)));
+                const cycles = [];
+                let active = null;
+                for (const tx of events) {
+                    const time = Date.parse(tx.created_at);
+                    if (!Number.isFinite(time) || time >= period.end) continue;
+                    if (tx.phase === 'Phase 1') {
+                        // A later Phase 1 ends the previous allocation without inventing a return.
+                        if (active) { active.end = time; cycles.push(active); }
+                        active = { start: time, end: Infinity, returnedAt: null,
+                            sdr: (tx.sdr_name || '').trim() || 'SDR unavailable',
+                            location: tx.business_name || '', recipe: tx.kit_type || kit.kit_type };
+                    } else if (tx.phase === 'Phase 4') {
+                        if (active) {
+                            active.end = time;
+                            active.returnedAt = time;
+                            cycles.push(active);
+                            active = null;
+                        } else {
+                            // An orphan return can be counted, but has no inferred holder.
+                            cycles.push({ start: time, end: time, returnedAt: time,
+                                sdr: (tx.sdr_name || '').trim() || 'SDR unavailable',
+                                location: tx.business_name || '', recipe: tx.kit_type || kit.kit_type, orphan: true });
+                        }
+                    }
+                }
+                if (active) cycles.push(active);
+                const matches = cycles.filter(cycle => {
+                    const held = !cycle.orphan && cycle.start < period.end && cycle.end > period.start;
+                    const returned = cycle.returnedAt != null && cycle.returnedAt >= period.start && cycle.returnedAt < period.end;
+                    return (held || returned) && (!sdrSearch || cycle.sdr.toLowerCase().includes(sdrSearch)) &&
+                        (!filters.filterType || cycle.recipe === filters.filterType) &&
+                        (!search || String(kit.kit_id).toLowerCase().includes(search) || cycle.location.toLowerCase().includes(search));
+                });
+                if (!matches.length) continue;
+                const held = matches.some(cycle => !cycle.orphan && cycle.start < period.end && cycle.end > period.start);
+                const returned = matches.some(cycle => cycle.returnedAt != null && cycle.returnedAt >= period.start && cycle.returnedAt < period.end);
+                result.push({ ...kit, period_sdr: [...new Set(matches.map(cycle => cycle.sdr))].join(', '),
+                    period_held: held, period_returned: returned,
+                    period_recipes: [...new Set(matches.map(cycle => cycle.recipe || 'Unspecified recipe'))],
+                    period_cycles: matches });
+            }
+            return result.sort((a, b) => String(a.kit_id).localeCompare(String(b.kit_id)) || a.id - b.id);
+        }
+
+        async function loadAssetPeriodRows(filters, requestId) {
+            const period = getAssetPeriod(filters);
+            // Master data defines the admin's allowed kit scope; current SDR/location
+            // cannot filter historical allocations. Recipe/search apply to deployment history.
+            const scope = { ...filters, filterSdr: '', filterType: '', searchTerm: '' };
+            const kits = await fetchAllAssetRows(() => applyAssetAllocationFilters(
+                db.from('master_kits').select('*', { count: 'exact' }), scope).order('id'), requestId);
+            if (!kits) return null;
+            const transactions = [];
+            for (let offset = 0; offset < kits.length; offset += 100) {
+                const ids = kits.slice(offset, offset + 100).map(kit => kit.kit_id);
+                const batch = await fetchAllAssetRows(() => db.from('transactions')
+                    .select('id,kit_id,kit_type,phase,sdr_name,business_name,created_at', { count: 'exact' })
+                    .in('kit_id', ids).in('phase', ['Phase 1', 'Phase 4'])
+                    .lt('created_at', new Date(period.end).toISOString())
+                    .order('created_at').order('id'), requestId);
+                if (!batch) return null;
+                transactions.push(...batch);
+            }
+            return buildAssetPeriodRows(kits, transactions, filters, period);
+        }
+
+        function renderAssetPeriodSummary(kits, filters) {
+            const panel = document.getElementById('kits-sdr-summary');
+            const period = getAssetPeriod(filters);
+            const recipes = new Map();
+            for (const kit of kits) {
+                for (const name of kit.period_recipes) {
+                    if (!recipes.has(name)) recipes.set(name, { name, held: new Set(), returned: new Set() });
+                    const recipe = recipes.get(name);
+                    for (const cycle of kit.period_cycles.filter(c => (c.recipe || 'Unspecified recipe') === name)) {
+                        if (!cycle.orphan && cycle.start < period.end && cycle.end > period.start) recipe.held.add(kit.id);
+                        if (cycle.returnedAt != null && cycle.returnedAt >= period.start && cycle.returnedAt < period.end) recipe.returned.add(kit.id);
+                    }
+                }
+            }
+            panel.classList.remove('hidden');
+            panel.innerHTML = `
+                <div class="font-black text-sm text-slate-800 mb-2">Riwayat SDR: ${escapeAssetText(filters.filterSdr || 'Semua SDR')} · ${escapeAssetText(filters.dateStart)} – ${escapeAssetText(filters.dateEnd)} (WITA)</div>
+                <div class="text-sm font-bold text-blue-700 mb-2">Pernah dipegang: ${kits.filter(k => k.period_held).length} kit · Kembali dalam periode: ${kits.filter(k => k.period_returned).length} kit</div>
+                <p class="text-xs text-slate-500 mb-3">Kit unik per recipe. Termasuk kit yang keluar sebelum tanggal mulai dan masih dipegang dalam periode. Kembali dihitung dari Phase 4 dalam periode. Satu kit bisa masuk kedua jumlah. Lokasi dan kondisi di tabel menunjukkan keadaan saat ini.</p>
+                <div class="flex flex-wrap gap-3">${[...recipes.values()].sort((a, b) => a.name.localeCompare(b.name)).map(recipe => `
+                    <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 min-w-[180px]">
+                        <div class="text-xs font-black text-slate-700">${escapeAssetText(recipe.name)}</div>
+                        <div class="text-sm font-bold text-blue-700 mt-2">Pernah dipegang: ${recipe.held.size} kit</div>
+                        <div class="text-xs text-slate-600 mt-1">Kembali: ${recipe.returned.size} kit</div>
+                    </div>`).join('') || '<div class="text-xs text-slate-500">Tidak ada riwayat kit yang sesuai filter.</div>'}</div>`;
         }
 
         let assetAllocationRequest = 0;
@@ -1983,6 +2137,35 @@ function initFOTrackerFilters() {
             loadAssetSdrOptions();
             const filters = getAssetAllocationFilters();
             const requestId = ++assetAllocationRequest;
+            try {
+                if (getAssetPeriod(filters)) {
+                    const panel = document.getElementById('kits-sdr-summary');
+                    panel.classList.remove('hidden');
+                    panel.innerHTML = '<div class="text-xs text-slate-500">Memuat riwayat kit dalam periode...</div>';
+                    document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-slate-500">Memuat riwayat...</td></tr>';
+                    const rows = await loadAssetPeriodRows(filters, requestId);
+                    if (!rows || requestId !== assetAllocationRequest) return;
+                    const from = kitPage * kitPageSize;
+                    globalKits = rows.slice(from, from + kitPageSize);
+                    document.getElementById('kit-page-display').innerText = rows.length ? kitPage + 1 : 0;
+                    document.getElementById('btn-kit-prev').disabled = kitPage === 0;
+                    document.getElementById('btn-kit-next').disabled = from + kitPageSize >= rows.length;
+                    renderKits();
+                    renderAssetPeriodSummary(rows, filters);
+                    return;
+                }
+            } catch (error) {
+                if (requestId !== assetAllocationRequest) return;
+                const panel = document.getElementById('kits-sdr-summary');
+                panel.classList.remove('hidden');
+                panel.innerHTML = `<div class="text-xs text-red-600">${escapeAssetText(error.message)}</div>`;
+                globalKits = [];
+                document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-slate-400">Lengkapi atau perbaiki filter tanggal, lalu refresh.</td></tr>';
+                document.getElementById('kit-page-display').innerText = '0';
+                document.getElementById('btn-kit-prev').disabled = true;
+                document.getElementById('btn-kit-next').disabled = true;
+                return;
+            }
             fetchAssetSdrSummary(filters, requestId);
             // Always query the current filters and page; SDR filtering applies before pagination.
 
@@ -2982,7 +3165,7 @@ function renderLogs() {
                     </td>
                     <td class="p-4">
                         <div class="font-black">${i.kit_id}</div>
-                        <div class="text-[10px] font-bold text-slate-400 uppercase">${i.kit_type} | ${i.area_name}</div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">${escapeAssetText(i.period_sdr ? i.period_recipes.join(' / ') : i.kit_type)} | ${escapeAssetText(i.area_name)}</div>
                     </td>
                     <td class="p-4">
                         <span class="font-bold ${locData.isOffice ? 'text-slate-400' : 'text-blue-600'}">${locData.loc}</span>
@@ -2990,6 +3173,7 @@ function renderLogs() {
                     <td class="p-4">
                         <div class="text-[10px] uppercase text-slate-400 font-bold">${sdr.label}</div>
                         <div class="font-bold text-slate-700">${escapeAssetText(sdr.name)}</div>
+                        ${i.period_sdr ? `<div class="text-[10px] text-slate-500 mt-1">Pernah dipegang: ${i.period_held ? 'Ya' : 'Tidak'} · Kembali dalam periode: ${i.period_returned ? 'Ya' : 'Tidak'}</div>` : ''}
                     </td>
                     <td class="p-4">
                         <span class="text-[10px] font-black px-2 py-1 rounded border ${i.current_status === 'Damaged' ? 'bg-red-500 text-white border-red-600' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}">
@@ -3873,7 +4057,8 @@ console.log(authError);
                     ? filters.filterArea
                     : (filters.adminAreas.includes('All') ? 'All Regions' : 'All My Regions');
                 const recipeLabel = filters.filterType || 'All Recipes';
-                const filterLabel = `Region: ${regionLabel} | Recipe: ${recipeLabel} | SDR: ${filters.filterSdr || 'All SDRs'} | Search: ${filters.searchTerm || '-'}`;
+                const period = getAssetPeriod(filters);
+                const filterLabel = `Region: ${regionLabel} | Recipe: ${recipeLabel} | SDR: ${filters.filterSdr || 'All SDRs'} | Search: ${filters.searchTerm || '-'}${period ? ` | Periode: ${filters.dateStart} – ${filters.dateEnd} (WITA)` : ''}`;
                 setAssetAllocationExportStatus(`Menyiapkan ekspor semua halaman. ${filterLabel}`);
 
                 const { data: authData, error: authError } = await db.auth.getSession();
@@ -3887,7 +4072,14 @@ console.log(authError);
                 let offset = 0;
                 let expectedTotal = null;
 
-                while (true) {
+                if (period) {
+                    allKits.push(...await loadAssetPeriodRows(filters));
+                    if (!allKits.length) {
+                        setAssetAllocationExportStatus(`Tidak ada riwayat kit yang sesuai filter. ${filterLabel}`);
+                        return;
+                    }
+                }
+                while (!period) {
                     const query = applyAssetAllocationFilters(
                         db.from('master_kits').select(
                             'id,kit_id,kit_type,area_name,last_location,current_status,last_sdr_name,has_deployed',
@@ -3945,19 +4137,20 @@ console.log(authError);
                         'Current Location': isOffice ? 'Warehouse' : String(kit.last_location),
                         'SDR / Last SDR': getAssetSdr(kit).label,
                         'SDR Name': getAssetSdr(kit).name,
-                        'Condition Status': String(kit.current_status || 'Good')
+                        'Condition Status': String(kit.current_status || 'Good'),
+                        ...(period ? { 'Pernah dipegang dalam periode': kit.period_held ? 'Ya' : 'Tidak', 'Kembali dalam periode': kit.period_returned ? 'Ya' : 'Tidak', 'Recipe dalam periode': kit.period_recipes.join(', ') } : {})
                     };
                 });
                 const ws = XLSX.utils.json_to_sheet(exportRows, {
-                    header: ['No.', 'Kit ID', 'Recipe Type', 'Region', 'Current Location', 'SDR / Last SDR', 'SDR Name', 'Condition Status']
+                    header: ['No.', 'Kit ID', 'Recipe Type', 'Region', 'Current Location', 'SDR / Last SDR', 'SDR Name', 'Condition Status', ...(period ? ['Pernah dipegang dalam periode', 'Kembali dalam periode', 'Recipe dalam periode'] : [])]
                 });
-                ws['!cols'] = [{ wch: 7 }, { wch: 22 }, { wch: 28 }, { wch: 20 }, { wch: 52 }, { wch: 18 }, { wch: 28 }, { wch: 22 }];
+                ws['!cols'] = [{ wch: 7 }, { wch: 22 }, { wch: 28 }, { wch: 20 }, { wch: 52 }, { wch: 18 }, { wch: 28 }, { wch: 22 }, ...(period ? [{ wch: 28 }, { wch: 24 }, { wch: 32 }] : [])];
                 ws['!autofilter'] = { ref: ws['!ref'] };
                 ws['!rows'] = [{ hpt: 24 }];
                 // Keep barcodes and all database text as literal text, not formulas
                 // or numeric identifiers (preserves leading zeros).
                 for (let r = 1; r <= exportRows.length; r++) {
-                    for (let c = 1; c <= 7; c++) {
+                    for (let c = 1; c <= (period ? 10 : 7); c++) {
                         const cell = ws[XLSX.utils.encode_cell({ r, c })];
                         if (cell) {
                             cell.t = 's';
@@ -3976,6 +4169,9 @@ console.log(authError);
                     ['Region filter', regionLabel],
                     ['Recipe filter', recipeLabel],
                     ['SDR / Last SDR filter', filters.filterSdr || 'All SDRs'],
+                    ['Periode mulai (WITA)', filters.dateStart || '-'],
+                    ['Periode akhir (WITA, inklusif)', filters.dateEnd || '-'],
+                    ['Perhitungan periode', period ? 'Kit unik pernah dipegang; kembali dari Phase 4 dalam periode' : 'Alokasi saat ini'],
                     ['Search (Kit ID / Location)', filters.searchTerm || '-'],
                     ['Admin region scope', filters.adminAreas.join(', ')],
                     ['Exported kits', exportRows.length],
