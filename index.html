@@ -650,6 +650,8 @@
                         <input type="text" id="search-kits" onkeyup="if(event.key === 'Enter') { kitPage=0; fetchKits(true); }" placeholder="Search Kit ID (Press Enter)..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
                     </div>
                     <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="kitPage=0; fetchKits(true)"></select>
+                    <input id="filter-kits-sdr" list="asset-sdr-options" placeholder="Filter SDR / Last SDR (Enter)" aria-label="Filter SDR or Last SDR" class="p-2 border border-slate-200 rounded-lg text-xs outline-none w-56" onchange="kitPage=0; fetchKits(true)">
+                    <datalist id="asset-sdr-options"></datalist>
                     <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="kitPage=0; fetchKits(true)">
                         <option value="">All Recipes</option>
                     </select>
@@ -658,7 +660,7 @@
                     <button onclick="openManualDeployModal()" class="bg-amber-500 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-amber-600 shadow-md transition"><i class="fa-solid fa-truck-fast mr-1"></i> Manual Override</button>
                     
                     <button onclick="showModal('modal-import')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition"><i class="fa-solid fa-file-excel mr-1"></i> Import</button>
-                    <button type="button" id="btn-export-kits" onclick="exportAssetAllocationToExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition disabled:opacity-60 disabled:cursor-wait" title="Export all matching kits across every page, using the current Region, Recipe and search filters"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
+                    <button type="button" id="btn-export-kits" onclick="exportAssetAllocationToExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition disabled:opacity-60 disabled:cursor-wait" title="Export all matching kits across every page, using Region, Recipe, SDR and search filters"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
                     <div class="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                         <button onclick="changeKitPage(-1)" class="px-3 py-2 hover:bg-slate-50 text-slate-500 border-r border-slate-200 disabled:opacity-30" id="btn-kit-prev"><i class="fa-solid fa-chevron-left"></i></button>
                         <div class="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">Page <span id="kit-page-display">1</span></div>
@@ -680,6 +682,7 @@
                                     </th>
                                     <th class="p-4 font-black">Kit ID & Recipe</th>
                                     <th class="p-4 font-black">Current Location</th>
+                                    <th class="p-4 font-black">SDR / Last SDR</th>
                                     <th class="p-4 font-black">Condition Status</th>
                                     <th class="p-4 font-black text-right">Actions</th>
                                 </tr>
@@ -1857,6 +1860,7 @@ function initFOTrackerFilters() {
                 searchTerm: (document.getElementById('search-kits')?.value || '').trim(),
                 filterArea: document.getElementById('filter-kits-area')?.value || '',
                 filterType: document.getElementById('filter-kits-type')?.value || '',
+                filterSdr: (document.getElementById('filter-kits-sdr')?.value || '').trim(),
                 adminAreas: [...getAdminAreas()]
             };
         }
@@ -1869,6 +1873,10 @@ function initFOTrackerFilters() {
                 query = query.or(`kit_id.ilike."%${search}%",last_location.ilike."%${search}%"`);
             }
             if (filters.filterType) query = query.eq('kit_type', filters.filterType);
+            if (filters.filterSdr) {
+                if (filters.filterSdr.toLowerCase() === 'havent deployed') query = query.eq('has_deployed', false);
+                else query = query.ilike('last_sdr_name', '%' + filters.filterSdr.replace(/[%_\\]/g, '\\$&') + '%');
+            }
 
             // Apply the admin's area scope independently of the selected dropdown.
             // Database RLS remains the authority for access to these records.
@@ -1881,9 +1889,33 @@ function initFOTrackerFilters() {
             return query;
         }
 
+        function escapeAssetText(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function getAssetSdr(kit) {
+            const isOffice = !kit.last_location || String(kit.last_location).toLowerCase() === 'warehouse';
+            return {
+                label: isOffice ? 'Last SDR' : 'SDR',
+                name: kit.last_sdr_name || (kit.has_deployed || !isOffice ? 'SDR unavailable' : 'havent deployed')
+            };
+        }
+
+        async function loadAssetSdrOptions() {
+            let query = db.from('master_sdrs').select('sdr_name,area_name');
+            const areas = getAdminAreas();
+            if (!areas.includes('All')) query = query.in('area_name', areas);
+            const { data, error } = await query.order('sdr_name');
+            if (error) { console.error('Gagal memuat pilihan SDR:', error.message); return; }
+            const names = [...new Set((data || []).map(row => row.sdr_name).filter(Boolean))];
+            document.getElementById('asset-sdr-options').innerHTML =
+                ['havent deployed', ...names].map(name => `<option value="${escapeAssetText(name)}"></option>`).join('');
+        }
+
         async function fetchKits(force = false) {
+            loadAssetSdrOptions();
             const filters = getAssetAllocationFilters();
-            if (!force && globalKits.length > 0 && !filters.searchTerm) return renderKits();
+            // Always query the current filters and page; SDR filtering applies before pagination.
 
             const from = kitPage * kitPageSize;
             const to = from + kitPageSize - 1;
@@ -1894,6 +1926,7 @@ function initFOTrackerFilters() {
 
             if (error) {
                 console.error('Gagal tarik kits:', error.message);
+                document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-red-600">Gagal memuat aset. Silakan refresh dan periksa koneksi.</td></tr>';
                 return;
             }
             if (data) {
@@ -2871,6 +2904,7 @@ function renderLogs() {
 
             document.getElementById('table-kits').innerHTML = globalKits.map(i => {
                 const locData = getKitLocation(i.kit_id);
+                const sdr = getAssetSdr(i);
                 return `
                 <tr class="hover:bg-slate-50 border-b border-slate-100 ${i.current_status === 'Damaged' ? 'bg-red-50/30' : ''}">
                     <td class="p-4">
@@ -2884,6 +2918,10 @@ function renderLogs() {
                         <span class="font-bold ${locData.isOffice ? 'text-slate-400' : 'text-blue-600'}">${locData.loc}</span>
                     </td>
                     <td class="p-4">
+                        <div class="text-[10px] uppercase text-slate-400 font-bold">${sdr.label}</div>
+                        <div class="font-bold text-slate-700">${escapeAssetText(sdr.name)}</div>
+                    </td>
+                    <td class="p-4">
                         <span class="text-[10px] font-black px-2 py-1 rounded border ${i.current_status === 'Damaged' ? 'bg-red-500 text-white border-red-600' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}">
                             ${(i.current_status || 'Good').toUpperCase()}
                         </span>
@@ -2894,7 +2932,7 @@ function renderLogs() {
                         <button onclick="deleteRow('master_kits', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>`;
-            }).join('');
+            }).join('') || '<tr><td colspan="6" class="p-6 text-center text-slate-400">Tidak ada kit yang sesuai filter.</td></tr>';
             
         }
         
@@ -3765,7 +3803,7 @@ console.log(authError);
                     ? filters.filterArea
                     : (filters.adminAreas.includes('All') ? 'All Regions' : 'All My Regions');
                 const recipeLabel = filters.filterType || 'All Recipes';
-                const filterLabel = `Region: ${regionLabel} | Recipe: ${recipeLabel} | Search: ${filters.searchTerm || '-'}`;
+                const filterLabel = `Region: ${regionLabel} | Recipe: ${recipeLabel} | SDR: ${filters.filterSdr || 'All SDRs'} | Search: ${filters.searchTerm || '-'}`;
                 setAssetAllocationExportStatus(`Menyiapkan ekspor semua halaman. ${filterLabel}`);
 
                 const { data: authData, error: authError } = await db.auth.getSession();
@@ -3782,7 +3820,7 @@ console.log(authError);
                 while (true) {
                     const query = applyAssetAllocationFilters(
                         db.from('master_kits').select(
-                            'id,kit_id,kit_type,area_name,last_location,current_status',
+                            'id,kit_id,kit_type,area_name,last_location,current_status,last_sdr_name,has_deployed',
                             { count: 'exact' }
                         ), filters
                     );
@@ -3835,19 +3873,21 @@ console.log(authError);
                         'Recipe Type': String(kit.kit_type ?? ''),
                         'Region': String(kit.area_name ?? ''),
                         'Current Location': isOffice ? 'Warehouse' : String(kit.last_location),
+                        'SDR / Last SDR': getAssetSdr(kit).label,
+                        'SDR Name': getAssetSdr(kit).name,
                         'Condition Status': String(kit.current_status || 'Good')
                     };
                 });
                 const ws = XLSX.utils.json_to_sheet(exportRows, {
-                    header: ['No.', 'Kit ID', 'Recipe Type', 'Region', 'Current Location', 'Condition Status']
+                    header: ['No.', 'Kit ID', 'Recipe Type', 'Region', 'Current Location', 'SDR / Last SDR', 'SDR Name', 'Condition Status']
                 });
-                ws['!cols'] = [{ wch: 7 }, { wch: 22 }, { wch: 28 }, { wch: 20 }, { wch: 52 }, { wch: 22 }];
+                ws['!cols'] = [{ wch: 7 }, { wch: 22 }, { wch: 28 }, { wch: 20 }, { wch: 52 }, { wch: 18 }, { wch: 28 }, { wch: 22 }];
                 ws['!autofilter'] = { ref: ws['!ref'] };
                 ws['!rows'] = [{ hpt: 24 }];
                 // Keep barcodes and all database text as literal text, not formulas
                 // or numeric identifiers (preserves leading zeros).
                 for (let r = 1; r <= exportRows.length; r++) {
-                    for (let c = 1; c <= 5; c++) {
+                    for (let c = 1; c <= 7; c++) {
                         const cell = ws[XLSX.utils.encode_cell({ r, c })];
                         if (cell) {
                             cell.t = 's';
@@ -3865,6 +3905,7 @@ console.log(authError);
                     ['Timezone', timezone],
                     ['Region filter', regionLabel],
                     ['Recipe filter', recipeLabel],
+                    ['SDR / Last SDR filter', filters.filterSdr || 'All SDRs'],
                     ['Search (Kit ID / Location)', filters.searchTerm || '-'],
                     ['Admin region scope', filters.adminAreas.join(', ')],
                     ['Exported kits', exportRows.length],
