@@ -670,6 +670,7 @@
                     <button onclick="openAddKitModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Register New</button>
                 </div>
             </div>
+            <div id="kits-sdr-summary" role="status" aria-live="polite" class="hidden px-6 py-4 border-b border-slate-200 bg-blue-50/50 shrink-0 max-h-64 overflow-y-auto"></div>
             <div id="kits-export-status" role="status" aria-live="polite" class="hidden px-6 py-3 border-b border-slate-200 bg-slate-50 text-xs font-bold shrink-0 break-words"></div>
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1912,9 +1913,77 @@ function initFOTrackerFilters() {
                 ['havent deployed', ...names].map(name => `<option value="${escapeAssetText(name)}"></option>`).join('');
         }
 
+        let assetAllocationRequest = 0;
+
+        function summarizeAssetRecipes(kits) {
+            const recipes = new Map();
+            for (const kit of kits) {
+                const name = kit.kit_type || 'Unspecified recipe';
+                if (!recipes.has(name)) recipes.set(name, { name, total: 0, holding: 0, returned: 0, undeployed: 0 });
+                const recipe = recipes.get(name);
+                recipe.total++;
+                const isOffice = !kit.last_location || String(kit.last_location).toLowerCase() === 'warehouse';
+                if (!isOffice) recipe.holding++;
+                else if (kit.has_deployed) recipe.returned++;
+                else recipe.undeployed++;
+            }
+            return [...recipes.values()].sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        async function fetchAssetSdrSummary(filters, requestId) {
+            const panel = document.getElementById('kits-sdr-summary');
+            if (!filters.filterSdr) {
+                panel.classList.add('hidden');
+                panel.innerHTML = '';
+                return;
+            }
+            panel.classList.remove('hidden');
+            panel.innerHTML = '<div class="text-xs font-bold text-slate-500">Memuat ringkasan kit per recipe...</div>';
+            try {
+                const kits = [];
+                const batchSize = 500;
+                let expectedTotal = null;
+                while (true) {
+                    const query = applyAssetAllocationFilters(
+                        db.from('master_kits').select('id,kit_type,last_location,has_deployed', { count: 'exact' }), filters
+                    );
+                    const { data, count, error } = await query.order('id').range(kits.length, kits.length + batchSize - 1);
+                    if (requestId !== assetAllocationRequest) return;
+                    if (error) throw error;
+                    if (!Array.isArray(data) || !Number.isInteger(count)) throw new Error('Respons ringkasan tidak lengkap.');
+                    if (expectedTotal === null) expectedTotal = count;
+                    if (count !== expectedTotal) throw new Error('Data aset berubah. Silakan refresh ringkasan.');
+                    kits.push(...data);
+                    if (kits.length === expectedTotal) break;
+                    if (!data.length || kits.length > expectedTotal) throw new Error('Data ringkasan belum lengkap. Silakan refresh.');
+                }
+                const recipes = summarizeAssetRecipes(kits);
+                const holding = recipes.reduce((total, recipe) => total + recipe.holding, 0);
+                panel.innerHTML = `
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div class="font-black text-sm text-slate-800">Ringkasan SDR: ${escapeAssetText(filters.filterSdr)}</div>
+                        <div class="text-xs font-bold text-blue-700">Total hasil: ${kits.length} kit · Sedang dipegang: ${holding} kit</div>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-3">Mengikuti filter Region, Recipe dan pencarian di seluruh halaman. Kit yang sudah kembali dihitung sebagai Last SDR.</p>
+                    <div class="flex flex-wrap gap-3">${recipes.map(recipe => `
+                        <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 min-w-[180px]">
+                            <div class="text-xs font-black text-slate-700">${escapeAssetText(recipe.name)}</div>
+                            <div class="text-xl font-black text-blue-700 mt-1">${recipe.total} <span class="text-xs">kit</span></div>
+                            <div class="text-[11px] text-slate-500 mt-1">Dipegang: ${recipe.holding} · Kembali: ${recipe.returned}${recipe.undeployed ? ` · Belum keluar: ${recipe.undeployed}` : ''}</div>
+                        </div>`).join('') || '<div class="text-xs text-slate-500">Tidak ada kit yang sesuai filter.</div>'}
+                    </div>`;
+            } catch (error) {
+                if (requestId !== assetAllocationRequest) return;
+                console.error('Gagal memuat ringkasan SDR:', error);
+                panel.innerHTML = `<div class="text-xs text-red-600">${escapeAssetText(error.message || 'Gagal memuat ringkasan. Silakan refresh.')}</div>`;
+            }
+        }
+
         async function fetchKits(force = false) {
             loadAssetSdrOptions();
             const filters = getAssetAllocationFilters();
+            const requestId = ++assetAllocationRequest;
+            fetchAssetSdrSummary(filters, requestId);
             // Always query the current filters and page; SDR filtering applies before pagination.
 
             const from = kitPage * kitPageSize;
@@ -1923,6 +1992,7 @@ function initFOTrackerFilters() {
                 db.from('master_kits').select('*', { count: 'exact' }), filters
             );
             const { data, count, error } = await q.order('kit_id').order('id').range(from, to);
+            if (requestId !== assetAllocationRequest) return;
 
             if (error) {
                 console.error('Gagal tarik kits:', error.message);
