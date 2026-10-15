@@ -1175,6 +1175,34 @@ function showArchivePhotoError(viewer, message) {
     viewer.dialog.setAttribute('aria-busy', 'false');
 }
 
+async function getArchiveServiceError(response) {
+    const fallback = 'Foto arsip belum dapat dibuka (HTTP 503). Silakan coba kembali.';
+    if (response.status !== 503 || !response.body ||
+        (response.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase() !== 'text/plain') return fallback;
+    const messages = new Map([
+        ['Archive is not configured.', 'Konfigurasi server arsip belum lengkap. Hubungi administrator.'],
+        ['Authentication is temporarily unavailable.', 'Layanan login untuk foto arsip sementara tidak tersedia. Silakan coba kembali.'],
+        ['Photo authorization is temporarily unavailable.', 'Layanan pemeriksaan izin foto arsip sementara tidak tersedia. Hubungi administrator.'],
+        ['Photo archive is temporarily unavailable. Please retry.', 'Server penyimpanan arsip tidak merespons atau sementara tidak tersedia. Silakan coba kembali.'],
+    ]);
+    // Read at most 256 bytes for exact matching; never display arbitrary server text.
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '', bytes = 0;
+    try {
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            bytes += value.byteLength;
+            if (bytes > 256) { await reader.cancel(); return fallback; }
+            text += decoder.decode(value, {stream: true});
+        }
+        text += decoder.decode();
+        return messages.get(text.trim()) || fallback;
+    } catch { return fallback; }
+    finally { reader.releaseLock(); }
+}
+
 // Keep private photos inside the page so the viewer also works in browsers
 // without popup support. Session tokens remain in the request header only.
 function openProofPhoto(event, link) {
@@ -1244,6 +1272,11 @@ async function loadArchivePhoto(url, viewer) {
         });
         if (response.status === 401) { showArchivePhotoError(viewer, 'Sesi telah berakhir. Silakan login kembali di halaman admin.'); return; }
         if (response.status === 403) { showArchivePhotoError(viewer, 'Server menolak akses foto arsip (403). Periksa izin akun atau pembatasan akses server.'); return; }
+        if (response.status === 503) {
+            const message = await getArchiveServiceError(response);
+            if (!viewer.controller.signal.aborted) showArchivePhotoError(viewer, message);
+            return;
+        }
         if (!response.ok) { showArchivePhotoError(viewer, `Foto arsip belum dapat dibuka (HTTP ${response.status}). Silakan coba kembali.`); return; }
         const blob = await response.blob();
         if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(blob.type.toLowerCase()) || !blob.size) {
