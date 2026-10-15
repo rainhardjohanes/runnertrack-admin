@@ -647,19 +647,19 @@
                 <div class="flex flex-wrap items-center justify-end gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-kits" onkeyup="if(event.key === 'Enter') { kitPage=0; fetchKits(true); }" placeholder="Search Kit ID (Press Enter)..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                        <input type="text" id="search-kits" onkeyup="if(event.key === 'Enter') { kitPage=0; fetchKits(); }" placeholder="Search Kit ID (Press Enter)..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
                     </div>
-                    <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="kitPage=0; fetchKits(true)"></select>
-                    <input id="filter-kits-sdr" list="asset-sdr-options" placeholder="Filter SDR / Last SDR (Enter)" aria-label="Filter SDR or Last SDR" class="p-2 border border-slate-200 rounded-lg text-xs outline-none w-56" onchange="kitPage=0; fetchKits(true)">
+                    <select id="filter-kits-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="kitPage=0; fetchKits()"></select>
+                    <input id="filter-kits-sdr" list="asset-sdr-options" placeholder="Filter SDR / Last SDR (Enter)" aria-label="Filter SDR or Last SDR" class="p-2 border border-slate-200 rounded-lg text-xs outline-none w-56" onchange="kitPage=0; fetchKits()">
                     <datalist id="asset-sdr-options"></datalist>
                     <label class="text-[10px] font-bold text-slate-500">Dari (WITA)
-                        <input type="date" id="filter-kits-date-start" aria-label="Tanggal mulai Asset Allocation" class="block p-2 border border-slate-200 rounded-lg text-xs bg-slate-50" onchange="kitPage=0; fetchKits(true)">
+                        <input type="date" id="filter-kits-date-start" aria-label="Tanggal mulai Asset Allocation" class="block p-2 border border-slate-200 rounded-lg text-xs bg-slate-50" onchange="kitPage=0; fetchKits()">
                     </label>
                     <label class="text-[10px] font-bold text-slate-500">Sampai (WITA)
-                        <input type="date" id="filter-kits-date-end" aria-label="Tanggal akhir Asset Allocation" class="block p-2 border border-slate-200 rounded-lg text-xs bg-slate-50" onchange="kitPage=0; fetchKits(true)">
+                        <input type="date" id="filter-kits-date-end" aria-label="Tanggal akhir Asset Allocation" class="block p-2 border border-slate-200 rounded-lg text-xs bg-slate-50" onchange="kitPage=0; fetchKits()">
                     </label>
                     <button type="button" onclick="clearAssetPeriod()" class="p-2 text-xs text-slate-500 border border-slate-200 rounded-lg" title="Kembali ke alokasi saat ini">Reset tanggal</button>
-                    <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="kitPage=0; fetchKits(true)">
+                    <select id="filter-kits-type" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50" onchange="kitPage=0; fetchKits()">
                         <option value="">All Recipes</option>
                     </select>
                     <button onclick="fetchKits(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
@@ -1135,6 +1135,74 @@ const db = createClient(
     'https://ezmevzvxqbsvwxufapck.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6bWV2enZ4cWJzdnd4dWZhcGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzEyNzUsImV4cCI6MjA5OTc0NzI3NX0.mrbmvvU4sKQT3aFLGbtrrqbzKcRPSEViXRmEyfGSGPE'
 );
+// Set to the deployed private archive Worker origin after its authorization RPC is installed.
+// An exact origin match is required before the admin session token can be sent.
+const PHOTO_ARCHIVE_ORIGIN = 'https://atlas-logistic-photo-archive.rainhardjohanes.workers.dev';
+
+function getArchivePhotoURL(value) {
+    if (!PHOTO_ARCHIVE_ORIGIN) return null;
+    try {
+        const url = new URL(value);
+        if (url.protocol !== 'https:' || url.origin !== PHOTO_ARCHIVE_ORIGIN || url.username || url.password) return null;
+        if (!url.pathname.startsWith('/photos/supabase-proofs/') || url.search || url.hash) return null;
+        return url;
+    } catch { return null; }
+}
+
+// Open the popup synchronously, then load private image bytes using the current
+// Supabase session. The token is never put in the URL or given to another origin.
+function openProofPhoto(event, link) {
+    let url;
+    try { url = new URL(link.href); } catch { event.preventDefault(); return false; }
+    if (!['https:', 'http:'].includes(url.protocol)) { event.preventDefault(); return false; }
+    const archiveURL = getArchivePhotoURL(url.href);
+    if (!archiveURL) return true;
+    event.preventDefault();
+    const popup = window.open('', '_blank');
+    if (!popup) { alert('Izinkan pop-up untuk membuka foto arsip.'); return false; }
+    popup.opener = null;
+    popup.document.title = 'Foto bukti';
+    popup.document.body.textContent = 'Memuat foto arsip…';
+    loadArchivePhoto(archiveURL, popup);
+    return false;
+}
+
+async function loadArchivePhoto(url, popup) {
+    let objectURL;
+    try {
+        // Validate again at the token boundary, even if called from another UI path.
+        const archiveURL = getArchivePhotoURL(url.href);
+        if (!archiveURL) throw new Error('Alamat arsip foto tidak valid.');
+        const {data: {session}, error} = await db.auth.getSession();
+        if (error || !session?.access_token) throw new Error('Silakan login kembali di halaman admin.');
+        const response = await fetch(archiveURL.href, {
+            headers: {Authorization: `Bearer ${session.access_token}`},
+            credentials: 'omit', redirect: 'error', cache: 'no-store',
+            signal: AbortSignal.timeout(30000),
+        });
+        if (response.status === 401) throw new Error('Sesi telah berakhir. Silakan login kembali di halaman admin.');
+        if (response.status === 403) throw new Error('Akun ini tidak memiliki akses ke foto tersebut.');
+        if (!response.ok) throw new Error('Foto arsip belum dapat dibuka. Silakan coba kembali.');
+        const blob = await response.blob();
+        if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(blob.type.toLowerCase()) || !blob.size) {
+            throw new Error('Format foto arsip tidak valid.');
+        }
+        if (popup.closed) return;
+        objectURL = URL.createObjectURL(blob);
+        popup.location.replace(objectURL);
+        // Release image memory when its tab closes, with a bounded fallback timer.
+        const openedAt = Date.now();
+        const timer = setInterval(() => {
+            if (popup.closed || Date.now() - openedAt >= 10 * 60 * 1000) {
+                clearInterval(timer);
+                URL.revokeObjectURL(objectURL);
+            }
+        }, 1000);
+    } catch (error) {
+        if (objectURL) URL.revokeObjectURL(objectURL);
+        if (!popup.closed) popup.document.body.textContent = error.message || 'Foto arsip tidak dapat dibuka.';
+    }
+}
         let globalLogs = [];
         let globalAreas = [];
         let globalRunners = [];
@@ -1214,7 +1282,7 @@ const db = createClient(
         function changeKitPage(step) {
             kitPage += step;
             if (kitPage < 0) kitPage = 0;
-            fetchKits(true); // BENAR: Minta data halaman selanjutnya ke Supabase
+            fetchKits(); // Reuse historical data when only the displayed page changes.
         }
 
         function changeLogPage(step) {
@@ -1322,7 +1390,6 @@ if (!["admin", "super_admin"].includes(role)) {
             
             await fetchAreas(); 
             switchTab('dashboard');
-            enableRealtimeSync();
         }
 
         // ----------------------------------------------------------------------
@@ -1340,6 +1407,7 @@ if (!["admin", "super_admin"].includes(role)) {
             const activeBtn = document.getElementById(`btn-${tab}`);
             if(activeBtn) activeBtn.className = `w-full text-left px-4 py-3 rounded-lg font-bold flex items-center shadow-lg ${tab === 'admin_logs' ? 'bg-amber-500 text-white shadow-amber-900/50' : (tab === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white shadow-blue-900/50')}`;
             
+            enableRealtimeSync(tab);
             if(tab === 'dashboard') refreshAllData();
             if(tab === 'sd_tracker') renderSDTracker(); 
             if(tab === 'fo_tracker') fetchAndRenderFOTracker(); 
@@ -1939,131 +2007,58 @@ function initFOTrackerFilters() {
             return { start, end };
         }
 
-        async function fetchAllAssetRows(buildQuery, requestId) {
-            const rows = [];
-            const seen = new Set();
-            let expected = null;
-            while (true) {
-                const { data, count, error } = await buildQuery().range(rows.length, rows.length + 499);
+        const assetPeriodCache = new Map();
+        const assetPeriodCacheTTL = 60000;
+
+        async function loadAssetPeriodReport(filters, offset = 0, limit = 50, requestId) {
+            const period = getAssetPeriod(filters);
+            const params = {
+                p_start: new Date(period.start).toISOString(), p_end: new Date(period.end).toISOString(),
+                p_sdr: filters.filterSdr || '', p_recipe: filters.filterType || '',
+                p_search: filters.searchTerm || '', p_area: filters.filterArea || '',
+                p_limit: limit, p_offset: offset
+            };
+            const key = JSON.stringify([localStorage.getItem('admin_user'), params]);
+            let entry = assetPeriodCache.get(key);
+            if (entry && entry.expiresAt <= Date.now()) { assetPeriodCache.delete(key); entry = null; }
+            if (!entry) {
+                entry = { expiresAt: Infinity, promise: null };
+                entry.promise = (async () => {
+                    const { data, error } = await db.rpc('asset_allocation_period_report', params);
+                    if (error) throw error;
+                    if (!data || !Array.isArray(data.rows) || !Array.isArray(data.recipes) ||
+                        !Number.isInteger(data.total) || data.total < 0 || !Number.isInteger(data.held) ||
+                        !Number.isInteger(data.returned) || data.rows.length > limit) {
+                        throw new Error('Respons laporan aset tidak lengkap. Silakan refresh.');
+                    }
+                    entry.expiresAt = Date.now() + assetPeriodCacheTTL;
+                    return data;
+                })();
+                assetPeriodCache.set(key, entry);
+                while (assetPeriodCache.size > 12) assetPeriodCache.delete(assetPeriodCache.keys().next().value);
+            }
+            try {
+                const report = await entry.promise;
                 if (requestId != null && requestId !== assetAllocationRequest) return null;
-                if (error) throw error;
-                if (!Array.isArray(data) || !Number.isInteger(count)) throw new Error('Respons riwayat aset tidak lengkap.');
-                if (expected === null) expected = count;
-                if (count !== expected) throw new Error('Riwayat aset berubah. Silakan refresh.');
-                for (const row of data) {
-                    if (seen.has(row.id)) throw new Error('Urutan riwayat berubah. Silakan refresh.');
-                    seen.add(row.id);
-                    rows.push(row);
-                }
-                if (rows.length === expected) return rows;
-                if (!data.length || rows.length > expected) throw new Error('Riwayat aset belum lengkap. Silakan refresh.');
+                return report;
+            } catch (error) {
+                if (assetPeriodCache.get(key) === entry) assetPeriodCache.delete(key);
+                throw error;
             }
         }
 
-        // Reconstruct each deployment before applying the date/SDR filters.
-        // Phase 4 belongs to the preceding Phase 1, even after a kit changes SDR.
-        function buildAssetPeriodRows(kits, transactions, filters, period) {
-            const history = new Map();
-            for (const tx of transactions) {
-                if (!history.has(tx.kit_id)) history.set(tx.kit_id, []);
-                history.get(tx.kit_id).push(tx);
-            }
-            const result = [];
-            const sdrSearch = (filters.filterSdr || '').toLowerCase();
-            const search = (filters.searchTerm || '').toLowerCase();
-            for (const kit of kits) {
-                const events = (history.get(kit.kit_id) || []).sort((a, b) =>
-                    Date.parse(a.created_at) - Date.parse(b.created_at) || String(a.id).localeCompare(String(b.id)));
-                const cycles = [];
-                let active = null;
-                for (const tx of events) {
-                    const time = Date.parse(tx.created_at);
-                    if (!Number.isFinite(time) || time >= period.end) continue;
-                    if (tx.phase === 'Phase 1') {
-                        // A later Phase 1 ends the previous allocation without inventing a return.
-                        if (active) { active.end = time; cycles.push(active); }
-                        active = { start: time, end: Infinity, returnedAt: null,
-                            sdr: (tx.sdr_name || '').trim() || 'SDR unavailable',
-                            location: tx.business_name || '', recipe: tx.kit_type || kit.kit_type };
-                    } else if (tx.phase === 'Phase 4') {
-                        if (active) {
-                            active.end = time;
-                            active.returnedAt = time;
-                            cycles.push(active);
-                            active = null;
-                        } else {
-                            // An orphan return can be counted, but has no inferred holder.
-                            cycles.push({ start: time, end: time, returnedAt: time,
-                                sdr: (tx.sdr_name || '').trim() || 'SDR unavailable',
-                                location: tx.business_name || '', recipe: tx.kit_type || kit.kit_type, orphan: true });
-                        }
-                    }
-                }
-                if (active) cycles.push(active);
-                const matches = cycles.filter(cycle => {
-                    const held = !cycle.orphan && cycle.start < period.end && cycle.end > period.start;
-                    const returned = cycle.returnedAt != null && cycle.returnedAt >= period.start && cycle.returnedAt < period.end;
-                    return (held || returned) && (!sdrSearch || cycle.sdr.toLowerCase().includes(sdrSearch)) &&
-                        (!filters.filterType || cycle.recipe === filters.filterType) &&
-                        (!search || String(kit.kit_id).toLowerCase().includes(search) || cycle.location.toLowerCase().includes(search));
-                });
-                if (!matches.length) continue;
-                const held = matches.some(cycle => !cycle.orphan && cycle.start < period.end && cycle.end > period.start);
-                const returned = matches.some(cycle => cycle.returnedAt != null && cycle.returnedAt >= period.start && cycle.returnedAt < period.end);
-                result.push({ ...kit, period_sdr: [...new Set(matches.map(cycle => cycle.sdr))].join(', '),
-                    period_held: held, period_returned: returned,
-                    period_recipes: [...new Set(matches.map(cycle => cycle.recipe || 'Unspecified recipe'))],
-                    period_cycles: matches });
-            }
-            return result.sort((a, b) => String(a.kit_id).localeCompare(String(b.kit_id)) || a.id - b.id);
-        }
-
-        async function loadAssetPeriodRows(filters, requestId) {
-            const period = getAssetPeriod(filters);
-            // Master data defines the admin's allowed kit scope; current SDR/location
-            // cannot filter historical allocations. Recipe/search apply to deployment history.
-            const scope = { ...filters, filterSdr: '', filterType: '', searchTerm: '' };
-            const kits = await fetchAllAssetRows(() => applyAssetAllocationFilters(
-                db.from('master_kits').select('*', { count: 'exact' }), scope).order('id'), requestId);
-            if (!kits) return null;
-            const transactions = [];
-            for (let offset = 0; offset < kits.length; offset += 100) {
-                const ids = kits.slice(offset, offset + 100).map(kit => kit.kit_id);
-                const batch = await fetchAllAssetRows(() => db.from('transactions')
-                    .select('id,kit_id,kit_type,phase,sdr_name,business_name,created_at', { count: 'exact' })
-                    .in('kit_id', ids).in('phase', ['Phase 1', 'Phase 4'])
-                    .lt('created_at', new Date(period.end).toISOString())
-                    .order('created_at').order('id'), requestId);
-                if (!batch) return null;
-                transactions.push(...batch);
-            }
-            return buildAssetPeriodRows(kits, transactions, filters, period);
-        }
-
-        function renderAssetPeriodSummary(kits, filters) {
+        function renderAssetPeriodSummary(report, filters) {
             const panel = document.getElementById('kits-sdr-summary');
-            const period = getAssetPeriod(filters);
-            const recipes = new Map();
-            for (const kit of kits) {
-                for (const name of kit.period_recipes) {
-                    if (!recipes.has(name)) recipes.set(name, { name, held: new Set(), returned: new Set() });
-                    const recipe = recipes.get(name);
-                    for (const cycle of kit.period_cycles.filter(c => (c.recipe || 'Unspecified recipe') === name)) {
-                        if (!cycle.orphan && cycle.start < period.end && cycle.end > period.start) recipe.held.add(kit.id);
-                        if (cycle.returnedAt != null && cycle.returnedAt >= period.start && cycle.returnedAt < period.end) recipe.returned.add(kit.id);
-                    }
-                }
-            }
             panel.classList.remove('hidden');
             panel.innerHTML = `
                 <div class="font-black text-sm text-slate-800 mb-2">Riwayat SDR: ${escapeAssetText(filters.filterSdr || 'Semua SDR')} · ${escapeAssetText(filters.dateStart)} – ${escapeAssetText(filters.dateEnd)} (WITA)</div>
-                <div class="text-sm font-bold text-blue-700 mb-2">Pernah dipegang: ${kits.filter(k => k.period_held).length} kit · Kembali dalam periode: ${kits.filter(k => k.period_returned).length} kit</div>
+                <div class="text-sm font-bold text-blue-700 mb-2">Pernah dipegang: ${report.held} kit · Kembali dalam periode: ${report.returned} kit</div>
                 <p class="text-xs text-slate-500 mb-3">Kit unik per recipe. Termasuk kit yang keluar sebelum tanggal mulai dan masih dipegang dalam periode. Kembali dihitung dari Phase 4 dalam periode. Satu kit bisa masuk kedua jumlah. Lokasi dan kondisi di tabel menunjukkan keadaan saat ini.</p>
-                <div class="flex flex-wrap gap-3">${[...recipes.values()].sort((a, b) => a.name.localeCompare(b.name)).map(recipe => `
+                <div class="flex flex-wrap gap-3">${report.recipes.map(recipe => `
                     <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 min-w-[180px]">
                         <div class="text-xs font-black text-slate-700">${escapeAssetText(recipe.name)}</div>
-                        <div class="text-sm font-bold text-blue-700 mt-2">Pernah dipegang: ${recipe.held.size} kit</div>
-                        <div class="text-xs text-slate-600 mt-1">Kembali: ${recipe.returned.size} kit</div>
+                        <div class="text-sm font-bold text-blue-700 mt-2">Pernah dipegang: ${recipe.held} kit</div>
+                        <div class="text-xs text-slate-600 mt-1">Kembali: ${recipe.returned} kit</div>
                     </div>`).join('') || '<div class="text-xs text-slate-500">Tidak ada riwayat kit yang sesuai filter.</div>'}</div>`;
         }
 
@@ -2134,7 +2129,8 @@ function initFOTrackerFilters() {
         }
 
         async function fetchKits(force = false) {
-            loadAssetSdrOptions();
+            if (force) assetPeriodCache.clear();
+            if (force || !document.getElementById('asset-sdr-options').innerHTML) loadAssetSdrOptions();
             const filters = getAssetAllocationFilters();
             const requestId = ++assetAllocationRequest;
             try {
@@ -2143,15 +2139,15 @@ function initFOTrackerFilters() {
                     panel.classList.remove('hidden');
                     panel.innerHTML = '<div class="text-xs text-slate-500">Memuat riwayat kit dalam periode...</div>';
                     document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-slate-500">Memuat riwayat...</td></tr>';
-                    const rows = await loadAssetPeriodRows(filters, requestId);
-                    if (!rows || requestId !== assetAllocationRequest) return;
                     const from = kitPage * kitPageSize;
-                    globalKits = rows.slice(from, from + kitPageSize);
-                    document.getElementById('kit-page-display').innerText = rows.length ? kitPage + 1 : 0;
+                    const report = await loadAssetPeriodReport(filters, from, kitPageSize, requestId);
+                    if (!report || requestId !== assetAllocationRequest) return;
+                    globalKits = report.rows;
+                    document.getElementById('kit-page-display').innerText = report.total ? kitPage + 1 : 0;
                     document.getElementById('btn-kit-prev').disabled = kitPage === 0;
-                    document.getElementById('btn-kit-next').disabled = from + kitPageSize >= rows.length;
+                    document.getElementById('btn-kit-next').disabled = from + kitPageSize >= report.total;
                     renderKits();
-                    renderAssetPeriodSummary(rows, filters);
+                    renderAssetPeriodSummary(report, filters);
                     return;
                 }
             } catch (error) {
@@ -2425,7 +2421,7 @@ async function fetchAndRenderFOTracker() {
                 : '';
 
             const photoBtn = log.proof_photo
-                ? `<a href="${log.proof_photo}" target="_blank" class="text-blue-600">
+                ? `<a href="${escapeHTML(log.proof_photo)}" target="_blank" rel="noopener noreferrer" onclick="return openProofPhoto(event, this)" class="text-blue-600">
                         <i class="fa-solid fa-image"></i>
                    </a>`
                 : '-';
@@ -2957,7 +2953,7 @@ function renderLogs() {
                     </span>` : '';
 
                 const photoBtn = i.proof_photo ? `
-                    <a href="${i.proof_photo}" target="_blank" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg border border-blue-100 transition" title="View Photo">
+                    <a href="${escapeHTML(i.proof_photo)}" target="_blank" rel="noopener noreferrer" onclick="return openProofPhoto(event, this)" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg border border-blue-100 transition" title="View Photo">
                         <i class="fa-solid fa-image"></i>
                     </a>` : '<span class="text-slate-300 p-2"><i class="fa-solid fa-image-slash"></i></span>';
 
@@ -3988,33 +3984,51 @@ console.log(authError);
         // ----------------------------------------------------------------------
         // 8. REALTIME SUBSCRIPTION
         // ----------------------------------------------------------------------
-        function enableRealtimeSync() {
-            db.channel('admin-realtime')
-              .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-                  console.log('⚡ Data changed by another user:', payload.table);
-                  
-                  const activeTab = document.querySelector('aside nav button.bg-blue-600');
-                  if (activeTab) {
-                      const tabId = activeTab.id.replace('btn-', '');
-                      const refreshBtn = document.querySelector(`#view-${tabId} button[onclick^="fetch"]`) || 
-                                         document.querySelector(`#view-${tabId} button[onclick^="render"]`) || 
-                                         document.querySelector(`#view-${tabId} button[onclick^="refresh"]`);
-                      
-                      if (refreshBtn && !refreshBtn.classList.contains('bg-emerald-500')) {
-                          const originalClass = refreshBtn.className;
-                          refreshBtn.className = "bg-emerald-500 text-white px-3 py-2 rounded-lg shadow-md animate-pulse transition";
-                          refreshBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down mr-1"></i> New Data';
-                          
-                          refreshBtn.addEventListener('click', function resetBtn() {
-                              refreshBtn.className = originalClass;
-                              refreshBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
-                              refreshBtn.removeEventListener('click', resetBtn);
-                          }, { once: true });
-                      }
-                  }
-              })
-              .subscribe();
+        let adminRealtimeChannel = null;
+        const adminRealtimeTables = {
+            dashboard: ['transactions', 'master_kits', 'master_kit_types'],
+            sd_tracker: ['transactions'], fo_tracker: ['fo_visits', 'master_runners'], runner_tracker: ['transactions'],
+            logs: ['transactions'], kits: ['transactions', 'master_kits', 'master_kit_types', 'master_sdrs'],
+            runners: ['master_runners'], sdrs: ['master_sdrs'], businesses: ['master_businesses', 'master_kits'],
+            areas: ['master_areas'], kit_types: ['master_kit_types'], users: ['master_users'], admin_logs: ['admin_logs']
+        };
+
+        function enableRealtimeSync(tab = 'dashboard') {
+            if (adminRealtimeChannel) { db.removeChannel(adminRealtimeChannel); adminRealtimeChannel = null; }
+            if (document.hidden) return;
+            const tables = adminRealtimeTables[tab] || [];
+            if (!tables.length) return;
+            const channel = db.channel('admin-realtime-' + tab);
+            for (const table of tables) {
+                channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+                    if (table === 'transactions' || table === 'master_kits' || table === 'master_users') assetPeriodCache.clear();
+                    if (table === 'master_runners' && tab === 'fo_tracker') globalRunners = [];
+                    const refreshBtn = document.querySelector(`#view-${tab} button[onclick^="fetch"]`) ||
+                        document.querySelector(`#view-${tab} button[onclick^="render"]`) ||
+                        document.querySelector(`#view-${tab} button[onclick^="refresh"]`);
+                    if (refreshBtn && !refreshBtn.classList.contains('bg-emerald-500')) {
+                        const originalClass = refreshBtn.className;
+                        refreshBtn.className = 'bg-emerald-500 text-white px-3 py-2 rounded-lg shadow-md animate-pulse transition';
+                        refreshBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down mr-1"></i> New Data';
+                        refreshBtn.addEventListener('click', function resetBtn() {
+                            refreshBtn.className = originalClass;
+                            refreshBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
+                        }, { once: true });
+                    }
+                });
+            }
+            adminRealtimeChannel = channel;
+            channel.subscribe();
         }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (adminRealtimeChannel) { db.removeChannel(adminRealtimeChannel); adminRealtimeChannel = null; }
+                return;
+            }
+            const activeBtn = document.querySelector('aside nav button.bg-blue-600, aside nav button.bg-amber-500');
+            if (activeBtn) enableRealtimeSync(activeBtn.id.replace('btn-', ''));
+        });
 
         // ----------------------------------------------------------------------
         // 9. EXCEL IMPORT / EXPORT FUNCTIONS
@@ -4073,10 +4087,25 @@ console.log(authError);
                 let expectedTotal = null;
 
                 if (period) {
-                    allKits.push(...await loadAssetPeriodRows(filters));
-                    if (!allKits.length) {
-                        setAssetAllocationExportStatus(`Tidak ada riwayat kit yang sesuai filter. ${filterLabel}`);
-                        return;
+                    while (true) {
+                        const report = await loadAssetPeriodReport(filters, offset, batchSize);
+                        if (expectedTotal === null) expectedTotal = report.total;
+                        if (report.total !== expectedTotal) throw new Error('Data laporan berubah. Silakan ulangi ekspor.');
+                        if (expectedTotal > excelMaxDataRows) throw new Error('Data melebihi kapasitas Excel. Persempit filter.');
+                        if (!expectedTotal) {
+                            setAssetAllocationExportStatus(`Tidak ada riwayat kit yang sesuai filter. ${filterLabel}`);
+                            return;
+                        }
+                        for (const kit of report.rows) {
+                            const id = String(kit.id);
+                            if (seenIds.has(id)) throw new Error('Urutan laporan berubah. Silakan ulangi ekspor.');
+                            seenIds.add(id);
+                            allKits.push(kit);
+                        }
+                        offset += report.rows.length;
+                        setAssetAllocationExportStatus(`Mengambil ${offset} dari ${expectedTotal} kit. ${filterLabel}`);
+                        if (offset === expectedTotal) break;
+                        if (!report.rows.length || offset > expectedTotal) throw new Error('Laporan ekspor belum lengkap. Silakan ulangi.');
                     }
                 }
                 while (!period) {

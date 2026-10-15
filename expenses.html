@@ -109,6 +109,7 @@
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Proof Picture *</label>
                         <div class="bg-white p-4 border border-slate-200 rounded-2xl">
                             <input type="file" id="input-photo" accept="image/*" class="w-full text-sm" required>
+                            <p class="mt-2 text-xs text-slate-500">Foto dikompresi otomatis, maksimal 100 KB.</p>
                         </div>
                     </div>
 
@@ -154,25 +155,45 @@
             }
         }
 
+        const proofPhotoMaxBytes = 100000; // Maximum JPEG file size: 100 KB.
+
+        function getBase64PhotoBytes(dataUrl) {
+            const encoded = dataUrl.slice(dataUrl.indexOf(',') + 1);
+            return Math.floor(encoded.length * 3 / 4) - (encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0);
+        }
+
         async function compressImageToBase64(file) {
-            return new Promise((res) => {
-                const reader = new FileReader(); 
+            const source = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('Foto tidak dapat dibaca.'));
                 reader.readAsDataURL(file);
-                reader.onload = e => {
-                    const img = new Image(); 
-                    img.src = e.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas'); 
-                        let w = img.width, h = img.height; 
-                        const max = 1024;
-                        if(w>h && w>max){ h*=max/w; w=max; } 
-                        else if(h>max){ w*=max/h; h=max; }
-                        canvas.width = w; canvas.height = h; 
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        res(canvas.toDataURL('image/jpeg', 0.6));
-                    };
-                };
             });
+            const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => reject(new Error('Format foto tidak dapat diproses. Gunakan JPEG atau PNG.'));
+                image.src = source;
+            });
+            if (!img.width || !img.height) throw new Error('Foto tidak valid.');
+            if (file.type === 'image/jpeg' && file.size <= proofPhotoMaxBytes && Math.max(img.width, img.height) <= 1024) return source;
+            const canvas = document.createElement('canvas');
+            let maxEdge = Math.min(1024, Math.max(img.width, img.height));
+            while (maxEdge >= Math.min(192, Math.max(img.width, img.height))) {
+                const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
+                canvas.width = Math.max(1, Math.round(img.width * scale));
+                canvas.height = Math.max(1, Math.round(img.height * scale));
+                const context = canvas.getContext('2d');
+                context.fillStyle = '#ffffff';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                for (const quality of [0.6, 0.5, 0.4, 0.35]) {
+                    const result = canvas.toDataURL('image/jpeg', quality);
+                    if (getBase64PhotoBytes(result) <= proofPhotoMaxBytes) return result;
+                }
+                maxEdge = Math.floor(maxEdge * 0.8);
+            }
+            throw new Error('Foto belum dapat diperkecil hingga 100 KB. Ambil ulang foto lebih dekat dengan bukti yang diperlukan.');
         }
 
         function showToast(msg) {
@@ -238,40 +259,46 @@
             btn.innerHTML = '<div class="spinner mr-2"></div> Processing...';
             btn.disabled = true;
 
-            const photoBase64 = await compressImageToBase64(fileInput.files[0]);
+            try {
+                const photoBase64 = await compressImageToBase64(fileInput.files[0]);
 
-            const expenseData = {
-                itemName: document.getElementById('input-item-name').value,
-                priceIdr: document.getElementById('input-price-idr').value,
-                priceUsd: document.getElementById('input-price-usd').value,
-                region: document.getElementById('input-region').value,
-                date: document.getElementById('input-date').value,
-                by: document.getElementById('input-by').value.toUpperCase(),
-                photoBase64: photoBase64
-            };
+                const expenseData = {
+                    itemName: document.getElementById('input-item-name').value,
+                    priceIdr: document.getElementById('input-price-idr').value,
+                    priceUsd: document.getElementById('input-price-usd').value,
+                    region: document.getElementById('input-region').value,
+                    date: document.getElementById('input-date').value,
+                    by: document.getElementById('input-by').value.toUpperCase(),
+                    photoBase64: photoBase64
+                };
 
-            expensesQueue.push(expenseData);
-            
-            // Simpan variabel statis agar tidak harus input ulang tiap nambah item
-            const savedKurs = document.getElementById('input-kurs').value;
-            const savedDate = document.getElementById('input-date').value;
-            const savedBy = document.getElementById('input-by').value;
-            const savedRegion = document.getElementById('input-region').value;
+                expensesQueue.push(expenseData);
 
-            this.reset();
-            
-            // Kembalikan variabel statis
-            document.getElementById('input-kurs').value = savedKurs;
-            document.getElementById('input-date').value = savedDate;
-            document.getElementById('input-by').value = savedBy;
-            document.getElementById('input-region').value = savedRegion;
+                // Simpan variabel statis agar tidak harus input ulang tiap nambah item
+                const savedKurs = document.getElementById('input-kurs').value;
+                const savedDate = document.getElementById('input-date').value;
+                const savedBy = document.getElementById('input-by').value;
+                const savedRegion = document.getElementById('input-region').value;
 
-            btn.innerHTML = originalBtnHtml;
-            btn.disabled = false;
-            
-            toggleModal('modal-add-expense');
-            renderQueue();
-            showToast("Added to Queue!");
+                this.reset();
+
+                // Kembalikan variabel statis
+                document.getElementById('input-kurs').value = savedKurs;
+                document.getElementById('input-date').value = savedDate;
+                document.getElementById('input-by').value = savedBy;
+                document.getElementById('input-region').value = savedRegion;
+
+
+                toggleModal('modal-add-expense');
+                renderQueue();
+                showToast("Added to Queue!");
+            } catch (error) {
+                console.error('Unable to process expense photo:', error);
+                alert(error.message || 'Foto tidak dapat diproses. Silakan pilih foto lain.');
+            } finally {
+                btn.innerHTML = originalBtnHtml;
+                btn.disabled = false;
+            }
         });
 
         async function submitAllExpenses() {
