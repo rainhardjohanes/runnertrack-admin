@@ -1149,8 +1149,34 @@ function getArchivePhotoURL(value) {
     } catch { return null; }
 }
 
-// Open the popup synchronously, then load private image bytes using the current
-// Supabase session. The token is never put in the URL or given to another origin.
+let archivePhotoViewerState = null;
+
+function closeArchivePhotoViewer() {
+    const viewer = archivePhotoViewerState;
+    if (!viewer) return;
+    archivePhotoViewerState = null;
+    viewer.controller.abort();
+    clearTimeout(viewer.timeout);
+    viewer.image.onload = null;
+    viewer.image.onerror = null;
+    viewer.image.removeAttribute('src');
+    if (viewer.objectURL) URL.revokeObjectURL(viewer.objectURL);
+    viewer.dialog.remove();
+    if (viewer.returnFocus?.isConnected) viewer.returnFocus.focus();
+}
+
+function showArchivePhotoError(viewer, message) {
+    if (archivePhotoViewerState !== viewer) return;
+    viewer.status.hidden = false;
+    viewer.status.textContent = message;
+    viewer.status.setAttribute('role', 'alert');
+    viewer.status.style.color = '#b91c1c';
+    viewer.image.hidden = true;
+    viewer.dialog.setAttribute('aria-busy', 'false');
+}
+
+// Keep private photos inside the page so the viewer also works in browsers
+// without popup support. Session tokens remain in the request header only.
 function openProofPhoto(event, link) {
     let url;
     try { url = new URL(link.href); } catch { event.preventDefault(); return false; }
@@ -1158,49 +1184,94 @@ function openProofPhoto(event, link) {
     const archiveURL = getArchivePhotoURL(url.href);
     if (!archiveURL) return true;
     event.preventDefault();
-    const popup = window.open('', '_blank');
-    if (!popup) { alert('Izinkan pop-up untuk membuka foto arsip.'); return false; }
-    popup.opener = null;
-    popup.document.title = 'Foto bukti';
-    popup.document.body.textContent = 'Memuat foto arsip…';
-    loadArchivePhoto(archiveURL, popup);
+    closeArchivePhotoViewer();
+    const dialog = document.createElement('dialog');
+    dialog.id = 'archive-photo-viewer';
+    dialog.setAttribute('aria-labelledby', 'archive-photo-title');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-busy', 'true');
+    dialog.style.cssText = 'position:fixed;inset:0;margin:auto;border:0;border-radius:16px;padding:24px;max-width:min(960px,94vw);max-height:92vh;width:100%;box-shadow:0 20px 80px #0006;background:white;color:#0f172a;';
+    const heading = document.createElement('div');
+    heading.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;';
+    const title = document.createElement('h2');
+    title.id = 'archive-photo-title';
+    title.textContent = 'Foto bukti arsip';
+    title.style.cssText = 'font-size:18px;font-weight:700;';
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.textContent = 'Tutup';
+    closeButton.setAttribute('aria-label', 'Tutup foto arsip');
+    closeButton.style.cssText = 'padding:8px 16px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;cursor:pointer;';
+    closeButton.addEventListener('click', closeArchivePhotoViewer);
+    heading.append(title, closeButton);
+    const status = document.createElement('p');
+    status.textContent = 'Memuat foto arsip…';
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    const image = document.createElement('img');
+    image.alt = 'Foto bukti arsip';
+    image.hidden = true;
+    image.style.cssText = 'max-width:100%;max-height:72vh;object-fit:contain;margin:auto;';
+    dialog.append(heading, status, image);
+    dialog.addEventListener('cancel', event => { event.preventDefault(); closeArchivePhotoViewer(); });
+    dialog.addEventListener('click', event => { if (event.target === dialog) closeArchivePhotoViewer(); });
+    const viewer = {dialog, status, image, returnFocus: link, controller: new AbortController(), objectURL: null, timeout: null, timedOut: false};
+    archivePhotoViewerState = viewer;
+    document.body.append(dialog);
+    dialog.showModal();
+    closeButton.focus();
+    loadArchivePhoto(archiveURL, viewer);
     return false;
 }
 
-async function loadArchivePhoto(url, popup) {
-    let objectURL;
+async function loadArchivePhoto(url, viewer) {
+    viewer.timeout = setTimeout(() => {
+        viewer.timedOut = true;
+        showArchivePhotoError(viewer, 'Waktu memuat foto habis setelah 30 detik. Silakan coba kembali.');
+        viewer.controller.abort();
+    }, 30000);
     try {
         // Validate again at the token boundary, even if called from another UI path.
         const archiveURL = getArchivePhotoURL(url.href);
-        if (!archiveURL) throw new Error('Alamat arsip foto tidak valid.');
+        if (!archiveURL) { showArchivePhotoError(viewer, 'Alamat arsip foto tidak valid.'); return; }
         const {data: {session}, error} = await db.auth.getSession();
-        if (error || !session?.access_token) throw new Error('Silakan login kembali di halaman admin.');
+        if (archivePhotoViewerState !== viewer || viewer.controller.signal.aborted) return;
+        if (error || !session?.access_token) { showArchivePhotoError(viewer, 'Silakan login kembali di halaman admin.'); return; }
         const response = await fetch(archiveURL.href, {
             headers: {Authorization: `Bearer ${session.access_token}`},
             credentials: 'omit', redirect: 'error', cache: 'no-store',
-            signal: AbortSignal.timeout(30000),
+            signal: viewer.controller.signal,
         });
-        if (response.status === 401) throw new Error('Sesi telah berakhir. Silakan login kembali di halaman admin.');
-        if (response.status === 403) throw new Error('Akun ini tidak memiliki akses ke foto tersebut.');
-        if (!response.ok) throw new Error('Foto arsip belum dapat dibuka. Silakan coba kembali.');
+        if (response.status === 401) { showArchivePhotoError(viewer, 'Sesi telah berakhir. Silakan login kembali di halaman admin.'); return; }
+        if (response.status === 403) { showArchivePhotoError(viewer, 'Server menolak akses foto arsip (403). Periksa izin akun atau pembatasan akses server.'); return; }
+        if (!response.ok) { showArchivePhotoError(viewer, `Foto arsip belum dapat dibuka (HTTP ${response.status}). Silakan coba kembali.`); return; }
         const blob = await response.blob();
         if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(blob.type.toLowerCase()) || !blob.size) {
-            throw new Error('Format foto arsip tidak valid.');
+            showArchivePhotoError(viewer, 'Format foto arsip tidak valid.'); return;
         }
-        if (popup.closed) return;
-        objectURL = URL.createObjectURL(blob);
-        popup.location.replace(objectURL);
-        // Release image memory when its tab closes, with a bounded fallback timer.
-        const openedAt = Date.now();
-        const timer = setInterval(() => {
-            if (popup.closed || Date.now() - openedAt >= 10 * 60 * 1000) {
-                clearInterval(timer);
-                URL.revokeObjectURL(objectURL);
-            }
-        }, 1000);
-    } catch (error) {
-        if (objectURL) URL.revokeObjectURL(objectURL);
-        if (!popup.closed) popup.document.body.textContent = error.message || 'Foto arsip tidak dapat dibuka.';
+        if (archivePhotoViewerState !== viewer || viewer.controller.signal.aborted) return;
+        viewer.objectURL = URL.createObjectURL(blob);
+        viewer.image.onload = () => {
+            if (archivePhotoViewerState !== viewer) return;
+            viewer.status.hidden = true;
+            viewer.dialog.setAttribute('aria-busy', 'false');
+        };
+        viewer.image.onerror = () => {
+            if (archivePhotoViewerState !== viewer) return;
+            URL.revokeObjectURL(viewer.objectURL);
+            viewer.objectURL = null;
+            viewer.image.onerror = null;
+            viewer.image.removeAttribute('src');
+            showArchivePhotoError(viewer, 'Foto arsip tidak dapat ditampilkan karena data gambarnya tidak valid.');
+        };
+        viewer.image.src = viewer.objectURL;
+        viewer.image.hidden = false;
+    } catch {
+        showArchivePhotoError(viewer, viewer.timedOut
+            ? 'Waktu memuat foto habis setelah 30 detik. Silakan coba kembali.'
+            : 'Foto arsip gagal dimuat. Koneksi ke server arsip terputus atau diblokir browser. Silakan coba kembali.');
+    } finally {
+        clearTimeout(viewer.timeout);
     }
 }
         let globalLogs = [];
