@@ -112,6 +112,18 @@
             </div>
             
             <div class="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 p-3 lg:p-6 space-y-4 lg:space-y-6">
+                <section id="photo-quota-card" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200" aria-labelledby="photo-quota-heading">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h3 id="photo-quota-heading" class="text-sm font-black text-slate-800">Penyimpanan foto</h3>
+                            <p id="photo-quota-usage" class="text-xs text-slate-600 mt-1" aria-live="polite">Memuat penggunaan foto…</p>
+                        </div>
+                        <button id="photo-quota-refresh" type="button" onclick="refreshPhotoQuota()" class="text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50">Perbarui</button>
+                    </div>
+                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden mt-3" aria-hidden="true"><div id="photo-quota-bar" class="h-full bg-emerald-500 rounded-full" style="width:0%"></div></div>
+                    <p id="photo-quota-message" class="text-xs text-slate-500 mt-2" role="status">Peringatan pada 7 GB; unggahan berhenti sebelum melewati 8 GB.</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Termasuk ruang yang sudah dipesan. Maksimal 100 KB per foto.</p>
+                </section>
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3 lg:gap-6">
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-blue-200 relative overflow-hidden">
                         <i class="fa-solid fa-sd-card absolute -right-4 -bottom-4 text-8xl text-blue-50 opacity-50"></i>
@@ -1135,8 +1147,7 @@ const db = createClient(
     'https://ezmevzvxqbsvwxufapck.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6bWV2enZ4cWJzdnd4dWZhcGNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzEyNzUsImV4cCI6MjA5OTc0NzI3NX0.mrbmvvU4sKQT3aFLGbtrrqbzKcRPSEViXRmEyfGSGPE'
 );
-// Set to the deployed private archive Worker origin after its authorization RPC is installed.
-// An exact origin match is required before the admin session token can be sent.
+// An exact origin and approved photo path are required before sending the admin session token.
 const PHOTO_ARCHIVE_ORIGIN = 'https://atlas-logistic-photo-archive.rainhardjohanes.workers.dev';
 
 function getArchivePhotoURL(value) {
@@ -1144,9 +1155,65 @@ function getArchivePhotoURL(value) {
     try {
         const url = new URL(value);
         if (url.protocol !== 'https:' || url.origin !== PHOTO_ARCHIVE_ORIGIN || url.username || url.password) return null;
-        if (!url.pathname.startsWith('/photos/supabase-proofs/') || url.search || url.hash) return null;
+        if (url.search || url.hash) return null;
+        if (/^\/photos\/uploads\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{64}\.jpg$/i.test(url.pathname)) return url;
+        if (!url.pathname.startsWith('/photos/supabase-proofs/')) return null;
+        const name = decodeURIComponent(url.pathname.slice('/photos/supabase-proofs/'.length));
+        if (!name || name.length > 1024 || /[\u0000-\u001f\u007f\\]/.test(name) || name.split('/').some(part => !part || part === '.' || part === '..')) return null;
         return url;
     } catch { return null; }
+}
+
+let photoQuotaRequest = null;
+
+async function refreshPhotoQuota() {
+    if (photoQuotaRequest) return photoQuotaRequest;
+    const button = document.getElementById('photo-quota-refresh');
+    const usage = document.getElementById('photo-quota-usage');
+    const message = document.getElementById('photo-quota-message');
+    const bar = document.getElementById('photo-quota-bar');
+    const card = document.getElementById('photo-quota-card');
+    if (!button || !usage || !message || !bar || !card) return;
+    button.disabled = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    photoQuotaRequest = Promise.resolve().then(async () => {
+        try {
+            const {data, error} = await db.rpc('photo_quota_status').abortSignal(controller.signal);
+            if (error) throw error;
+            const used = Number(data?.storage_bytes);
+            const limit = Number(data?.storage_limit_bytes);
+            const warning = Number(data?.storage_warning_bytes);
+            if (!data || !Number.isFinite(used) || used < 0 || !Number.isFinite(limit) || limit <= 0 || !Number.isFinite(warning) || warning <= 0) throw new Error('Invalid photo quota status');
+            const gb = value => (value / 1000000000).toLocaleString('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            usage.textContent = gb(used) + ' GB dari batas aman ' + gb(limit) + ' GB';
+            bar.style.width = Math.min(100, Math.max(0, used / limit * 100)) + '%';
+            const blocked = data.upload_blocked === true || data.quota_enabled === false;
+            const caution = blocked || data.read_blocked === true || data.storage_warning === true;
+            const reasons = Array.isArray(data.reasons) ? data.reasons : [data.reason];
+            let description = 'Masih tersedia ' + gb(Math.max(0, limit - used)) + ' GB. Peringatan dimulai pada ' + gb(warning) + ' GB.';
+            if (data.quota_enabled === false || data.upload_enabled === false || reasons.includes('quota_disabled')) description = 'Unggahan foto dihentikan sementara. Hubungi administrator untuk memeriksa pengaturan penyimpanan.';
+            else if (blocked && (reasons.includes('storage_limit') || used >= limit)) description = 'Kapasitas foto mencapai batas aman. Unggahan baru dihentikan sampai ruang tersedia. Foto dan transaksi yang sudah tersimpan tetap dipertahankan.';
+            else if (blocked && reasons.includes('reservation_limit')) description = 'Jumlah foto mencapai batas aman. Unggahan baru dihentikan sampai administrator menyediakan kapasitas. Foto dan transaksi yang sudah tersimpan tetap dipertahankan.';
+            else if (blocked) description = 'Batas jumlah unggahan sementara tercapai. Pengiriman foto dapat dilanjutkan setelah batas direset. Data yang tertunda tetap berada di perangkat pengirim.';
+            else if (data.storage_warning === true) description = 'Kapasitas foto mendekati batas. Sediakan ruang sebelum ' + gb(limit) + ' GB agar unggahan dapat terus berjalan.';
+            if (data.read_blocked === true) description += ' Pembukaan foto juga dihentikan sementara sampai batas akses direset; foto tetap tersimpan.';
+            message.textContent = description;
+            message.className = 'text-xs mt-2 ' + (caution ? 'text-amber-800' : 'text-slate-500');
+            bar.className = 'h-full rounded-full ' + (blocked ? 'bg-rose-500' : caution ? 'bg-amber-500' : 'bg-emerald-500');
+            card.className = 'p-4 rounded-2xl shadow-sm border ' + (caution ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200');
+        } catch {
+            usage.textContent = 'Penggunaan foto belum dapat dimuat.';
+            message.textContent = 'Periksa koneksi lalu tekan Perbarui. Batas unggahan tetap diperiksa oleh server.';
+            message.className = 'text-xs text-amber-800 mt-2';
+            bar.style.width = '0%';
+        } finally {
+            clearTimeout(timeout);
+            button.disabled = false;
+            photoQuotaRequest = null;
+        }
+    });
+    return photoQuotaRequest;
 }
 
 let archivePhotoViewerState = null;
@@ -1223,21 +1290,21 @@ function openProofPhoto(event, link) {
     heading.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;';
     const title = document.createElement('h2');
     title.id = 'archive-photo-title';
-    title.textContent = 'Foto bukti arsip';
+    title.textContent = 'Foto bukti';
     title.style.cssText = 'font-size:18px;font-weight:700;';
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
     closeButton.textContent = 'Tutup';
-    closeButton.setAttribute('aria-label', 'Tutup foto arsip');
+    closeButton.setAttribute('aria-label', 'Tutup foto bukti');
     closeButton.style.cssText = 'padding:8px 16px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;cursor:pointer;';
     closeButton.addEventListener('click', closeArchivePhotoViewer);
     heading.append(title, closeButton);
     const status = document.createElement('p');
-    status.textContent = 'Memuat foto arsip…';
+    status.textContent = 'Memuat foto…';
     status.setAttribute('role', 'status');
     status.setAttribute('aria-live', 'polite');
     const image = document.createElement('img');
-    image.alt = 'Foto bukti arsip';
+    image.alt = 'Foto bukti';
     image.hidden = true;
     image.style.cssText = 'max-width:100%;max-height:72vh;object-fit:contain;margin:auto;';
     dialog.append(heading, status, image);
@@ -1271,7 +1338,8 @@ async function loadArchivePhoto(url, viewer) {
             signal: viewer.controller.signal,
         });
         if (response.status === 401) { showArchivePhotoError(viewer, 'Sesi telah berakhir. Silakan login kembali di halaman admin.'); return; }
-        if (response.status === 403) { showArchivePhotoError(viewer, 'Server menolak akses foto arsip (403). Periksa izin akun atau pembatasan akses server.'); return; }
+        if (response.status === 403) { showArchivePhotoError(viewer, 'Akun ini tidak memiliki izin membuka foto tersebut. Hubungi administrator.'); return; }
+        if (response.status === 429) { showArchivePhotoError(viewer, 'Batas pembukaan foto sementara tercapai. Foto tetap tersimpan. Coba lagi setelah batas direset atau hubungi admin.'); return; }
         if (response.status === 503) {
             const message = await getArchiveServiceError(response);
             if (!viewer.controller.signal.aborted) showArchivePhotoError(viewer, message);
@@ -1492,6 +1560,7 @@ if (!["admin", "super_admin"].includes(role)) {
                 document.getElementById('btn-admin_logs').classList.add('hidden-view');
             }
             
+            refreshPhotoQuota();
             await fetchAreas(); 
             switchTab('dashboard');
         }
@@ -3518,14 +3587,11 @@ async function resolveSD(logId, type, variance) {
         });
 
         // --- Runner ---
-        function openAddRunnerModal() { 
-            document.getElementById('form-runner').reset(); 
-            document.getElementById('input-runner-id').value = ''; 
-            document.getElementById('runner-auth-section').classList.remove('hidden-view'); 
-            document.getElementById('runner-modal-title').innerText = 'Add Runner'; 
-            document.getElementById('input-runner-email').required = true; 
-            document.getElementById('input-runner-pin').required = true; 
-            showModal('modal-runner'); 
+        function openAddRunnerModal() {
+            // Reuse the existing account form so new staff receive a login identity too.
+            openAddUserModal();
+            document.getElementById('user-modal-title').innerText = 'Add Runner / Field Staff';
+            document.getElementById('input-user-role').value = 'Staff';
         }
 
         function editRunner(id) { 
@@ -3540,26 +3606,39 @@ async function resolveSD(logId, type, variance) {
             showModal('modal-runner'); 
         }
 
-        document.getElementById('form-runner').addEventListener('submit', async (e) => { 
-            e.preventDefault(); 
+        document.getElementById('form-runner').addEventListener('submit', async (e) => {
+            e.preventDefault();
             const id = document.getElementById('input-runner-id').value;
-            const area = document.getElementById('input-runner-area').value;
-            const name = document.getElementById('input-runner-name').value; 
-            
-            if (!id) { 
-                const em = document.getElementById('input-runner-email').value;
-                const pin = document.getElementById('input-runner-pin').value; 
-                const { error } = await db.from('master_users').insert([{ email: em, pin: pin, role: 'Staff', runner_name: name }]); 
-                if (error) { alert("Email exists or error occurred."); return; } 
-                await db.from('master_runners').insert([{ area_name: area, runner_name: name }]); 
-                await logAdminAction('CREATE_RUNNER', `Added runner: ${name}`); 
-            } else { 
-                await db.from('master_runners').update({ area_name: area, runner_name: name }).eq('id', id); 
-                await logAdminAction('UPDATE_RUNNER', `Updated runner ID ${id}`); 
-            } 
-            fetchRunners(true); 
-            e.target.reset(); 
-            closeModal('modal-runner'); 
+            const area = document.getElementById('input-runner-area').value.trim();
+            const name = document.getElementById('input-runner-name').value.trim();
+            const allowedAreas = getAdminAreas();
+            if (!area || !name) { alert('Nama dan area runner wajib diisi.'); return; }
+            if (!allowedAreas.includes('All') && !allowedAreas.includes(area)) {
+                alert('Anda hanya dapat mengelola runner dalam area yang ditugaskan.'); return;
+            }
+            // Old open forms also use the existing System User flow for creation.
+            if (!id) {
+                closeModal('modal-runner');
+                openAddRunnerModal();
+                document.getElementById('input-user-fullname').value = name;
+                document.querySelectorAll('.user-area-cb').forEach(cb => { cb.checked = cb.value === area; });
+                alert('Lengkapi akun runner pada formulir ini agar akses login dan area tersimpan bersama.');
+                return;
+            }
+            const button = e.target.querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+            try {
+                const {data, error} = await db.from('master_runners')
+                    .update({area_name: area, runner_name: name}).eq('id', id).select('id');
+                if (error) throw error;
+                if (!data?.length) throw new Error('Perubahan runner ditolak atau data sudah tidak tersedia.');
+                await logAdminAction('UPDATE_RUNNER', `Updated runner ID ${id}`);
+                await fetchRunners(true);
+                e.target.reset();
+                closeModal('modal-runner');
+            } catch (error) {
+                alert('Runner belum tersimpan: ' + (error.message || 'Periksa koneksi dan izin akun.'));
+            } finally { if (button) button.disabled = false; }
         });
 
         // --- SDR ---
@@ -3909,6 +3988,13 @@ if (updateError) {
                 areaValue = selectedCBs.join(',');
             }
 
+            const allowedAreas = getAdminAreas();
+            const requestedAreas = areaValue.split(',').map(area => area.trim()).filter(Boolean);
+            if (!allowedAreas.includes('All') && (areaValue === 'All' || requestedAreas.some(area => !allowedAreas.includes(area)))) {
+                alert('Pilih hanya area yang termasuk penugasan Anda.');
+                return;
+            }
+
             const payload = {
                 email: emailInput.toLowerCase(),
                 role: role,
@@ -3948,7 +4034,12 @@ console.log(authError);
                         runner_name: fullName,
                         area_name: a.trim()
                     }));
-                    await db.from('master_runners').insert(runnerPayloads);
+                    const {error: runnerError} = await db.from('master_runners').insert(runnerPayloads);
+                    if (runnerError) {
+                        alert('Akun sudah dibuat, tetapi penempatan runner belum tersimpan. Hubungi administrator sebelum membuat akun yang sama lagi.');
+                        fetchUsers(true);
+                        return;
+                    }
                     fetchRunners(true); 
                 }
 
