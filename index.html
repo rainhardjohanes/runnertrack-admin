@@ -596,13 +596,17 @@
                 <div class="flex gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-businesses" onkeyup="renderBusinesses()" placeholder="Search merchants..." class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
+                        <input type="text" id="search-businesses" oninput="renderBusinesses()" placeholder="Search merchants..." aria-label="Search merchants" class="pl-8 p-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 w-64">
                     </div>
-                    <select id="filter-businesses-area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderBusinesses()"></select>
+                    <select id="filter-businesses-area" aria-label="Filter merchant area" class="p-2 border border-slate-200 rounded-lg text-xs outline-none bg-slate-50 filter-area-dropdown" onchange="renderBusinesses()"></select>
                     <button onclick="fetchBusinesses(true)" class="bg-slate-100 text-slate-600 px-3 rounded-lg border border-slate-200 hover:bg-slate-200 transition"><i class="fa-solid fa-rotate-right"></i></button>
                     <button onclick="openAddBizModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-plus mr-1"></i> Add Merchant</button>
                     <button onclick="exportMerchantAssetsToExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-md transition"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
                 </div>
+            </div>
+            <div class="px-6 py-3 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-3">
+                <p class="text-xs text-slate-500">Pilih merchant dengan centang. Pilihan yang tersembunyi oleh filter otomatis dibatalkan.</p>
+                <button id="btn-delete-businesses" onclick="deleteSelectedBusinesses()" disabled class="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-xs font-bold border border-red-200 hover:bg-red-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition"><i class="fa-solid fa-trash-can mr-1"></i> Delete Selected (<span id="selected-business-count" aria-live="polite">0</span>)</button>
             </div>
             <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -610,6 +614,7 @@
                         <table class="w-full text-left whitespace-nowrap">
                             <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
                                 <tr class="text-[10px] uppercase tracking-widest text-slate-500">
+                                    <th class="p-4 w-12"><input type="checkbox" id="business-master-checkbox" onchange="toggleSelectAllBusinesses(this)" aria-label="Select all visible merchants" class="rounded border-slate-300"></th>
                                     <th class="p-4 font-black">Merchant Name</th>
                                     <th class="p-4 font-black">Area</th>
                                     <th class="p-4 font-black">Active Kits</th>
@@ -1380,6 +1385,12 @@ async function loadArchivePhoto(url, viewer) {
         let globalRunners = [];
         let globalSDRs = [];
         let globalBusinesses = [];
+        const selectedBusinessIds = new Set();
+        let visibleBusinesses = [];
+        let businessRenderVersion = 0;
+        let businessFetchVersion = 0;
+        let businessRenderPending = false;
+        let businessDeleteBusy = false;
         let globalKitTypes = [];
         let globalKits = [];
         let globalUsers = [];
@@ -1444,7 +1455,7 @@ async function loadArchivePhoto(url, viewer) {
         async function logAdminAction(actionType, description) {
             const admin = JSON.parse(localStorage.getItem('admin_user'));
             if (!admin) return;
-            await db.from('admin_logs').insert([{ 
+            return await db.from('admin_logs').insert([{
                 admin_email: admin.email, 
                 action_type: actionType, 
                 description: description 
@@ -2043,17 +2054,25 @@ function initFOTrackerFilters() {
             if (data) { globalSDRs = data; renderSDRs(); } 
         }
 
-        async function fetchBusinesses(force = false) { 
-            if (!force && globalBusinesses.length > 0) return renderBusinesses(); 
-            let q = db.from('master_businesses').select('*'); 
-            const adminAreas = getAdminAreas();
-            if (!adminAreas.includes('All')) q = q.in('area_name', adminAreas); 
-            const { data } = await q.order('business_name'); 
-            if (data) { 
-                globalBusinesses = data; 
-                renderBusinesses(); 
-                updateLogBusinessDropdown(); 
-            } 
+        async function fetchBusinesses(force = false, reportErrors = true) {
+            if (!force && globalBusinesses.length > 0) { await renderBusinesses(); return true; }
+            const requestVersion = ++businessFetchVersion;
+            try {
+                let q = db.from('master_businesses').select('*');
+                const adminAreas = getAdminAreas();
+                if (!adminAreas.includes('All')) q = q.in('area_name', adminAreas);
+                const { data, error } = await q.order('business_name');
+                if (requestVersion !== businessFetchVersion) return false;
+                if (error) throw error;
+                if (!Array.isArray(data)) throw new Error('Server tidak mengembalikan daftar merchant.');
+                globalBusinesses = data;
+                updateLogBusinessDropdown();
+                await renderBusinesses();
+                return true;
+            } catch (error) {
+                if (requestVersion === businessFetchVersion && reportErrors) alert('Gagal memuat merchant: ' + error.message);
+                return false;
+            }
         }
 
         async function fetchKitTypes(force = false) { 
@@ -3228,55 +3247,156 @@ function renderLogs() {
             `).join(''); 
         }
 
-        async function renderBusinesses() { 
-    const s = document.getElementById('search-businesses').value.toLowerCase(); 
-    const fA = document.getElementById('filter-businesses-area') ? document.getElementById('filter-businesses-area').value : ''; 
-    
-    // Mencegah data dobel tampil dengan menyaring berdasarkan nama merchant yang unik
-    const uniqueBusinesses = Array.from(
-        new Map(globalBusinesses.map(item => [item.business_name, item])).values()
-    );
-
-    const f = uniqueBusinesses.filter(i => (!fA || i.area_name === fA) && i.business_name.toLowerCase().includes(s));
-            
+        // --- Merchant selection and bulk deletion ---
+        function getFilteredBusinesses() {
+            const search = document.getElementById('search-businesses').value.toLowerCase();
+            const area = document.getElementById('filter-businesses-area').value;
             const adminAreas = getAdminAreas();
-            let qDep = db.from('master_kits').select('kit_id, kit_type, last_location').neq('last_location', 'Warehouse').not('last_location', 'is', null);
-            if (!adminAreas.includes('All')) qDep = qDep.in('area_name', adminAreas);
-            const { data: deployedKits } = await qDep;
-            const activeDb = deployedKits || [];
+            // A merchant is identified by its database ID, even when names are equal.
+            const unique = new Map(globalBusinesses.filter(item => item.id != null).map(item => [String(item.id), item]));
+            return Array.from(unique.values()).filter(item =>
+                (adminAreas.includes('All') || adminAreas.includes(item.area_name)) &&
+                (!area || item.area_name === area) && String(item.business_name || '').toLowerCase().includes(search));
+        }
 
-            document.getElementById('table-businesses').innerHTML = f.map(i => {
-                const activeKits = activeDb.filter(k => k.last_location === i.business_name);
-                
+        function updateBusinessSelection() {
+            const visibleIds = new Set(visibleBusinesses.map(item => String(item.id)));
+            for (const id of selectedBusinessIds) if (!visibleIds.has(id)) selectedBusinessIds.delete(id);
+            const count = selectedBusinessIds.size;
+            const master = document.getElementById('business-master-checkbox');
+            master.checked = visibleIds.size > 0 && count === visibleIds.size;
+            master.indeterminate = count > 0 && count < visibleIds.size;
+            master.disabled = businessDeleteBusy || businessRenderPending || visibleIds.size === 0;
+            document.getElementById('selected-business-count').textContent = count;
+            document.getElementById('btn-delete-businesses').disabled = businessDeleteBusy || businessRenderPending || count === 0;
+            document.querySelectorAll('.business-checkbox').forEach(checkbox => {
+                checkbox.checked = selectedBusinessIds.has(checkbox.value);
+                checkbox.disabled = businessDeleteBusy || businessRenderPending;
+            });
+            document.querySelectorAll('.business-row-action').forEach(button => { button.disabled = businessDeleteBusy; });
+        }
+
+        function setBusinessSelected(checkbox) {
+            if (businessDeleteBusy || businessRenderPending) return updateBusinessSelection();
+            if (visibleBusinesses.some(item => String(item.id) === checkbox.value)) {
+                if (checkbox.checked) selectedBusinessIds.add(checkbox.value);
+                else selectedBusinessIds.delete(checkbox.value);
+            }
+            updateBusinessSelection();
+        }
+
+        function toggleSelectAllBusinesses(master) {
+            if (businessDeleteBusy || businessRenderPending) return updateBusinessSelection();
+            visibleBusinesses.forEach(item => {
+                if (master.checked) selectedBusinessIds.add(String(item.id));
+                else selectedBusinessIds.delete(String(item.id));
+            });
+            updateBusinessSelection();
+        }
+
+        function setBusinessDeleteBusy(busy) {
+            businessDeleteBusy = busy;
+            document.querySelectorAll('#view-businesses button, #view-businesses input, #view-businesses select').forEach(control => { control.disabled = busy; });
+            document.getElementById('table-businesses').setAttribute('aria-busy', String(busy || businessRenderPending));
+            updateBusinessSelection();
+        }
+
+        async function renderBusinesses() {
+            const requestVersion = ++businessRenderVersion;
+            const businesses = getFilteredBusinesses();
+            visibleBusinesses = businesses;
+            const table = document.getElementById('table-businesses');
+            businessRenderPending = businesses.length > 0;
+            table.setAttribute('aria-busy', String(businessRenderPending || businessDeleteBusy));
+            table.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-sm text-slate-400">${businesses.length ? 'Loading merchant assets...' : 'No merchants found.'}</td></tr>`;
+            updateBusinessSelection();
+            if (!businesses.length) return;
+
+            let activeDb = [];
+            let assetsUnavailable = false;
+            try {
+                const adminAreas = getAdminAreas();
+                let query = db.from('master_kits').select('kit_id, kit_type, last_location, area_name').neq('last_location', 'Warehouse').not('last_location', 'is', null);
+                if (!adminAreas.includes('All')) query = query.in('area_name', adminAreas);
+                const { data, error } = await query;
+                if (error) throw error;
+                activeDb = data || [];
+            } catch (_) { assetsUnavailable = true; }
+            if (requestVersion !== businessRenderVersion) return;
+            businessRenderPending = false;
+            table.setAttribute('aria-busy', String(businessDeleteBusy));
+            table.innerHTML = businesses.map(item => {
+                const activeKits = activeDb.filter(kit => kit.last_location === item.business_name && kit.area_name === item.area_name);
                 let totalItems = 0;
-                let kitBadges = activeKits.length === 0 ? '<span class="text-slate-400 italic text-[10px]">No active kits</span>' : activeKits.map(k => {
-                    const recipe = globalKitTypes.find(t => t.type_name === k.kit_type);
-                    const itemCount = recipe && recipe.checklist_items ? recipe.checklist_items.split(',').length : 0;
-                    totalItems += itemCount;
-
-                    let colorClass = recipe && recipe.ui_color ? `bg-${recipe.ui_color}-50 text-${recipe.ui_color}-700 border-${recipe.ui_color}-200` : 'bg-slate-50 text-slate-700 border-slate-200';
-                    let icon = recipe && recipe.ui_icon ? `<i class="fa-solid ${recipe.ui_icon} mr-1 opacity-70"></i>` : '<i class="fa-solid fa-box mr-1 opacity-70"></i>';
-
-                    return `<span class="text-[10px] ${colorClass} font-black px-2 py-1 rounded border mr-1 inline-block mb-1 shadow-sm">${icon}${k.kit_id}</span>`;
+                const kitBadges = assetsUnavailable ? '<span class="text-amber-600 text-[10px]">Asset data unavailable. Refresh to retry.</span>' : activeKits.length === 0 ? '<span class="text-slate-400 italic text-[10px]">No active kits</span>' : activeKits.map(kit => {
+                    const recipe = globalKitTypes.find(type => type.type_name === kit.kit_type);
+                    totalItems += recipe && recipe.checklist_items ? recipe.checklist_items.split(',').length : 0;
+                    const color = recipe && /^[a-z]+$/.test(recipe.ui_color || '') ? recipe.ui_color : 'slate';
+                    const icon = recipe && /^fa-[a-z0-9-]+$/.test(recipe.ui_icon || '') ? recipe.ui_icon : 'fa-box';
+                    return `<span class="text-[10px] bg-${color}-50 text-${color}-700 border-${color}-200 font-black px-2 py-1 rounded border mr-1 inline-block mb-1 shadow-sm"><i class="fa-solid ${icon} mr-1 opacity-70"></i>${escapeHTML(kit.kit_id)}</span>`;
                 }).join('');
-
-                return `
-                <tr class="hover:bg-slate-50 border-b border-slate-100">
-                    <td class="p-4">
-                        <button onclick="filterKitsByMerchant('${i.business_name.replace(/'/g, "\\'")}')" class="font-black text-blue-600 hover:underline text-left">
-                            ${i.business_name}
-                        </button>
-                        <div class="text-[9px] text-slate-400 font-bold uppercase">Click to view assets</div>
-                    </td>
-                    <td class="p-4 align-top"><span class="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200 uppercase">${i.area_name}</span></td>
+                const idArgument = escapeHTML(JSON.stringify(item.id));
+                const nameArgument = escapeHTML(JSON.stringify(String(item.business_name || '')));
+                const label = escapeHTML(`${item.business_name || 'Merchant'} (${item.area_name || '-'}), ID ${item.id}`);
+                return `<tr class="hover:bg-slate-50 border-b border-slate-100">
+                    <td class="p-4 align-top"><input type="checkbox" class="business-checkbox rounded border-slate-300" value="${escapeHTML(String(item.id))}" aria-label="Select ${label}" onchange="setBusinessSelected(this)"></td>
+                    <td class="p-4"><button onclick="filterKitsByMerchant(${nameArgument})" class="business-row-action font-black text-blue-600 hover:underline text-left">${escapeHTML(item.business_name)}</button><div class="text-[9px] text-slate-400 font-bold uppercase">Click to view assets · ID ${escapeHTML(String(item.id))}</div></td>
+                    <td class="p-4 align-top"><span class="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200 uppercase">${escapeHTML(item.area_name)}</span></td>
                     <td class="p-4 max-w-[200px] flex-wrap align-top">${kitBadges}</td>
-                    <td class="p-4 text-center align-top"><span class="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">${totalItems} Items</span></td>
-                    <td class="p-4 text-right align-top">
-                        <button onclick="editBusiness(${i.id})" class="text-slate-400 hover:text-blue-600 p-2"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deleteRow('master_businesses', ${i.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
-                    </td>
+                    <td class="p-4 text-center align-top"><span class="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">${assetsUnavailable ? '—' : totalItems + ' Items'}</span></td>
+                    <td class="p-4 text-right align-top"><button onclick="editBusiness(${idArgument})" aria-label="Edit ${label}" class="business-row-action text-slate-400 hover:text-blue-600 p-2"><i class="fa-solid fa-pen"></i></button><button onclick="deleteRow('master_businesses', ${idArgument})" aria-label="Delete ${label}" class="business-row-action text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button></td>
                 </tr>`;
-            }).join(''); 
+            }).join('');
+            updateBusinessSelection();
+        }
+
+        async function deleteSelectedBusinesses() {
+            if (businessDeleteBusy || businessRenderPending) return;
+            // Recheck the current filter and access scope before creating a mutation.
+            const renderedIds = new Set(visibleBusinesses.map(item => String(item.id)));
+            const selected = getFilteredBusinesses().filter(item => renderedIds.has(String(item.id)) && selectedBusinessIds.has(String(item.id)));
+            if (!selected.length) return;
+            const preview = selected.slice(0, 10).map(item => `• ${item.business_name} (${item.area_name}) — ID ${item.id}`).join('\n');
+            const extra = selected.length > 10 ? `\n... dan ${selected.length - 10} merchant lainnya.` : '';
+            if (!confirm(`Hapus permanen ${selected.length} merchant yang dipilih?\n\n${preview}${extra}\n\nTindakan ini tidak dapat dibatalkan.`)) return;
+            setBusinessDeleteBusy(true);
+            ++businessFetchVersion; // Ignore any earlier fetch that could restore deleted rows.
+            try {
+                let result;
+                try {
+                    let query = db.from('master_businesses').delete().in('id', selected.map(item => item.id));
+                    const adminAreas = getAdminAreas();
+                    if (!adminAreas.includes('All')) query = query.in('area_name', adminAreas);
+                    result = await query.select('id');
+                } catch (error) {
+                    alert('Hasil penghapusan belum dapat dipastikan karena koneksi terputus. Refresh daftar sebelum mencoba lagi.\n\n' + error.message);
+                    return;
+                }
+                if (result.error) { alert('Gagal menghapus merchant: ' + result.error.message); return; }
+                const requestedIds = new Set(selected.map(item => String(item.id)));
+                const deletedIds = new Set((result.data || []).map(item => String(item.id)).filter(id => requestedIds.has(id)));
+                if (!deletedIds.size) {
+                    alert('Tidak ada merchant yang terhapus. Data mungkin sudah berubah atau izin database (RLS) menolak penghapusan. Refresh daftar untuk memeriksa.');
+                    return;
+                }
+                deletedIds.forEach(id => selectedBusinessIds.delete(id));
+                globalBusinesses = globalBusinesses.filter(item => !deletedIds.has(String(item.id)));
+                const warnings = [];
+                try {
+                    const audit = await logAdminAction('BULK_DELETE', `Deleted ${deletedIds.size} merchants from master_businesses. IDs: ${Array.from(deletedIds).join(', ')}`);
+                    if (audit && audit.error) throw audit.error;
+                } catch (_) { warnings.push('Penghapusan berhasil, tetapi catatan audit gagal disimpan.'); }
+                const refreshed = await fetchBusinesses(true, false);
+                if (!refreshed) {
+                    warnings.push('Daftar terbaru belum dapat dimuat. Tekan Refresh untuk mencoba lagi.');
+                    try {
+                        updateLogBusinessDropdown();
+                        await renderBusinesses();
+                    } catch (_) { warnings.push('Muat ulang halaman jika tampilan daftar belum diperbarui.'); }
+                }
+                const remaining = selected.length - deletedIds.size;
+                alert(`Berhasil menghapus ${deletedIds.size} dari ${selected.length} merchant.` + (remaining ? `\n${remaining} merchant tidak terhapus; pilihan yang masih terlihat tetap dicentang.` : '') + (warnings.length ? '\n\n' + warnings.join('\n') : ''));
+            } finally { setBusinessDeleteBusy(false); }
         }
 
         function renderKitTypes() { 
