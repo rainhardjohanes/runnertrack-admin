@@ -660,7 +660,7 @@
 
         <div id="view-kits" class="flex-1 flex flex-col hidden-view h-full">
             <div class="p-6 pt-20 lg:pt-6 border-b border-slate-200 bg-white flex flex-col xl:flex-row justify-between xl:items-center gap-4 shadow-sm z-10 flex-shrink-0">
-                <h2 class="text-xl font-black text-slate-800 shrink-0">Asset Allocation</h2>
+                <div class="shrink-0"><h2 class="text-xl font-black text-slate-800">Asset Allocation</h2><p id="asset-auto-status" role="status" aria-live="polite" class="mt-1 text-[11px] font-bold text-slate-500">Pembaruan otomatis siap</p></div>
                 <div class="flex flex-wrap items-center justify-end gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
@@ -1475,7 +1475,7 @@ async function loadArchivePhoto(url, viewer) {
         }
 
         function showModal(id) { document.getElementById(id).classList.replace('hidden-view', 'flex'); }
-        function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden-view'); }
+        function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden-view'); resumeAssetAutoRefresh(); }
 
         // ----------------------------------------------------------------------
         // 3. AUTHENTICATION & INIT
@@ -1533,6 +1533,8 @@ if (!["admin", "super_admin"].includes(role)) {
         });
 
         async function logoutAdmin() { 
+            adminRealtimeAuthenticated = false;
+            stopAdminRealtime();
             await db.auth.signOut(); 
             localStorage.removeItem('admin_user'); 
             window.location.reload(); 
@@ -1541,6 +1543,7 @@ if (!["admin", "super_admin"].includes(role)) {
         async function initApp() {
             const { data: { session } } = await db.auth.getSession();
             const admin = JSON.parse(localStorage.getItem('admin_user'));
+            adminRealtimeAuthenticated = Boolean(session);
             
             const role = (admin?.role || "").toLowerCase();
 
@@ -1601,7 +1604,7 @@ if (!["admin", "super_admin"].includes(role)) {
             if(tab === 'sdrs') fetchSDRs(); 
             if(tab === 'businesses') fetchBusinesses(); 
             if(tab === 'kit_types') fetchKitTypes(); 
-            if(tab === 'kits') fetchKits(); 
+            // Asset Allocation loads after its live subscription is ready (with one fallback load on connection failure). 
             if(tab === 'users') fetchUsers();
             if(tab === 'admin_logs') fetchAdminLogs();
             if(tab === 'runner_tracker') fetchAndRenderRunnerTracker();
@@ -2271,111 +2274,127 @@ function initFOTrackerFilters() {
             return [...recipes.values()].sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        async function fetchAssetSdrSummary(filters, requestId) {
-            const panel = document.getElementById('kits-sdr-summary');
-            if (!filters.filterSdr) {
-                panel.classList.add('hidden');
-                panel.innerHTML = '';
-                return;
+        function assetFetchCanApply(requestId, filters, page, options = {}) {
+            if ((options.automatic && options.generation !== undefined && options.generation !== adminRealtimeGeneration) ||
+                requestId !== assetAllocationRequest || page !== kitPage ||
+                JSON.stringify(filters) !== JSON.stringify(getAssetAllocationFilters())) return false;
+            if (options.automatic && (!assetAutoSyncEligible() || assetAutoInteractionBusy())) {
+                assetAutoSync.pending = true;
+                setAssetAutoStatus();
+                return false;
             }
-            panel.classList.remove('hidden');
-            panel.innerHTML = '<div class="text-xs font-bold text-slate-500">Memuat ringkasan kit per recipe...</div>';
-            try {
-                const kits = [];
-                const batchSize = 500;
-                let expectedTotal = null;
-                while (true) {
-                    const query = applyAssetAllocationFilters(
-                        db.from('master_kits').select('id,kit_type,last_location,has_deployed', { count: 'exact' }), filters
-                    );
-                    const { data, count, error } = await query.order('id').range(kits.length, kits.length + batchSize - 1);
-                    if (requestId !== assetAllocationRequest) return;
-                    if (error) throw error;
-                    if (!Array.isArray(data) || !Number.isInteger(count)) throw new Error('Respons ringkasan tidak lengkap.');
-                    if (expectedTotal === null) expectedTotal = count;
-                    if (count !== expectedTotal) throw new Error('Data aset berubah. Silakan refresh ringkasan.');
-                    kits.push(...data);
-                    if (kits.length === expectedTotal) break;
-                    if (!data.length || kits.length > expectedTotal) throw new Error('Data ringkasan belum lengkap. Silakan refresh.');
-                }
-                const recipes = summarizeAssetRecipes(kits);
-                const holding = recipes.reduce((total, recipe) => total + recipe.holding, 0);
-                panel.innerHTML = `
-                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                        <div class="font-black text-sm text-slate-800">Ringkasan SDR: ${escapeAssetText(filters.filterSdr)}</div>
-                        <div class="text-xs font-bold text-blue-700">Total hasil: ${kits.length} kit · Sedang dipegang: ${holding} kit</div>
-                    </div>
-                    <p class="text-xs text-slate-500 mb-3">Mengikuti filter Region, Recipe dan pencarian di seluruh halaman. Kit yang sudah kembali dihitung sebagai Last SDR.</p>
-                    <div class="flex flex-wrap gap-3">${recipes.map(recipe => `
-                        <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 min-w-[180px]">
-                            <div class="text-xs font-black text-slate-700">${escapeAssetText(recipe.name)}</div>
-                            <div class="text-xl font-black text-blue-700 mt-1">${recipe.total} <span class="text-xs">kit</span></div>
-                            <div class="text-[11px] text-slate-500 mt-1">Dipegang: ${recipe.holding} · Kembali: ${recipe.returned}${recipe.undeployed ? ` · Belum keluar: ${recipe.undeployed}` : ''}</div>
-                        </div>`).join('') || '<div class="text-xs text-slate-500">Tidak ada kit yang sesuai filter.</div>'}
-                    </div>`;
-            } catch (error) {
-                if (requestId !== assetAllocationRequest) return;
-                console.error('Gagal memuat ringkasan SDR:', error);
-                panel.innerHTML = `<div class="text-xs text-red-600">${escapeAssetText(error.message || 'Gagal memuat ringkasan. Silakan refresh.')}</div>`;
-            }
+            return true;
         }
 
-        async function fetchKits(force = false) {
-            if (force) assetPeriodCache.clear();
-            if (force || !document.getElementById('asset-sdr-options').innerHTML) loadAssetSdrOptions();
+        async function fetchAssetSdrSummary(filters, requestId, options = {}) {
+            if (!filters.filterSdr) return null;
+            const {data, error} = await db.rpc('asset_allocation_current_summary', {p_filters: filters});
+            if (error) throw error;
+            if (!data || !Number.isInteger(data.total) || data.total < 0 || !Number.isInteger(data.holding) ||
+                data.holding < 0 || data.holding > data.total || !Array.isArray(data.recipes) ||
+                data.recipes.some(recipe => typeof recipe.name !== 'string' ||
+                    ['total','holding','returned','undeployed'].some(key => !Number.isInteger(recipe[key]) || recipe[key] < 0))) {
+                throw new Error('Respons ringkasan SDR tidak lengkap.');
+            }
+            return data;
+        }
+
+        function renderCurrentAssetSummary(report, filters) {
+            const panel = document.getElementById('kits-sdr-summary');
+            if (!filters.filterSdr || !report) {
+                panel.classList.add('hidden'); panel.innerHTML = ''; return;
+            }
+            panel.classList.remove('hidden');
+            panel.innerHTML = `
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div class="font-black text-sm text-slate-800">Ringkasan SDR: ${escapeAssetText(filters.filterSdr)}</div>
+                    <div class="text-xs font-bold text-blue-700">Total hasil: ${report.total} kit · Sedang dipegang: ${report.holding} kit</div>
+                </div>
+                <p class="text-xs text-slate-500 mb-3">Mengikuti filter Region, Recipe dan pencarian di seluruh halaman. Kit yang sudah kembali dihitung sebagai Last SDR.</p>
+                <div class="flex flex-wrap gap-3">${report.recipes.map(recipe => `
+                    <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 min-w-[180px]">
+                        <div class="text-xs font-black text-slate-700">${escapeAssetText(recipe.name)}</div>
+                        <div class="text-xl font-black text-blue-700 mt-1">${recipe.total} <span class="text-xs">kit</span></div>
+                        <div class="text-[11px] text-slate-500 mt-1">Dipegang: ${recipe.holding} · Kembali: ${recipe.returned}${recipe.undeployed ? ` · Belum keluar: ${recipe.undeployed}` : ''}</div>
+                    </div>`).join('') || '<div class="text-xs text-slate-500">Tidak ada kit yang sesuai filter.</div>'}
+                </div>`;
+        }
+
+        async function fetchKits(force = false, options = {}) {
+            if (options.automatic && (!assetAutoSyncEligible() || assetAutoInteractionBusy())) {
+                assetAutoSync.pending = true; setAssetAutoStatus(); return null;
+            }
+            if (force || options.invalidatePeriod) assetPeriodCache.clear();
+            if (!options.automatic && (force || !document.getElementById('asset-sdr-options').innerHTML)) loadAssetSdrOptions();
             const filters = getAssetAllocationFilters();
+            const page = kitPage;
             const requestId = ++assetAllocationRequest;
             try {
-                if (getAssetPeriod(filters)) {
-                    const panel = document.getElementById('kits-sdr-summary');
-                    panel.classList.remove('hidden');
-                    panel.innerHTML = '<div class="text-xs text-slate-500">Memuat riwayat kit dalam periode...</div>';
-                    document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-slate-500">Memuat riwayat...</td></tr>';
-                    const from = kitPage * kitPageSize;
+                const period = getAssetPeriod(filters);
+                if (period) {
+                    if (!options.automatic) {
+                        const panel = document.getElementById('kits-sdr-summary');
+                        panel.classList.remove('hidden');
+                        panel.innerHTML = '<div class="text-xs text-slate-500">Memuat riwayat kit dalam periode...</div>';
+                        document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-slate-500">Memuat riwayat...</td></tr>';
+                    }
+                    const from = page * kitPageSize;
                     const report = await loadAssetPeriodReport(filters, from, kitPageSize, requestId);
-                    if (!report || requestId !== assetAllocationRequest) return;
+                    if (!report || !assetFetchCanApply(requestId, filters, page, options)) return null;
                     globalKits = report.rows;
-                    document.getElementById('kit-page-display').innerText = report.total ? kitPage + 1 : 0;
-                    document.getElementById('btn-kit-prev').disabled = kitPage === 0;
+                    document.getElementById('kit-page-display').innerText = report.total ? page + 1 : 0;
+                    document.getElementById('btn-kit-prev').disabled = page === 0;
                     document.getElementById('btn-kit-next').disabled = from + kitPageSize >= report.total;
                     renderKits();
                     renderAssetPeriodSummary(report, filters);
-                    return;
+                } else {
+                    const from = page * kitPageSize;
+                    const to = from + kitPageSize - 1;
+                    const q = applyAssetAllocationFilters(db.from('master_kits').select('*', {count:'exact'}), filters);
+                    // The table and compact summary share the same captured filters.
+                    const [result, summary] = await Promise.all([
+                        q.order('kit_id').order('id').range(from, to),
+                        fetchAssetSdrSummary(filters, requestId, options)
+                    ]);
+                    if (result.error) throw result.error;
+                    if (!Array.isArray(result.data)) throw new Error('Respons daftar kit tidak lengkap.');
+                    if (!assetFetchCanApply(requestId, filters, page, options)) return null;
+                    globalKits = result.data;
+                    document.getElementById('kit-page-display').innerText = result.data.length ? page + 1 : 0;
+                    document.getElementById('btn-kit-prev').disabled = page === 0;
+                    document.getElementById('btn-kit-next').disabled = to >= (result.count || 0) - 1;
+                    renderKits();
+                    renderCurrentAssetSummary(summary, filters);
                 }
+                assetAutoSync.refreshError = false;
+                assetAutoSync.lastUpdatedAt = Date.now();
+                assetAutoSync.retryAttempts = 0; assetAutoSync.retryNotBefore = 0;
+                if (!options.automatic && assetAutoSync.retryWaiting) {
+                    assetAutoSync.pending = false;
+                    if (assetAutoSync.timer) clearTimeout(assetAutoSync.timer);
+                    assetAutoSync.timer = null;
+                }
+                assetAutoSync.retryWaiting = false;
+                setAssetAutoStatus();
+                return true;
             } catch (error) {
-                if (requestId !== assetAllocationRequest) return;
-                const panel = document.getElementById('kits-sdr-summary');
-                panel.classList.remove('hidden');
-                panel.innerHTML = `<div class="text-xs text-red-600">${escapeAssetText(error.message)}</div>`;
-                globalKits = [];
-                document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-slate-400">Lengkapi atau perbaiki filter tanggal, lalu refresh.</td></tr>';
-                document.getElementById('kit-page-display').innerText = '0';
-                document.getElementById('btn-kit-prev').disabled = true;
-                document.getElementById('btn-kit-next').disabled = true;
-                return;
-            }
-            fetchAssetSdrSummary(filters, requestId);
-            // Always query the current filters and page; SDR filtering applies before pagination.
-
-            const from = kitPage * kitPageSize;
-            const to = from + kitPageSize - 1;
-            const q = applyAssetAllocationFilters(
-                db.from('master_kits').select('*', { count: 'exact' }), filters
-            );
-            const { data, count, error } = await q.order('kit_id').order('id').range(from, to);
-            if (requestId !== assetAllocationRequest) return;
-
-            if (error) {
-                console.error('Gagal tarik kits:', error.message);
-                document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-red-600">Gagal memuat aset. Silakan refresh dan periksa koneksi.</td></tr>';
-                return;
-            }
-            if (data) {
-                globalKits = data;
-                document.getElementById('kit-page-display').innerText = data.length > 0 ? (kitPage + 1) : 0;
-                document.getElementById('btn-kit-prev').disabled = (kitPage === 0);
-                document.getElementById('btn-kit-next').disabled = (to >= (count || 0) - 1);
-                renderKits();
+                if (!assetFetchCanApply(requestId, filters, page, options)) return null;
+                console.error('Gagal memuat Asset Allocation:', error);
+                assetAutoSync.refreshError = true;
+                setAssetAutoStatus();
+                if (!options.automatic) {
+                    const panel = document.getElementById('kits-sdr-summary');
+                    panel.classList.remove('hidden');
+                    panel.innerHTML = `<div class="text-xs text-red-600">${escapeAssetText(error.message || 'Gagal memuat aset. Periksa koneksi lalu coba lagi.')}</div>`;
+                    globalKits = [];
+                    document.getElementById('table-kits').innerHTML = '<tr><td colspan="6" class="p-4 text-red-600">Data belum dapat dimuat untuk filter ini.</td></tr>';
+                    document.getElementById('kit-page-display').innerText = '0';
+                    document.getElementById('btn-kit-prev').disabled = page === 0;
+                    document.getElementById('btn-kit-next').disabled = true;
+                    updateKitSelection();
+                }
+                // Keep the last successful table while a background refresh fails.
+                return false;
             }
         }
 
@@ -3442,7 +3461,6 @@ function renderLogs() {
         function renderKits() {
             const masterCheckbox = document.getElementById('kit-master-checkbox');
             if(masterCheckbox) masterCheckbox.checked = false;
-            updateKitSelection();
 
             document.getElementById('table-kits').innerHTML = globalKits.map(i => {
                 const locData = getKitLocation(i.kit_id);
@@ -3476,7 +3494,7 @@ function renderLogs() {
                     </td>
                 </tr>`;
             }).join('') || '<tr><td colspan="6" class="p-6 text-center text-slate-400">Tidak ada kit yang sesuai filter.</td></tr>';
-            
+            updateKitSelection();
         }
         
         function renderUsers() { 
@@ -4277,6 +4295,7 @@ console.log(authError);
                 btnDelete.classList.add('hidden');
                 document.getElementById('kit-master-checkbox').checked = false;
             }
+            resumeAssetAutoRefresh();
         }
 
         async function deleteSelectedKits() {
@@ -4300,22 +4319,147 @@ console.log(authError);
         // 8. REALTIME SUBSCRIPTION
         // ----------------------------------------------------------------------
         let adminRealtimeChannel = null;
+        let adminRealtimeGeneration = 0;
+        let activeAdminView = null;
+        let adminRealtimeAuthenticated = false;
+        const assetAutoSync = {
+            pending:false, pendingSince:0, timer:null, initialTimer:null,
+            inFlight:false, lastRefreshAt:-Infinity, connected:false,
+            refreshError:false, fallbackAllowed:false, lastUpdatedAt:null,
+            retryAttempts:0, retryNotBefore:0, retryWaiting:false
+        };
+        const assetAutoDebounceMs = 1500;
+        const assetAutoCooldownMs = 10000;
         const adminRealtimeTables = {
             dashboard: ['transactions', 'master_kits', 'master_kit_types'],
             sd_tracker: ['transactions'], fo_tracker: ['fo_visits', 'master_runners'], runner_tracker: ['transactions'],
-            logs: ['transactions'], kits: ['transactions', 'master_kits', 'master_kit_types', 'master_sdrs'],
+            // The SDR-history trigger updates master_kits for transaction inserts,
+            // edits and deletes. One small table covers current and period views.
+            logs: ['transactions'], kits: ['master_kits'],
             runners: ['master_runners'], sdrs: ['master_sdrs'], businesses: ['master_businesses', 'master_kits'],
             areas: ['master_areas'], kit_types: ['master_kit_types'], users: ['master_users'], admin_logs: ['admin_logs']
         };
 
+        function assetAutoSyncEligible() {
+            const admin = JSON.parse(localStorage.getItem('admin_user') || 'null');
+            return activeAdminView === 'kits' && !document.hidden && navigator.onLine !== false &&
+                adminRealtimeAuthenticated && ['admin','super_admin'].includes(String(admin?.role || '').toLowerCase());
+        }
+
+        function assetAutoInteractionBusy() {
+            if (document.querySelectorAll('.kit-checkbox:checked').length) return true;
+            return ['modal-edit-kit','modal-kit','modal-import','modal-manual-deploy'].some(id => {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('hidden-view');
+            });
+        }
+
+        function setAssetAutoStatus() {
+            const el = document.getElementById('asset-auto-status');
+            if (!el) return;
+            let text = 'Menghubungkan pembaruan otomatis...';
+            let tone = 'text-slate-500';
+            if (!adminRealtimeAuthenticated) text = 'Masuk untuk pembaruan otomatis';
+            else if (navigator.onLine === false) { text = 'Offline — diperbarui saat tersambung'; tone = 'text-amber-700'; }
+            else if (document.hidden || activeAdminView !== 'kits') text = 'Pembaruan otomatis dijeda';
+            else if (assetAutoSync.inFlight) { text = 'Memperbarui lokasi dan SDR...'; tone = 'text-blue-600'; }
+            else if (assetAutoSync.pending && assetAutoInteractionBusy()) { text = 'Pembaruan menunggu pilihan / formulir selesai'; tone = 'text-amber-700'; }
+            else if (assetAutoSync.refreshError) { text = assetAutoSync.retryWaiting ? 'Pembaruan tertunda — mencoba kembali otomatis' : 'Pembaruan gagal — periksa koneksi atau klik refresh'; tone = 'text-amber-700'; }
+            else if (assetAutoSync.connected) { text = assetAutoSync.pending ? 'Perubahan diterima — segera diperbarui' : 'Otomatis aktif · hemat data'; tone = 'text-emerald-700'; }
+            else if (!assetAutoSync.initialTimer) { text = 'Koneksi otomatis terputus — menunggu tersambung'; tone = 'text-amber-700'; }
+            if (assetAutoSync.connected && !assetAutoSync.pending && !assetAutoSync.inFlight && !assetAutoSync.refreshError && assetAutoSync.lastUpdatedAt !== null) {
+                const updated = new Date(assetAutoSync.lastUpdatedAt).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone:'Asia/Makassar'});
+                if (assetAutoSyncEligible()) text = 'Otomatis aktif · diperbarui ' + updated + ' WITA';
+            }
+            el.textContent = text;
+            el.className = 'mt-1 text-[11px] font-bold ' + tone;
+        }
+
+        function scheduleAssetAutoRefresh(immediate = false) {
+            if (!assetAutoSync.pending) return;
+            if (assetAutoSync.timer) clearTimeout(assetAutoSync.timer);
+            assetAutoSync.timer = null;
+            if (!assetAutoSyncEligible() || assetAutoInteractionBusy() || assetAutoSync.inFlight ||
+                (!assetAutoSync.connected && !assetAutoSync.fallbackAllowed)) { setAssetAutoStatus(); return; }
+            const now = Date.now();
+            // Trailing debounce has a maximum wait, so continuous writes cannot
+            // indefinitely postpone a refresh. Cooldown limits bursts to one/10s.
+            const batchDue = immediate ? now : Math.min(now + assetAutoDebounceMs, assetAutoSync.pendingSince + 3000);
+            const due = Math.max(batchDue, assetAutoSync.lastRefreshAt + assetAutoCooldownMs, assetAutoSync.retryNotBefore);
+            assetAutoSync.timer = setTimeout(() => { assetAutoSync.timer = null; flushAssetAutoRefresh(); }, Math.max(0, due - now));
+            setAssetAutoStatus();
+        }
+
+        function noteAssetChange(immediate = false) {
+            assetPeriodCache.clear();
+            const wasRetryWaiting = assetAutoSync.retryWaiting;
+            assetAutoSync.retryAttempts = 0; assetAutoSync.retryNotBefore = 0; assetAutoSync.retryWaiting = false;
+            if (!assetAutoSync.pending || wasRetryWaiting) assetAutoSync.pendingSince = Date.now();
+            assetAutoSync.pending = true;
+            scheduleAssetAutoRefresh(immediate);
+        }
+
+        function resumeAssetAutoRefresh() {
+            if (assetAutoSync.pending) scheduleAssetAutoRefresh(true);
+        }
+
+        async function flushAssetAutoRefresh() {
+            if (!assetAutoSync.pending || !assetAutoSyncEligible() || assetAutoInteractionBusy() || assetAutoSync.inFlight ||
+                (!assetAutoSync.connected && !assetAutoSync.fallbackAllowed)) { setAssetAutoStatus(); return; }
+            const generation = adminRealtimeGeneration;
+            const usedFallback = assetAutoSync.fallbackAllowed;
+            assetAutoSync.pending = false;
+            assetAutoSync.fallbackAllowed = false;
+            assetAutoSync.inFlight = true;
+            assetAutoSync.lastRefreshAt = Date.now();
+            setAssetAutoStatus();
+            try {
+                const result = await fetchKits(false, {automatic:true, invalidatePeriod:true, generation});
+                if (result === false && generation === adminRealtimeGeneration && !assetAutoSync.pending && assetAutoSync.retryAttempts < 2) {
+                    assetAutoSync.retryAttempts++;
+                    assetAutoSync.retryWaiting = true;
+                    assetAutoSync.pending = true;
+                    assetAutoSync.pendingSince = Date.now();
+                    assetAutoSync.retryNotBefore = Date.now() + assetAutoSync.retryAttempts * 10000;
+                    assetAutoSync.fallbackAllowed = usedFallback;
+                } else if (result === false && !assetAutoSync.pending) {
+                    assetAutoSync.retryWaiting = false;
+                }
+            } finally {
+                assetAutoSync.inFlight = false;
+                if (assetAutoSync.pending) scheduleAssetAutoRefresh();
+                setAssetAutoStatus();
+            }
+        }
+
+        function stopAdminRealtime() {
+            adminRealtimeGeneration++;
+            if (assetAutoSync.timer) clearTimeout(assetAutoSync.timer);
+            if (assetAutoSync.initialTimer) clearTimeout(assetAutoSync.initialTimer);
+            assetAutoSync.timer = null; assetAutoSync.initialTimer = null;
+            assetAutoSync.connected = false; assetAutoSync.fallbackAllowed = false;
+            if (adminRealtimeChannel) {
+                const oldChannel = adminRealtimeChannel;
+                adminRealtimeChannel = null;
+                Promise.resolve(db.removeChannel(oldChannel)).catch(error => console.warn('Realtime cleanup:', error));
+            }
+            setAssetAutoStatus();
+        }
+
         function enableRealtimeSync(tab = 'dashboard') {
-            if (adminRealtimeChannel) { db.removeChannel(adminRealtimeChannel); adminRealtimeChannel = null; }
-            if (document.hidden) return;
+            stopAdminRealtime();
+            activeAdminView = tab;
+            if (document.hidden || navigator.onLine === false || !adminRealtimeAuthenticated) { setAssetAutoStatus(); return; }
             const tables = adminRealtimeTables[tab] || [];
             if (!tables.length) return;
+            const generation = adminRealtimeGeneration;
             const channel = db.channel('admin-realtime-' + tab);
+            adminRealtimeChannel = channel;
+            const isCurrent = () => generation === adminRealtimeGeneration && channel === adminRealtimeChannel && tab === activeAdminView;
             for (const table of tables) {
-                channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+                channel.on('postgres_changes', {event:'*', schema:'public', table}, () => {
+                    if (!isCurrent() || document.hidden || navigator.onLine === false) return;
+                    if (tab === 'kits') { noteAssetChange(); return; }
                     if (table === 'transactions' || table === 'master_kits' || table === 'master_users') assetPeriodCache.clear();
                     if (table === 'master_runners' && tab === 'fo_tracker') globalRunners = [];
                     const refreshBtn = document.querySelector(`#view-${tab} button[onclick^="fetch"]`) ||
@@ -4328,21 +4472,52 @@ console.log(authError);
                         refreshBtn.addEventListener('click', function resetBtn() {
                             refreshBtn.className = originalClass;
                             refreshBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
-                        }, { once: true });
+                        }, {once:true});
                     }
                 });
             }
-            adminRealtimeChannel = channel;
-            channel.subscribe();
+            if (tab === 'kits') {
+                if (!document.getElementById('asset-sdr-options').innerHTML) loadAssetSdrOptions();
+                // Wait for subscription acknowledgement before the initial read,
+                // closing the read/listen gap. A single fallback still loads the
+                // table if the live connection is unavailable; there is no poll.
+                assetAutoSync.pending = false;
+                assetAutoSync.refreshError = false;
+                assetAutoSync.initialTimer = setTimeout(() => {
+                    assetAutoSync.initialTimer = null;
+                    if (isCurrent() && !assetAutoSync.connected && assetAutoSyncEligible()) {
+                        assetAutoSync.fallbackAllowed = true;
+                        noteAssetChange(true);
+                    }
+                }, 5000);
+                setAssetAutoStatus();
+            }
+            channel.subscribe(status => {
+                if (!isCurrent() || tab !== 'kits') return;
+                if (status === 'SUBSCRIBED') {
+                    const wasConnected = assetAutoSync.connected;
+                    assetAutoSync.connected = true;
+                    if (assetAutoSync.initialTimer) clearTimeout(assetAutoSync.initialTimer);
+                    assetAutoSync.initialTimer = null;
+                    if (!wasConnected) noteAssetChange(true);
+                } else if (['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)) {
+                    assetAutoSync.connected = false;
+                    if (assetAutoSync.timer) clearTimeout(assetAutoSync.timer);
+                    assetAutoSync.timer = null;
+                }
+                setAssetAutoStatus();
+            });
         }
 
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                if (adminRealtimeChannel) { db.removeChannel(adminRealtimeChannel); adminRealtimeChannel = null; }
-                return;
-            }
-            const activeBtn = document.querySelector('aside nav button.bg-blue-600, aside nav button.bg-amber-500');
-            if (activeBtn) enableRealtimeSync(activeBtn.id.replace('btn-', ''));
+            if (document.hidden) stopAdminRealtime();
+            else if (activeAdminView) enableRealtimeSync(activeAdminView);
+        });
+        window.addEventListener('offline', () => stopAdminRealtime());
+        window.addEventListener('online', () => { if (activeAdminView) enableRealtimeSync(activeAdminView); });
+        if (typeof db.auth.onAuthStateChange === 'function') db.auth.onAuthStateChange((event, session) => {
+            adminRealtimeAuthenticated = Boolean(session);
+            if (!session) stopAdminRealtime();
         });
 
         // ----------------------------------------------------------------------
