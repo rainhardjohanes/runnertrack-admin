@@ -1711,7 +1711,7 @@ async function fetchAndRenderRunnerTracker() {
 
         data.forEach(t => {
 
-            if (t.phase === 'SYSTEM CLEAR') return;
+            if (t.phase === 'SYSTEM CLEAR' || t.is_location_adjustment === true) return;
 
             const runner = t.runner_name || 'Unknown';
             const merchant = t.business_name || 'Unknown';
